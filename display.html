@@ -4,17 +4,44 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Texty piesní – obrazovka</title>
+<link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="css/display.css">
 </head>
 <body class="display">
 <div id="root" class="display__root"></div>
+<div id="status" class="dstatus">Pripájam sa k tabletu…</div>
 <button id="fs" class="fsbtn" title="Na celú obrazovku">⛶</button>
 <script type="module">
   import { createDisplay } from './js/display-core.js';
-  import { createLocalBus } from './js/bus.js';
+  import { createLocalBus, subscribeNet } from './js/bus.js';
 
   const display = createDisplay(document.getElementById('root'));
-  createLocalBus().subscribe((state) => display.render(state));
+  const statusBox = document.getElementById('status');
+  let gotText = false;
+
+  const show = (state) => {
+    display.render(state);
+    if (state && !state.blank && state.lines && state.lines.length) {
+      gotText = true;
+      statusBox.hidden = true;
+    }
+  };
+  const setStatus = (text, ok) => {
+    if (gotText) return;
+    statusBox.textContent = text;
+    statusBox.className = `dstatus${ok ? ' dstatus--ok' : ''}`;
+    statusBox.hidden = false;
+  };
+
+  createLocalBus().subscribe(show);
+
+  // Obrazovka na inom zariadení – stav chodí zo servera.
+  const net = subscribeNet(show, {
+    onOpen: () => setStatus('Pripojené k tabletu. Čakám na text piesne…', true),
+    onError: () => setStatus('Server nedostupný – skontroluj Wi-Fi a adresu.', false),
+  });
+  if (!net) setStatus('Táto obrazovka je riadená z toho istého zariadenia.', true);
+  setTimeout(() => { if (!gotText) statusBox.hidden = false; }, 500);
 
   const fsButton = document.getElementById('fs');
   fsButton.onclick = () => {

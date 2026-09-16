@@ -26,7 +26,7 @@ a všetko sa dá zvládnuť za jedno popoludnie.
 7. [Písanie a úprava piesní v aplikácii](#7-písanie-a-úprava-piesní-v-aplikácii)
 8. [Piesne zo súborov XML](#8-piesne-zo-súborov-xml)
 9. [Keď niečo nefunguje](#9-keď-niečo-nefunguje)
-10. [Verzia bez poplatku (náhradné riešenie)](#10-verzia-bez-poplatku-náhradné-riešenie)
+10. [Bez Chromecastu: obrazovka cez sieť](#10-bez-chromecastu-obrazovka-cez-sieť)
 11. [Pre technicky zdatných](#11-pre-technicky-zdatných)
 
 ---
@@ -60,6 +60,11 @@ Aby si Chromecast vedel stiahnuť práve *našu* stránku, musia byť splnené d
 
 Po registrácii dostaneš **Application ID** – krátky kód (napr. `A1B2C3D4`), ktorý
 raz zadáš do aplikácie v tablete. Tým je celé prepojenie hotové.
+
+Ak nechceš platiť ani registrovať, existuje druhá cesta: **obrazovka cez sieť**.
+Televízor (alebo počítač pri ňom) vtedy otvorí obyčajnú webovú stránku a text mu
+posiela počítač v kostole, na ktorom beží priložený server. Popísaná je v časti
+[10](#10-bez-chromecastu-obrazovka-cez-sieť).
 
 Dôležité: piesne sú uložené **v tablete**, nie na internete. Na internete je len
 samotná aplikácia (jej „program“). Nikto cudzí sa k tvojim piesňam ani k setom
@@ -376,7 +381,7 @@ na tablete a na počítači.
 3. Toto okno presuň na televízor a daj ho na celú obrazovku (tlačidlo ⛶
    alebo kláves `F`).
 4. Piesne ovládaj **v tom istom počítači** v pôvodnom okne. Tablet vtedy
-   netreba. Podrobnosti sú v časti [10](#10-verzia-bez-poplatku-náhradné-riešenie).
+   netreba. Podrobnosti sú v časti [10](#10-bez-chromecastu-obrazovka-cez-sieť).
 
 **Čo uvidíš na televízore, keď to funguje:**
 
@@ -405,6 +410,8 @@ Keď je všetko raz nastavené, pred každou omšou stačí:
   (napr. `342`) a stlač Enter. Pieseň pribudne do zoznamu. Takto pridaj všetky
   piesne na omšu.
 - Šípkami ▲▼ vieš poradie zmeniť, krížikom pieseň odobrať.
+- Pieseň, ktorá už v sete je, má v knižnici namiesto *+ Do setu* zelenú
+  **✓ V sete** – tú istú pieseň teda nepridáš omylom dvakrát.
 - Hore napíš názov (napr. `Nedeľa 10:30`) a ťukni **Uložiť set** – nabudúce ho
   otvoríš jedným ťuknutím.
 
@@ -563,30 +570,96 @@ Ukážkové súbory nájdeš v priečinku [songs/](songs).
 
 ---
 
-## 10. Verzia bez poplatku (náhradné riešenie)
+## 10. Bez Chromecastu: obrazovka cez sieť
 
-Ak nechceš platiť 5 USD alebo zatiaľ čakáš na registráciu, text sa dá na televízor
-dostať aj takto – bez Chromecastu a bez registrácie:
+Ak nechceš platiť 5 USD, nechceš nič registrovať, alebo Chromecast jednoducho
+nemáš, text sa dá na televízor dostať aj takto. Podmienka je jediná: v kostole
+musí byť **počítač na rovnakej Wi-Fi ako tablet** (stačí starší notebook).
 
-**Cez HDMI kábel z notebooku (najistejšie):**
+### Ako to funguje
 
-1. Notebook pripoj k televízoru HDMI káblom.
-2. Otvor aplikáciu (adresu z časti A, alebo priamo súbor `index.html`
-   cez `npm start`, pozri časť 10).
-3. Ťukni na **Okno na TV** – otvorí sa čierne okno len s textom.
-4. Okno presuň na obrazovku televízora a stlač ⛶ (alebo kláves `F`) pre
-   celú obrazovku.
-5. Piesne ovládaj v pôvodnom okne na notebooku.
+Na počítači sa spustí server, ktorý je súčasťou tejto aplikácie. Tablet mu posiela,
+ktorá sloha sa má práve zobraziť, a server to okamžite rozošle všetkým otvoreným
+obrazovkám. Televízor pritom nepotrebuje nič zvláštne – **stačí mu prehliadač**.
 
-**Cez prenos karty v Chrome (ak máš Chromecast, ale bez registrácie):**
+```
+   TABLET  ──►  POČÍTAČ so serverom  ──►  TELEVÍZOR (prehliadač na celú obrazovku)
+ (ovládanie)      (npm start)                 └─► prípadne aj ďalšie obrazovky
+```
 
-1. Na **počítači** otvor aplikáciu a klikni na **Okno na TV**.
-2. V Chrome klikni na **⋮ → Prenášať…** → dole zvoľ *Zdroje: **Prenos karty*** →
-   vyber Chromecast.
-3. Na televízore bude len okno s textom, ovládanie ostáva na počítači.
+### Postup
 
-Rozdiel oproti platenej verzii: ovládanie musí bežať na tom istom počítači ako
-premietacie okno, takže tablet v tomto prípade nevyužiješ.
+**Na počítači (raz):**
+
+1. Nainštaluj [Node.js](https://nodejs.org) (stiahnuť, dvakrát kliknúť, ďalej-ďalej).
+2. Stiahni si tento projekt a v jeho priečinku spusti:
+
+   ```bash
+   npm start
+   ```
+
+3. V okne sa vypíšu adresy, napríklad:
+
+   ```
+   Ovládanie (tablet):   http://192.168.1.10:8080
+   Obrazovka (TV/PC):    http://192.168.1.10:8080/display.html
+   ```
+
+   Počítač musí ostať zapnutý, kým premietaš.
+
+**Na tablete:**
+
+1. V prehliadači otvor adresu **Ovládanie**, napríklad `http://192.168.1.10:8080`.
+2. Hore v lište uvidíš **Obrazovka cez sieť: pripravená**. Presnú adresu pre
+   televízor nájdeš v *Nastavenia → Obrazovka cez sieť* aj s tlačidlom *Kopírovať*.
+
+**Na televízore alebo počítači pri ňom:**
+
+1. Otvor prehliadač a zadaj adresu **Obrazovka**, teda tú istú adresu zakončenú
+   `/display.html`.
+   - Televízor s **Android TV / Google TV**: použi prehliadač z obchodu Google Play.
+   - **Počítač pripojený k TV cez HDMI**: otvor adresu v Chrome a okno presuň na televízor.
+2. Objaví sa čierna stránka s hláškou *Pripojené k tabletu. Čakám na text piesne…*
+3. Daj ju na **celú obrazovku** – tlačidlom ⛶ v rohu alebo klávesom `F`.
+4. Hotovo. Všetko, čo urobíš na tablete, sa objaví na televízore okamžite,
+   vrátane čiernej obrazovky.
+
+### Dobré vedieť
+
+- Obrazoviek môže byť **viac naraz** (napr. televízor vpredu aj monitor pre zbor) –
+  všetky ukazujú to isté.
+- Obrazovka otvorená neskôr si hneď natiahne aktuálnu slohu, netreba nič prepínať.
+- Ak sa spojenie preruší (vypadne Wi-Fi), stránka sa sama znovu pripojí.
+- Aplikácii spustenej týmto spôsobom **netreba internet** – stačí, aby boli tablet,
+  počítač a televízor na rovnakej sieti.
+- V tomto režime nefunguje Chromecast (ten potrebuje adresu s `https://`).
+  Sú to dve alternatívy, nie doplnky.
+- Adresa sa môže po reštarte routera zmeniť. Ak prestane fungovať, pozri si
+  aktuálnu adresu v okne, kde beží server.
+
+### Ešte jednoduchšie: bez servera, ale s ovládaním na počítači
+
+Ak nechceš nič inštalovať, ovládanie a text môžu bežať na **jednom počítači**:
+
+1. Otvor aplikáciu a stlač **Okno na TV** – otvorí sa čierne okno len s textom.
+2. Okno presuň na televízor (HDMI kábel) a daj ho na celú obrazovku.
+3. Ovládaj v pôvodnom okne. Tablet sa v tomto prípade nepoužíva.
+
+Alebo, ak máš Chromecast bez registrácie: v Chrome na počítači zvoľ
+*⋮ → Prenášať… → Zdroje: Prenos karty* a vyber okno s textom.
+
+### Prečo to nejde úplne bez počítača
+
+Adresa na GitHub Pages (časť A) je **statický hosting** – vie len vydávať súbory,
+ale nevie si nič zapamätať ani nič medzi zariadeniami preposielať. Tablet by teda
+nemal kam text poslať a televízor nemal odkiaľ ho vziať. Preto v tomto režime musí
+niekde bežať malý server – buď ten priložený na počítači v kostole, alebo
+Chromecast, ktorý zohráva rovnakú úlohu (časti A–C).
+
+Teoreticky sa dá namiesto počítača použiť aj bezplatná internetová služba na
+prenos správ (napr. Firebase alebo Cloudflare Workers), ale znamená to ďalší účet,
+nastavovanie kľúčov a závislosť na cudzej službe počas omše. Preto to aplikácia
+zámerne nerobí.
 
 ---
 
@@ -614,6 +687,11 @@ js/display-core.js vykreslenie textu + automatická veľkosť písma
 js/cast.js        Google Cast (odosielanie)
 js/app.js         rozhranie a živý režim
 ```
+
+Priložený server okrem súborov obsluhuje aj prenos stavu medzi zariadeniami:
+`GET /api/status` (stav a adresy), `GET /api/stream` (Server-Sent Events pre
+obrazovky) a `POST /api/state` (ovládanie posiela aktuálnu slohu). Na statickom
+hostingu tieto adresy neexistujú a aplikácia túto možnosť sama vypne.
 
 Komunikácia s prijímačom ide cez vlastný Cast kanál
 `urn:x-cast:sk.organista.texty`; posiela sa JSON so slohou, názvom, číslom

@@ -380,3 +380,20 @@ body.is-live .toast.is-visible { transform: translate(-50%, 0); }
   .editor__preview { max-width: none; min-width: 0; position: static; }
   .editor__preview .preview__screen { max-height: 30vh; }
 }
+
+/* Pieseň, ktorá už je v sete */
+.btn--inset {
+  background: transparent; color: var(--ok);
+  border-color: rgba(46,204,113,.55); opacity: 1;
+}
+.btn--inset:disabled { opacity: 1; }
+.quickhit__in { color: var(--ok); font-size: 14px; font-weight: 700; white-space: nowrap; }
+
+/* Adresy pre obrazovku cez sieť */
+.netaddr { display: flex; flex-direction: column; gap: 8px; }
+.netaddr__row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.netaddr__url {
+  flex: 1; min-width: 220px; font-size: 19px; font-weight: 700; color: var(--accent);
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 14px 16px; user-select: all; word-break: break-all;
+}

@@ -4,7 +4,7 @@ import { store, loadSettings, saveSettings, DEFAULT_SETTINGS } from './store.js'
 import { searchSongs, compareSongs, normalize, parseNumber, VERSE_TYPES } from './songs.js';
 import { createEditor } from './editor.js';
 import { importFiles, systemForFolder } from './import.js';
-import { createLocalBus, displayState } from './bus.js';
+import { createLocalBus, createNetBus, displayState } from './bus.js';
 import { createDisplay } from './display-core.js';
 import { createCast } from './cast.js';
 
@@ -24,6 +24,7 @@ const state = {
 };
 
 const bus = createLocalBus();
+const net = createNetBus({ onStatus: (status) => renderNetStatus(status) });
 let editor = null;
 let preview = null;
 let displayWindow = null;
@@ -162,9 +163,12 @@ function songRow(song, { action, actionLabel, subtitle }) {
     openEditor(song);
   };
 
+  const inSet = isInSet(song.id);
   const button = document.createElement('button');
-  button.className = 'btn btn--add';
-  button.textContent = actionLabel;
+  button.className = `btn btn--add${inSet ? ' btn--inset' : ''}`;
+  button.textContent = inSet ? '✓ V sete' : actionLabel;
+  button.disabled = inSet;
+  button.title = inSet ? 'Pieseň už je v sete' : 'Pridať pieseň do setu';
   button.onclick = (event) => {
     event.stopPropagation();
     action(song);
@@ -215,7 +219,12 @@ function openSongPreview(song) {
     dialog.close();
     openEditor(song);
   };
-  $('#dialogAdd').onclick = () => {
+  const addButton = $('#dialogAdd');
+  const alreadyIn = isInSet(song.id);
+  addButton.textContent = alreadyIn ? '✓ Už je v sete' : '+ Do setu';
+  addButton.disabled = alreadyIn;
+  addButton.classList.toggle('btn--inset', alreadyIn);
+  addButton.onclick = () => {
     addToSet(song.id);
     dialog.close();
   };
@@ -269,16 +278,29 @@ function setupEditor() {
 
 // ------------------------------------------------------------------- set
 
+function isInSet(songId) {
+  return state.set.items.includes(songId);
+}
+
+/** @returns {boolean} true, ak pieseň pribudla; false, ak už v sete bola */
 function addToSet(songId, { silent } = {}) {
-  if (!songById(songId)) return;
+  const song = songById(songId);
+  if (!song) return false;
+  if (isInSet(songId)) {
+    if (!silent) toast(`„${song.title}“ už v sete je.`, 'warn');
+    return false;
+  }
   state.set.items.push(songId);
   renderSetList();
-  if (!silent) toast(`Pridané: ${songById(songId).title}`, 'ok');
+  renderSongList();
+  if (!silent) toast(`Pridané: ${song.title}`, 'ok');
+  return true;
 }
 
 function removeFromSet(index) {
   state.set.items.splice(index, 1);
   renderSetList();
+  renderSongList();
 }
 
 function moveInSet(index, delta) {
@@ -346,6 +368,7 @@ function renderSavedSets() {
     open.onclick = () => {
       state.set = { id: saved.id, name: saved.name, items: saved.items.slice() };
       renderSetList();
+      renderSongList();
       toast(`Načítaný set „${saved.name}“`, 'ok');
     };
     const remove = document.createElement('button');
@@ -405,8 +428,9 @@ function renderQuickResults(boxId, value, onPick) {
   for (const song of matches.slice(0, 8)) {
     const button = document.createElement('button');
     button.className = 'quickhit';
+    const mark = state.view === 'set' && isInSet(song.id) ? '<span class="quickhit__in">✓ v sete</span>' : '';
     button.innerHTML = `<span class="quickhit__num">${songLabel(song) || '—'}</span>
-      <span class="quickhit__title">${song.title}</span><span class="quickhit__folder">${song.folder}</span>`;
+      <span class="quickhit__title">${song.title}</span>${mark}<span class="quickhit__folder">${song.folder}</span>`;
     button.onclick = () => onPick(song);
     box.appendChild(button);
   }
@@ -564,20 +588,82 @@ function publish() {
     position: state.live.songs.length > 1 ? `${state.live.songIndex + 1}/${state.live.songs.length}` : '',
   });
   bus.send(payload);
+  net.send(payload);
   cast.send(payload);
   if (preview) preview.render(payload);
+}
+
+function renderNetStatus(status) {
+  const badge = $('#netStatus');
+  badge.hidden = !status.available;
+  if (status.available) {
+    badge.textContent = status.screens
+      ? `Obrazovka cez sieť: ${status.screens === 1 ? '1 pripojená' : `${status.screens} pripojené`}`
+      : 'Obrazovka cez sieť: pripravená';
+    badge.className = status.screens ? 'badge badge--ok' : 'badge';
+  }
+
+  const hint = $('#netHint');
+  const list = $('#netAddresses');
+  const screens = $('#netScreens');
+  if (!hint) return;
+
+  if (!status.available) {
+    hint.innerHTML = 'Táto možnosť funguje, keď je aplikácia spustená z priloženého servera '
+      + '(<code>npm start</code>) v počítači na rovnakej sieti. Teraz je aplikácia otvorená '
+      + 'zo statického hostingu alebo zo súboru, takže nemá cez čo posielať text na iné zariadenie. '
+      + 'Použi Chromecast alebo tlačidlo <strong>Okno na TV</strong>.';
+    list.innerHTML = '';
+    screens.textContent = '';
+    return;
+  }
+
+  hint.innerHTML = 'Na televízore alebo počítači pri televízore otvor v prehliadači túto adresu '
+    + 'a daj ju na celú obrazovku. Text sa tam objaví okamžite a sám sa mení podľa toho, '
+    + 'čo robíš na tablete. Obrazoviek môže byť aj viac naraz.';
+  const port = status.port || location.port || 8080;
+  const addresses = (status.addresses.length ? status.addresses : [location.hostname])
+    .map((address) => `http://${address}:${port}/display.html`);
+  list.innerHTML = '';
+  for (const address of addresses) {
+    const row = document.createElement('div');
+    row.className = 'netaddr__row';
+    const code = document.createElement('code');
+    code.className = 'netaddr__url';
+    code.textContent = address;
+    const copy = document.createElement('button');
+    copy.className = 'btn';
+    copy.textContent = 'Kopírovať';
+    copy.onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(address);
+        toast('Adresa skopírovaná.', 'ok');
+      } catch {
+        toast('Kopírovanie sa nepodarilo – prepíš adresu ručne.', 'warn');
+      }
+    };
+    row.append(code, copy);
+    list.appendChild(row);
+  }
+  screens.textContent = status.screens
+    ? `Práve pripojené obrazovky: ${status.screens}`
+    : 'Zatiaľ nie je pripojená žiadna obrazovka.';
 }
 
 function renderCastStatus(status) {
   const badge = $('#castStatus');
   const button = $('#castBtn');
   if (!state.settings.castAppId) {
-    badge.textContent = 'Chromecast: nenastavený';
-    badge.className = 'badge';
+    badge.hidden = true;                     // bez App ID nie je čo hlásiť
     button.textContent = 'Nastaviť Cast';
-    button.onclick = () => setView('settings');
+    button.onclick = () => {
+      setView('settings');
+      renderSettings();
+      net.probe();
+    };
     return;
   }
+  badge.hidden = false;
   if (status.connected) {
     badge.textContent = `Chromecast: ${status.deviceName || 'pripojený'}`;
     badge.className = 'badge badge--ok';
@@ -607,6 +693,13 @@ function openDisplayWindow() {
 }
 
 // ------------------------------------------------------------- nastavenia
+
+let netPollTimer = null;
+
+function watchNetStatus(active) {
+  clearInterval(netPollTimer);
+  netPollTimer = active ? setInterval(() => net.probe(), 5000) : null;
+}
 
 function renderSettings() {
   $('#castAppId').value = state.settings.castAppId;
@@ -685,7 +778,11 @@ function bindEvents() {
       if (state.view === 'editor' && editor.isDirty()
         && !confirm('Máš neuložené zmeny v piesni. Naozaj odísť bez uloženia?')) return;
       setView(node.dataset.goto);
-      if (node.dataset.goto === 'settings') renderSettings();
+      if (node.dataset.goto === 'settings') {
+        renderSettings();
+        net.probe();
+      }
+      watchNetStatus(node.dataset.goto === 'settings');
       publish();
     };
   });
@@ -743,23 +840,26 @@ function bindEvents() {
     if (state.set.items.length && !confirm('Vyprázdniť aktuálny set?')) return;
     state.set = { id: null, name: 'Nový set', items: [] };
     renderSetList();
+    renderSongList();
   };
   $('#startSet').onclick = () => startLive(state.set.items, 0);
 
   $('#quickAdd').oninput = (event) => {
     renderQuickResults('#quickAddResults', event.target.value, (song) => {
-      addToSet(song.id);
-      $('#quickAdd').value = '';
-      $('#quickAddResults').innerHTML = '';
+      if (addToSet(song.id)) {
+        $('#quickAdd').value = '';
+        $('#quickAddResults').innerHTML = '';
+      }
     });
   };
   $('#quickAdd').onkeydown = (event) => {
     if (event.key !== 'Enter') return;
     const matches = quickMatches(event.target.value);
     if (matches.length) {
-      addToSet(matches[0].id);
-      event.target.value = '';
-      $('#quickAddResults').innerHTML = '';
+      if (addToSet(matches[0].id)) {
+        event.target.value = '';
+        $('#quickAddResults').innerHTML = '';
+      }
     } else {
       toast('Pieseň s týmto číslom sa nenašla.', 'warn');
     }
@@ -908,7 +1008,9 @@ async function main() {
   bindEvents();
   renderSettings();
   renderCastStatus(cast.state);
+  renderNetStatus(net.status);
   cast.start();
+  await net.probe();
   await reloadLibrary();
   setView('library');
   publish();
