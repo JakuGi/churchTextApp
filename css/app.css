@@ -397,3 +397,7 @@ body.is-live .toast.is-visible { transform: translate(-50%, 0); }
   background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius);
   padding: 14px 16px; user-select: all; word-break: break-all;
 }
+
+/* Časti rozhrania podľa toho, či beží aplikácia v prehliadači alebo v Androide */
+body.is-native .only-web { display: none !important; }
+body:not(.is-native) .only-native { display: none !important; }

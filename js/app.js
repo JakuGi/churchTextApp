@@ -1,10 +1,11 @@
 // Ovládacia aplikácia pre organistu (tablet).
 
-import { store, loadSettings, saveSettings, DEFAULT_SETTINGS } from './store.js';
-import { searchSongs, compareSongs, normalize, parseNumber, VERSE_TYPES } from './songs.js';
+import { store, loadSettings, saveSettings, storageKind } from './store.js';
+import { searchSongs, compareSongs, normalize, parseNumber, VERSE_TYPES, songToXml } from './songs.js';
 import { createEditor } from './editor.js';
 import { importFiles, systemForFolder } from './import.js';
-import { createLocalBus, createNetBus, displayState } from './bus.js';
+import { createLocalBus, createNetBus, createNativeBus, displayState } from './bus.js';
+import { isNative, call } from './native.js';
 import { createDisplay } from './display-core.js';
 import { createCast } from './cast.js';
 
@@ -20,11 +21,13 @@ const state = {
   set: { id: null, name: 'Nový set', items: [] },   // items = id piesní
   live: { songs: [], songIndex: 0, verseIndex: 0, blank: false },
   settings: loadSettings(),
+  display: { connected: false, name: '' },
   view: 'library',
 };
 
 const bus = createLocalBus();
 const net = createNetBus({ onStatus: (status) => renderNetStatus(status) });
+const nativeBus = createNativeBus();
 let editor = null;
 let preview = null;
 let displayWindow = null;
@@ -589,8 +592,39 @@ function publish() {
   });
   bus.send(payload);
   net.send(payload);
+  nativeBus.send(payload);
   cast.send(payload);
   if (preview) preview.render(payload);
+}
+
+function renderDisplayStatus({ connected, name }) {
+  state.display = { connected, name };
+  const badge = $('#displayStatus');
+  badge.hidden = !isNative;
+  badge.textContent = connected
+    ? `Druhá obrazovka: ${name || 'pripojená'}`
+    : 'Druhá obrazovka: nepripojená';
+  badge.className = connected ? 'badge badge--ok' : 'badge badge--warn';
+
+  const button = $('#displayBtn');
+  if (button) button.hidden = !isNative || connected;
+
+  const hint = $('#displayHint');
+  const detail = $('#displayDetail');
+  if (!hint || !detail) return;
+  if (connected) {
+    hint.textContent = 'Televízor je pripojený. Texty piesní sa naň premietajú automaticky, '
+      + 'na tablete zostáva ovládanie.';
+    detail.textContent = name || 'pripojená';
+    detail.className = 'badge badge--ok';
+  } else {
+    hint.textContent = 'Zatiaľ nie je pripojená žiadna druhá obrazovka. Pripoj televízor HDMI káblom, '
+      + 'alebo v nastaveniach tabletu zapni zrkadlenie obrazovky (Prenášať / Smart View). '
+      + 'Aplikácia si to všimne sama.';
+    detail.textContent = 'nepripojená';
+    detail.className = 'badge badge--warn';
+  }
+  publish();
 }
 
 function renderNetStatus(status) {
@@ -799,7 +833,10 @@ function bindEvents() {
 
   // import priečinka / súborov
   $('#newSong').onclick = () => openEditor(null);
-  $('#pickFolder').onclick = () => $('#folderInput').click();
+  $('#pickFolder').onclick = () => {
+    if (isNative) startNativeImport();
+    else $('#folderInput').click();
+  };
   $('#pickFiles').onclick = () => $('#fileInput').click();
   const handleFiles = async (files, folderName) => {
     if (!files || !files.length) return;
@@ -933,6 +970,7 @@ function bindEvents() {
     toast('Knižnica vymazaná.', 'ok');
   };
   $('#loadSamples').onclick = loadSampleSongs;
+  $('#exportLibrary').onclick = exportLibrary;
 
   $$('[data-close-dialog]').forEach((node) => {
     node.onclick = () => node.closest('dialog').close();
@@ -962,6 +1000,82 @@ function bindEvents() {
     }
   });
 }
+
+/** Uloží všetky piesne do jedného .xml súboru ako zálohu. */
+function exportLibrary() {
+  if (!state.songs.length) {
+    toast('Knižnica je prázdna.', 'warn');
+    return;
+  }
+  const body = state.songs
+    .map((song) => songToXml(song).replace(/<\?xml[^>]*\?>\s*/, '').trim())
+    .join('\n');
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<piesne>\n${body}\n</piesne>\n`;
+  const fileName = `organista-zaloha-${new Date().toISOString().slice(0, 10)}.xml`;
+
+  if (isNative) {
+    const where = call('exportFile', fileName, xml);
+    toast(where ? `Záloha uložená: ${where}` : 'Zálohu sa nepodarilo uložiť.', where ? 'ok' : 'warn');
+    return;
+  }
+  const blob = new Blob([xml], { type: 'application/xml;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  toast(`Záloha uložená ako ${fileName}`, 'ok');
+}
+
+// ------------------------------------------------- import v aplikácii Android
+
+const nativeImport = { files: [], running: false };
+
+function startNativeImport() {
+  nativeImport.files = [];
+  nativeImport.running = true;
+  $('#importInfo').textContent = 'Vyber priečinok s piesňami…';
+  call('importFolder');
+}
+
+/** Natívna časť posiela súbory po dávkach. */
+window.organistaImportChunk = (batch) => {
+  if (!nativeImport.running) return;
+  for (const item of batch || []) nativeImport.files.push(item);
+  $('#importInfo').textContent = `Načítavam ${nativeImport.files.length} súborov…`;
+};
+
+window.organistaImportDone = async (total) => {
+  if (!nativeImport.running) return;
+  nativeImport.running = false;
+  const files = nativeImport.files;
+  nativeImport.files = [];
+
+  if (!files.length) {
+    $('#importInfo').textContent = Number(total) === 0
+      ? 'Nenašli sa žiadne .xml súbory.'
+      : 'Načítanie sa nepodarilo.';
+    return;
+  }
+
+  const result = await importFiles(files.map((item) => ({
+    name: item.name,
+    webkitRelativePath: `${item.folder}/${item.name}`,
+    text: async () => item.text,
+  })));
+  await reloadLibrary();
+  renderSettings();
+  $('#importInfo').textContent = `Načítaných ${pluralSongs(result.songs)} z ${result.files} súborov.`;
+  toast(`Načítaných ${pluralSongs(result.songs)}.`, 'ok');
+};
+
+/** Zmena druhej obrazovky – volá natívna časť. */
+window.organistaDisplayChanged = (info) => {
+  renderDisplayStatus({ connected: !!(info && info.connected), name: (info && info.name) || '' });
+};
 
 async function loadSampleSongs() {
   const samples = [
@@ -1007,13 +1121,26 @@ async function main() {
   setupEditor();
   bindEvents();
   renderSettings();
-  renderCastStatus(cast.state);
-  renderNetStatus(net.status);
-  cast.start();
-  await net.probe();
+  if (isNative) {
+    document.body.classList.add('is-native');
+    renderDisplayStatus({ connected: !!call('displayName'), name: call('displayName') || '' });
+    $('#displayBtn').onclick = () => call('openDisplaySettings');
+    $('#displaySettingsBtn').onclick = () => call('openDisplaySettings');
+  } else {
+    renderCastStatus(cast.state);
+    renderNetStatus(net.status);
+    cast.start();
+    await net.probe();
+  }
   await reloadLibrary();
   setView('library');
   publish();
+
+  const kind = await storageKind();
+  $('#storageInfo').textContent = kind === 'android'
+    ? 'Piesne sú uložené v súkromnom priečinku aplikácie v tablete. Iná aplikácia sa k nim '
+      + 'nedostane a Android ich zálohuje spolu s aplikáciou. Zálohu si vieš uložiť aj ručne tlačidlom vyššie.'
+    : 'Piesne sa ukladajú do databázy prehliadača (IndexedDB) v tomto zariadení.';
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(() => {});

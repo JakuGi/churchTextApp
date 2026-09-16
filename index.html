@@ -23,10 +23,12 @@
     <button class="tab" data-goto="settings">Nastavenia</button>
   </nav>
   <div class="topbar__cast">
-    <span class="badge" id="netStatus" hidden>Obrazovka cez sieť</span>
+    <span class="badge" id="displayStatus" hidden>Druhá obrazovka</span>
+    <span class="badge only-web" id="netStatus" hidden>Obrazovka cez sieť</span>
     <span class="badge" id="castStatus">Chromecast</span>
     <button class="btn" id="castBtn">Pripojiť Chromecast</button>
-    <button class="btn" id="openDisplay" title="Otvorí okno s textom, ktoré prenesieš na TV">Okno na TV</button>
+    <button class="btn only-web" id="openDisplay" title="Otvorí okno s textom, ktoré prenesieš na TV">Okno na TV</button>
+    <button class="btn btn--primary only-native" id="displayBtn" hidden>📺 Pripojiť obrazovku</button>
   </div>
 </header>
 
@@ -160,15 +162,29 @@
   <!-- ============================ NASTAVENIA ============================== -->
   <section class="view" data-view="settings">
     <div class="content content--wide">
-      <h2 class="section-title">Obrazovka cez sieť (bez Chromecastu)</h2>
-      <div class="card" id="netCard">
+      <h2 class="section-title only-native">Druhá obrazovka (televízor)</h2>
+      <div class="card only-native">
+        <p class="hint" id="displayHint"></p>
+        <div class="row">
+          <button class="btn btn--big" id="displaySettingsBtn">Otvoriť nastavenia zrkadlenia</button>
+          <span class="badge" id="displayDetail"></span>
+        </div>
+        <p class="hint">
+          Keď je televízor pripojený, aplikácia naň sama pustí texty piesní a na tablete
+          zostane ovládanie. Funguje to cez HDMI kábel, bezdrôtový displej aj cez
+          zrkadlenie obrazovky na Chromecast – zapína sa v nastaveniach tabletu.
+        </p>
+      </div>
+
+      <h2 class="section-title only-web">Obrazovka cez sieť (bez Chromecastu)</h2>
+      <div class="card only-web" id="netCard">
         <p class="hint" id="netHint"></p>
         <div id="netAddresses" class="netaddr"></div>
         <p class="hint" id="netScreens"></p>
       </div>
 
-      <h2 class="section-title">Chromecast</h2>
-      <div class="card">
+      <h2 class="section-title only-web">Chromecast</h2>
+      <div class="card only-web">
         <label for="castAppId">Application ID prijímača (Google Cast Developer Console)</label>
         <input class="input" id="castAppId" placeholder="napr. A1B2C3D4" autocomplete="off">
         <p class="hint">
@@ -210,9 +226,13 @@
       <div class="card" id="folderAdmin"></div>
 
       <h2 class="section-title">Údržba</h2>
-      <div class="card row">
-        <button class="btn" id="loadSamples">Načítať ukážkové piesne</button>
-        <button class="btn btn--danger" id="clearLibrary">Zmazať celú knižnicu</button>
+      <div class="card">
+        <div class="row">
+          <button class="btn only-web" id="loadSamples">Načítať ukážkové piesne</button>
+          <button class="btn" id="exportLibrary">Zálohovať knižnicu do súboru</button>
+          <button class="btn btn--danger" id="clearLibrary">Zmazať celú knižnicu</button>
+        </div>
+        <p class="hint" id="storageInfo"></p>
       </div>
 
       <h2 class="section-title">Klávesové skratky (aj pre pedál / bluetooth ovládač)</h2>

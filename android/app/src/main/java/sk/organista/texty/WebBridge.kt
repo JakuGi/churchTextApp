@@ -1,0 +1,67 @@
+package sk.organista.texty
+
+import android.webkit.JavascriptInterface
+
+/**
+ * Rozhranie, ktoré webová časť aplikácie vidí ako `window.OrganistaNative`.
+ *
+ * Metódy volá WebView z vlastného vlákna, preto sa všetko, čo sa dotýka
+ * obrazovky, posiela do hlavného vlákna cez MainActivity.
+ */
+class WebBridge(private val activity: MainActivity) {
+
+    @JavascriptInterface
+    fun version(): String = BuildConfigCompat.versionName
+
+    /** Stav (sloha, ktorá sa má premietať) pre druhú obrazovku. */
+    @JavascriptInterface
+    fun publish(stateJson: String) {
+        activity.publishState(stateJson)
+    }
+
+    /** Názov pripojenej druhej obrazovky, alebo prázdny reťazec. */
+    @JavascriptInterface
+    fun displayName(): String = activity.currentDisplayName() ?: ""
+
+    /** Otvorí systémové nastavenia zrkadlenia obrazovky. */
+    @JavascriptInterface
+    fun openDisplaySettings() {
+        activity.openDisplaySettings()
+    }
+
+    // ------------------------------------------------------------ úložisko
+
+    @JavascriptInterface
+    fun read(name: String): String = activity.storage.read(name)
+
+    @JavascriptInterface
+    fun writeBegin(name: String) {
+        activity.storage.begin(name)
+    }
+
+    @JavascriptInterface
+    fun writeChunk(name: String, chunk: String) {
+        activity.storage.append(name, chunk)
+    }
+
+    @JavascriptInterface
+    fun writeCommit(name: String): Boolean = activity.storage.commit(name)
+
+    // -------------------------------------------------------------- súbory
+
+    /** Spustí výber priečinka s piesňami; výsledok príde do JS po častiach. */
+    @JavascriptInterface
+    fun importFolder() {
+        activity.startFolderImport()
+    }
+
+    /** Uloží súbor do priečinka Stiahnuté/Organista. */
+    @JavascriptInterface
+    fun exportFile(fileName: String, content: String): String =
+        activity.exportFile(fileName, content)
+}
+
+/** Verzia aplikácie bez potreby generovaného BuildConfig. */
+object BuildConfigCompat {
+    const val versionName: String = "1.0.0"
+}

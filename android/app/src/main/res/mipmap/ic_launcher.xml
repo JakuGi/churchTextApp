@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Ikona pre Android 7.0–7.1 (staršie ako adaptívne ikony). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <path
+        android:fillColor="#171c22"
+        android:pathData="M6,0 h36 a6,6 0 0 1 6,6 v36 a6,6 0 0 1 -6,6 h-36 a6,6 0 0 1 -6,-6 v-36 a6,6 0 0 1 6,-6 z" />
+    <path
+        android:fillColor="#0f1216"
+        android:pathData="M8,11 h32 v22 h-32 z" />
+    <path
+        android:fillColor="#ffb020"
+        android:pathData="M8,11 h32 v2 h-32 z M12,17 h24 v2.5 h-24 z M20,37 h8 v3 h-8 z" />
+    <path
+        android:fillColor="#eef2f6"
+        android:pathData="M12,22 h17 v2.5 h-17 z M12,27 h21 v2.5 h-21 z" />
+</vector>

@@ -3,9 +3,21 @@
 // 2) sieť (SSE cez priložený server) – pre obrazovku na inom zariadení,
 // 3) Google Cast – priamo na Chromecast prijímač (receiver.html).
 
+import { isNative, call } from './native.js';
+
 export const CHANNEL = 'organista-texty';
 export const MIRROR_KEY = 'organista-stav';
 export const CAST_NAMESPACE = 'urn:x-cast:sk.organista.texty';
+
+/** Druhá obrazovka v aplikácii pre Android (natívne Presentation API). */
+export function createNativeBus() {
+  return {
+    send(state) {
+      if (!isNative) return;
+      call('publish', JSON.stringify(state));
+    },
+  };
+}
 
 export function createLocalBus() {
   let channel = null;

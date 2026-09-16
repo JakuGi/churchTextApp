@@ -35,6 +35,12 @@
 
   createLocalBus().subscribe(show);
 
+  // Aplikácia pre Android posiela stav priamo sem, na druhú obrazovku.
+  window.organistaRender = (state) => {
+    if (state) show(state);
+  };
+  if (window.OrganistaNative) setStatus('Pripojené k tabletu. Čakám na text piesne…', true);
+
   // Obrazovka na inom zariadení – stav chodí zo servera.
   const net = subscribeNet(show, {
     onOpen: () => setStatus('Pripojené k tabletu. Čakám na text piesne…', true),
