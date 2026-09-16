@@ -20,7 +20,8 @@ hosting, žiadny internet.**
 7. [Súbory XML](#7-súbory-xml)
 8. [Kde sú uložené dáta a ako ich zálohovať](#8-kde-sú-uložené-dáta-a-ako-ich-zálohovať)
 9. [Keď niečo nefunguje](#9-keď-niečo-nefunguje)
-10. [Pre technicky zdatných](#10-pre-technicky-zdatných)
+10. [Ako to otestovať bez televízora](#10-ako-to-otestovať-bez-televízora)
+11. [Pre technicky zdatných](#11-pre-technicky-zdatných)
 
 ---
 
@@ -194,7 +195,79 @@ Odinštalovanie aplikácie zmaže aj dáta, preto si pred ňou vždy sprav zálo
 
 ---
 
-## 10. Pre technicky zdatných
+## 10. Ako to otestovať bez televízora
+
+Druhú obrazovku sa dá vyskúšať aj doma pri počítači, bez televízora a bez
+Chromecastu. Sú tri možnosti, od najrýchlejšej po najvernejšiu.
+
+### A. Len počítač, bez Androidu (5 minút)
+
+Otestuje všetko okrem natívnej časti – knižnicu, sety, editor, živý režim aj
+premietaný text. Je to ten istý kód, aký je v aplikácii.
+
+```bash
+npm start
+```
+
+Otvor `http://localhost:8080`, načítaj ukážkové piesne (*Nastavenia → Načítať
+ukážkové piesne*) a stlač **Okno na TV**. Otvorí sa druhé okno len s textom –
+to je presne to, čo uvidia veriaci. Prehádž ho na druhý monitor alebo ho daj
+vedľa ovládania a skúšaj prepínať slohy.
+
+### B. Ľubovoľný telefón alebo tablet s Androidom (najlepší pomer námahy a výsledku)
+
+Android má **vstavanú simuláciu druhej obrazovky**, ktorá je presne na testovanie
+takýchto aplikácií. Nepotrebuješ televízor ani Chromecast – stačí telefón.
+
+1. Nainštaluj APK (odkaz v časti 1).
+2. Zapni **vývojárske nastavenia**: *Nastavenia → Informácie o telefóne* →
+   sedemkrát ťukni na **Číslo zostavy**.
+3. *Nastavenia → Systém → Pre vývojárov* → v časti *Kreslenie* zapni
+   **Simulovať sekundárne obrazovky** a vyber rozlíšenie (napr. 1280×720).
+4. Na obrazovke sa objaví malé okno – to je „televízor“.
+5. Spusti Organistu, načítaj piesne a stlač **▶ Spustiť premietanie**.
+
+V aplikácii musí naskočiť zelené **Druhá obrazovka: …** a v malom okne sa objaví
+text piesne, zatiaľ čo na telefóne zostanú tlačidlá. Presne tak sa to bude
+správať s televízorom.
+
+> Aplikácia hľadá obrazovku dvoma spôsobmi – cez `MediaRouter` (to zachytí
+> Chromecast a bezdrôtový displej) aj cez `DisplayManager` (to zachytí HDMI
+> a práve túto simulovanú obrazovku). Preto test zodpovedá skutočnosti.
+>
+> Na niektorých telefónoch výrobcovia túto voľbu presunuli alebo vypli. Ak ju
+> nenájdeš, použi možnosť C.
+
+### C. Len počítač, emulátor Androidu
+
+1. Nainštaluj [Android Studio](https://developer.android.com/studio).
+2. *Device Manager* → vytvor zariadenie (tablet, API 34 alebo 35) a spusti ho.
+3. V okne emulátora klikni na **⋯** (Extended controls) → **Displays** →
+   **Add secondary display** → zvoľ rozlíšenie → *Apply changes*.
+4. Nainštaluj APK: stiahnutý súbor pretiahni myšou do okna emulátora, alebo
+   `adb install organista-1.0.0.apk`.
+5. Spusti aplikáciu a premietaj – text sa objaví na druhej obrazovke emulátora.
+
+Overiť, či Android naozaj hlási druhú obrazovku, sa dá aj z príkazového riadka:
+
+```bash
+adb shell dumpsys display | grep -i presentation
+```
+
+### Čo si pri teste všimnúť
+
+| Krok | Čo sa má stať |
+|---|---|
+| Druhá obrazovka pripojená | badge hore sa zmení na zelený **Druhá obrazovka: …** |
+| Spustenie piesne | na druhej obrazovke je text, na tablete ovládanie |
+| Ďalšia sloha / iná pieseň | text sa zmení okamžite |
+| **ČIERNA OBRAZOVKA** | druhá obrazovka sčernie, vybraná sloha zostane označená |
+| Vypnutie druhej obrazovky | badge zoranžovie, aplikácia funguje ďalej |
+| Zatvorenie a znovuotvorenie aplikácie | piesne aj sety sú na mieste |
+
+---
+
+## 11. Pre technicky zdatných
 
 ### Prečo natívny Android + WebView
 
