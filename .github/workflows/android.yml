@@ -100,12 +100,13 @@ jobs:
 
           Návod je v súbore README.md."
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release edit "$TAG" --notes "$NOTES" --title "Organista pre Android (posledná verzia)"
+            gh release edit "$TAG" --notes "$NOTES" --title "Organista pre Android (posledná verzia)" --target "$GITHUB_SHA"
             gh release upload "$TAG" "$APK" --clobber
           else
             gh release create "$TAG" "$APK" \
               --title "Organista pre Android (posledná verzia)" \
               --notes "$NOTES" \
+              --target "$GITHUB_SHA" \
               --prerelease
           fi
 

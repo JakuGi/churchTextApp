@@ -26,9 +26,13 @@ hosting, žiadny internet.**
 
 ## 1. Inštalácia do tabletu
 
-1. V tablete otvor stránku projektu na GitHube → vpravo **Releases** →
-   vydanie **Organista pre Android (posledná verzia)**.
-2. Stiahni súbor `organista-1.0.0.apk`.
+1. V tablete otvor priamy odkaz na stiahnutie:
+
+   **https://github.com/JakuGi/churchTextApp/releases/download/android-latest/organista-1.0.0.apk**
+
+   (Alebo: stránka projektu na GitHube → vpravo **Releases** → vydanie
+   **Organista pre Android (posledná verzia)**.)
+2. Počkaj, kým sa súbor stiahne celý.
 3. Ťukni na stiahnutý súbor. Android sa spýta na povolenie inštalovať aplikácie
    z tohto zdroja – potvrď **Nastavenia → Povoliť z tohto zdroja** a vráť sa späť.
 4. Ťukni **Inštalovať**. Na ploche pribudne ikona **Organista**.
