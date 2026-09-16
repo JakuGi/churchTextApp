@@ -105,7 +105,31 @@ function readBody(request, limit = 256 * 1024) {
   });
 }
 
-async function handleApi(request, response, path) {
+/**
+ * Sprostredkovanie stránky liturgického kalendára.
+ * Prehliadač si ju nemôže stiahnuť sám (cudzia doména), server áno.
+ */
+async function handleLiturgy(request, response, url) {
+  const day = (url.searchParams.get('den') || '').replace(/\D/g, '');
+  const target = day.length === 8 ? `https://lc.kbs.sk/?den=${day}` : 'https://lc.kbs.sk/';
+  try {
+    const page = await fetch(target, {
+      headers: { 'User-Agent': 'Organista/1.1 (+https://github.com/JakuGi/churchTextApp)' },
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!page.ok) {
+      sendJson(response, { ok: false, error: `Kalendár odpovedal ${page.status}` }, 502);
+      return;
+    }
+    const html = await page.text();
+    response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+    response.end(html);
+  } catch (error) {
+    sendJson(response, { ok: false, error: 'Kalendár sa nepodarilo načítať.' }, 502);
+  }
+}
+
+async function handleApi(request, response, path, url) {
   if (path === '/api/status') {
     sendJson(response, {
       app: 'organista',
@@ -117,6 +141,10 @@ async function handleApi(request, response, path) {
   }
   if (path === '/api/stream') {
     openStream(request, response);
+    return true;
+  }
+  if (path === '/api/liturgia') {
+    await handleLiturgy(request, response, url);
     return true;
   }
   if (path === '/api/state' && request.method === 'POST') {
@@ -138,7 +166,7 @@ createServer(async (request, response) => {
   const path = decodeURIComponent(url.pathname);
 
   if (path.startsWith('/api/')) {
-    if (await handleApi(request, response, path)) return;
+    if (await handleApi(request, response, path, url)) return;
     sendJson(response, { error: 'neznáme volanie' }, 404);
     return;
   }

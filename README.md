@@ -17,6 +17,7 @@ hosting, žiadny internet.**
 4. [Každá omša: tri kroky](#4-každá-omša-tri-kroky)
 5. [Ovládanie počas premietania](#5-ovládanie-počas-premietania)
 6. [Písanie a úprava piesní](#6-písanie-a-úprava-piesní)
+6b. [Responzóriový žalm z lc.kbs.sk](#6b-responzóriový-žalm-z-lckbssk)
 7. [Súbory XML](#7-súbory-xml)
 8. [Kde sú uložené dáta a ako ich zálohovať](#8-kde-sú-uložené-dáta-a-ako-ich-zálohovať)
 9. [Keď niečo nefunguje](#9-keď-niečo-nefunguje)
@@ -29,7 +30,7 @@ hosting, žiadny internet.**
 
 1. V tablete otvor priamy odkaz na stiahnutie:
 
-   **https://github.com/JakuGi/churchTextApp/releases/download/android-latest/organista-1.0.1.apk**
+   **https://github.com/JakuGi/churchTextApp/releases/download/android-latest/organista-1.1.0.apk**
 
    (Alebo: stránka projektu na GitHube → vpravo **Releases** → vydanie
    **Organista pre Android (posledná verzia)**.)
@@ -41,9 +42,11 @@ hosting, žiadny internet.**
    z tohto zdroja – potvrď **Nastavenia → Povoliť z tohto zdroja** a vráť sa späť.
 4. Ťukni **Inštalovať**. Na ploche pribudne ikona **Organista**.
 
-Aplikácia nepotrebuje žiadne povolenia ani internet. Nepýta si prístup ku
-kontaktom, polohe ani fotkám – k súborom sa dostane len vtedy, keď jej ty sám
-vyberieš priečinok s piesňami.
+Aplikácia si nepýta prístup ku kontaktom, polohe ani fotkám – k súborom sa
+dostane len vtedy, keď jej ty sám vyberieš priečinok s piesňami. Jediné
+povolenie, ktoré má, je **internet**, a používa ho výhradne na stiahnutie
+responzóriového žalmu z `lc.kbs.sk` (časť 6b). Piesne a sety zostávajú v tablete
+a nikam sa neodosielajú.
 
 > **Aktualizácia na novšiu verziu:** stiahni nové APK a nainštaluj cez staré.
 > Piesne ani sety sa nestratia. Ak Android inštaláciu odmietne s hláškou
@@ -157,6 +160,46 @@ náhľad toho, ako to bude vyzerať na televízore.
 - Existujúcu pieseň upravíš tlačidlom **✎** pri piesni v knižnici.
 - Rozpísaná pieseň sa nestratí – pri ďalšom otvorení editora ju appka ponúkne obnoviť.
 - **Stiahnuť XML** uloží pieseň do priečinka *Stiahnuté/Organista*.
+
+---
+
+## 6b. Responzóriový žalm z lc.kbs.sk
+
+Žalm na daný deň si nemusíš prepisovať ručne – aplikácia ho stiahne
+z liturgického kalendára KBS a pripraví na premietanie.
+
+### Ako to použiť
+
+1. V **Knižnici** ťukni vľavo dole na **📖 Žalm na dnes**.
+2. Otvorí sa okno, ktoré hneď načíta dnešný deň. Iný deň vyberieš tlačidlami
+   **Dnes / Zajtra / Najbližšia nedeľa**, alebo priamo v poli **Dátum**.
+3. Ukáže sa odkaz na žalm (napr. `Ž 111, 7-8. 9. 10`), názov sviatku a **refrén**,
+   teda to, čo sa spieva a čo sa bude premietať.
+4. Máš dve možnosti:
+   - **▶ Premietať teraz** – žalm sa hneď premieta a nikam sa neukladá
+     (po zavretí aplikácie zmizne);
+   - **Uložiť medzi žalmy** – pribudne do zbierky **Žalmy** ako pieseň s názvom
+     podľa dátumu a sviatku, napr. *17. 9. 2026 – Sv. Kornélia a Cypriána*.
+     Odvtedy sa dá pridať do setu ako ktorákoľvek iná pieseň.
+
+Ak má deň viac formulárov (napr. sviatok aj spomienka), nájdené žalmy sa uložia
+ako **jedna pieseň a každý žalm je samostatná sloha** – prepínaš ich teda
+rovnako ako slohy piesne.
+
+### Čo na to treba
+
+- **Internet** – aplikácia si stránku stiahne pri každom načítaní žalmu.
+  Je to jediná vec, na ktorú aplikácia internet potrebuje; piesne aj sety
+  zostávajú v tablete.
+- Vo verzii pre prehliadač to funguje pri spustení cez `npm start` (stránku
+  stiahne priložený server). Zo statického hostingu to prehliadač nedovolí,
+  lebo ide o cudziu doménu.
+
+### Keď sa žalm nenájde
+
+Okno má položku **Zobraziť načítaný text stránky** – ukáže presne to, čo
+aplikácia zo stránky prečítala. Ak by KBS zmenila podobu stránky, podľa tohto
+textu sa hľadanie rýchlo doladí.
 
 ---
 
@@ -319,7 +362,7 @@ správať s televízorom.
 3. V okne emulátora klikni na **⋯** (Extended controls) → **Displays** →
    **Add secondary display** → zvoľ rozlíšenie → *Apply changes*.
 4. Nainštaluj APK: stiahnutý súbor pretiahni myšou do okna emulátora, alebo
-   `adb install organista-1.0.1.apk`.
+   `adb install organista-1.1.0.apk`.
 5. Spusti aplikáciu a premietaj – text sa objaví na druhej obrazovke emulátora.
 
 Overiť, či Android naozaj hlási druhú obrazovku, sa dá aj z príkazového riadka:

@@ -55,6 +55,15 @@ class WebBridge(private val activity: MainActivity) {
         activity.startFolderImport()
     }
 
+    /**
+     * Stiahne stránku liturgického kalendára (responzóriový žalm).
+     * Výsledok príde do JS cez window.organistaLiturgy.
+     */
+    @JavascriptInterface
+    fun fetchLiturgy(dayKey: String) {
+        activity.fetchLiturgy(dayKey)
+    }
+
     /** Uloží súbor do priečinka Stiahnuté/Organista. */
     @JavascriptInterface
     fun exportFile(fileName: String, content: String): String =
@@ -63,5 +72,5 @@ class WebBridge(private val activity: MainActivity) {
 
 /** Verzia aplikácie bez potreby generovaného BuildConfig. */
 object BuildConfigCompat {
-    const val versionName: String = "1.0.1"
+    const val versionName: String = "1.1.0"
 }

@@ -39,6 +39,7 @@
       <h2>Zbierky</h2>
       <div id="folders" class="folders"></div>
       <div class="sidebar__import">
+        <button class="btn btn--block btn--big" id="psalmBtn">📖 Žalm na dnes</button>
         <button class="btn btn--primary btn--block btn--big" id="newSong">✎ Nová pieseň</button>
         <button class="btn btn--block" id="pickFolder">Načítať priečinok</button>
         <button class="btn btn--block" id="pickFiles">Načítať súbory</button>
@@ -341,6 +342,41 @@
   </div>
 </section>
 </main>
+
+<dialog id="psalmDialog" class="dialog dialog--wide">
+  <h3>Responzóriový žalm</h3>
+  <p class="hint">
+    Žalm sa načíta z liturgického kalendára KBS (<code>lc.kbs.sk</code>) podľa dátumu.
+    Vyberie sa refrén, ktorý sa spieva – ten sa premieta veriacim.
+  </p>
+
+  <div class="psalmbar">
+    <div class="chips" id="psalmQuick">
+      <button class="chip is-active" data-day="today">Dnes</button>
+      <button class="chip" data-day="tomorrow">Zajtra</button>
+      <button class="chip" data-day="sunday">Najbližšia nedeľa</button>
+    </div>
+    <label class="field field--date" for="psalmDate">Dátum
+      <input class="input" id="psalmDate" type="date">
+    </label>
+    <button class="btn btn--primary btn--big" id="psalmLoad">Načítať žalm</button>
+  </div>
+
+  <div class="dialog__body">
+    <p class="field__warn" id="psalmError" hidden></p>
+    <div id="psalmResult" class="psalmresult"></div>
+    <details class="field-more" id="psalmRawBox" hidden>
+      <summary>Zobraziť načítaný text stránky (na kontrolu)</summary>
+      <pre class="psalmraw" id="psalmRaw"></pre>
+    </details>
+  </div>
+
+  <div class="dialog__actions">
+    <button class="btn" data-close-dialog>Zavrieť</button>
+    <button class="btn btn--big" id="psalmSave" disabled>Uložiť medzi žalmy</button>
+    <button class="btn btn--primary btn--big" id="psalmPlay" disabled>▶ Premietať teraz</button>
+  </div>
+</dialog>
 
 <dialog id="pasteDialog" class="dialog">
   <h3>Vložiť celý text piesne</h3>

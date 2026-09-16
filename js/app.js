@@ -3,6 +3,7 @@
 import { store, loadSettings, saveSettings, storageKind } from './store.js';
 import { searchSongs, compareSongs, normalize, parseNumber, VERSE_TYPES, songToXml } from './songs.js';
 import { createEditor } from './editor.js';
+import { dateKey, todayKey, humanDate, lcUrl, parsePsalmPage, psalmSong } from './psalms.js';
 import { importFiles, systemForFolder } from './import.js';
 import { createLocalBus, createNetBus, createNativeBus, displayState } from './bus.js';
 import { isNative, call } from './native.js';
@@ -141,9 +142,11 @@ function renderFolders() {
 }
 
 function visibleSongs() {
+  // Jednorázovo načítaný žalm sa neukladá, preto nepatrí do zoznamu knižnice.
+  const saved = state.songs.filter((song) => !song.temporary);
   const pool = state.activeFolder
-    ? state.songs.filter((song) => song.folder === state.activeFolder)
-    : state.songs;
+    ? saved.filter((song) => song.folder === state.activeFolder)
+    : saved;
   return searchSongs(pool, state.query);
 }
 
@@ -236,6 +239,147 @@ function openSongPreview(song) {
     startLive([song.id], 0);
   };
   dialog.showModal();
+}
+
+// ------------------------------------------------- responzóriový žalm
+
+const psalm = { day: todayKey(), parsed: null, song: null, waiting: null };
+
+/**
+ * Stiahne stránku liturgického kalendára. V aplikácii pre Android to robí
+ * natívna časť, pri spustení zo servera jeho sprostredkovanie; na statickom
+ * hostingu to prehliadač nedovolí (cudzia doména).
+ */
+function loadLiturgyPage(day) {
+  if (isNative) {
+    return new Promise((resolve, reject) => {
+      psalm.waiting = { resolve, reject };
+      call('fetchLiturgy', day);
+      setTimeout(() => {
+        if (psalm.waiting) {
+          psalm.waiting = null;
+          reject(new Error('Kalendár neodpovedal včas.'));
+        }
+      }, 30000);
+    });
+  }
+  return fetch(`api/liturgia?den=${encodeURIComponent(day)}`)
+    .then((response) => {
+      if (!response.ok) throw new Error('Kalendár sa nepodarilo načítať.');
+      return response.text();
+    })
+    .catch(() => {
+      throw new Error('Žalm vie stiahnuť aplikácia v tablete alebo spustenie cez `npm start`. '
+        + 'Zo statickej stránky to prehliadač nedovolí.');
+    });
+}
+
+/** Odpoveď z natívnej časti. */
+window.organistaLiturgy = (result) => {
+  const pending = psalm.waiting;
+  psalm.waiting = null;
+  if (!pending) return;
+  if (result && result.ok) pending.resolve(result.html);
+  else pending.reject(new Error((result && result.error) || 'Kalendár sa nepodarilo načítať.'));
+};
+
+function nextSundayKey() {
+  const date = new Date();
+  date.setDate(date.getDate() + ((7 - date.getDay()) % 7 || 7));
+  return dateKey(date);
+}
+
+function setPsalmDay(day) {
+  psalm.day = day;
+  const iso = `${day.slice(0, 4)}-${day.slice(4, 6)}-${day.slice(6, 8)}`;
+  $('#psalmDate').value = iso;
+  $$('#psalmQuick [data-day]').forEach((chip) => {
+    const key = chip.dataset.day === 'today' ? todayKey()
+      : chip.dataset.day === 'tomorrow' ? dateKey(new Date(Date.now() + 86400000))
+        : nextSundayKey();
+    chip.classList.toggle('is-active', key === day);
+  });
+}
+
+function renderPsalmResult() {
+  const box = $('#psalmResult');
+  const parsed = psalm.parsed;
+  box.innerHTML = '';
+  $('#psalmSave').disabled = !psalm.song;
+  $('#psalmPlay').disabled = !psalm.song;
+  if (!parsed) return;
+
+  if (!parsed.psalms.length) {
+    box.innerHTML = '<p class="field__warn">Na tejto stránke sa nenašiel responzóriový žalm. '
+      + 'Pozri si načítaný text nižšie – podľa neho sa dá hľadanie doladiť.</p>';
+    return;
+  }
+
+  for (const item of parsed.psalms) {
+    const card = document.createElement('div');
+    card.className = 'psalmcard';
+    card.innerHTML = `
+      <div class="psalmcard__head">
+        <span class="psalmcard__ref">${item.reference || 'Responzóriový žalm'}</span>
+        <span class="psalmcard__feast">${[parsed.dateLabel, parsed.feast].filter(Boolean).join(' · ')}</span>
+      </div>
+      <div class="psalmcard__refrain">${item.lines.join('<br>')}</div>`;
+    box.appendChild(card);
+  }
+
+  const note = document.createElement('p');
+  note.className = 'hint';
+  note.textContent = parsed.psalms.length > 1
+    ? `Nájdené ${parsed.psalms.length} žalmy – uložia sa ako jedna pieseň, každý ako samostatná sloha.`
+    : `Uloží sa ako pieseň „${psalm.song.title}“ do zbierky Žalmy.`;
+  box.appendChild(note);
+}
+
+async function loadPsalm() {
+  const button = $('#psalmLoad');
+  const error = $('#psalmError');
+  button.disabled = true;
+  button.textContent = 'Načítavam…';
+  error.hidden = true;
+  psalm.parsed = null;
+  psalm.song = null;
+  renderPsalmResult();
+
+  try {
+    const html = await loadLiturgyPage(psalm.day);
+    const parsed = parsePsalmPage(html, { date: psalm.day });
+    psalm.parsed = parsed;
+    psalm.song = parsed.psalms.length ? psalmSong(parsed) : null;
+    $('#psalmRaw').textContent = parsed.lines.join('\n');
+    $('#psalmRawBox').hidden = false;
+    renderPsalmResult();
+  } catch (failure) {
+    error.textContent = failure.message;
+    error.hidden = false;
+    $('#psalmRawBox').hidden = true;
+  } finally {
+    button.disabled = false;
+    button.textContent = 'Načítať žalm';
+  }
+}
+
+async function savePsalm() {
+  if (!psalm.song) return;
+  const song = psalm.song;
+  await store.putSongs([song]);
+  const others = state.songs.filter((item) => item.folder === song.folder && item.id !== song.id).length;
+  await store.putFolder({ name: song.folder, system: '', count: others + 1, updatedAt: Date.now() });
+  await reloadLibrary();
+  toast(`Žalm uložený: „${song.title}“`, 'ok');
+}
+
+/** Premietanie bez ukladania – pieseň žije len do zatvorenia aplikácie. */
+function playPsalm() {
+  if (!psalm.song) return;
+  const song = { ...psalm.song, temporary: true };
+  if (!state.songs.some((item) => item.id === song.id)) state.songs = [song, ...state.songs];
+  $('#psalmDialog').close();
+  startLive([song.id], 0);
 }
 
 // ---------------------------------------------------------------- editor
@@ -842,6 +986,26 @@ function bindEvents() {
 
   // import priečinka / súborov
   $('#newSong').onclick = () => openEditor(null);
+  $('#psalmBtn').onclick = () => {
+    setPsalmDay(psalm.day || todayKey());
+    $('#psalmDialog').showModal();
+    if (!psalm.parsed) loadPsalm();
+  };
+  $('#psalmLoad').onclick = loadPsalm;
+  $('#psalmSave').onclick = savePsalm;
+  $('#psalmPlay').onclick = playPsalm;
+  $('#psalmDate').onchange = (event) => {
+    if (event.target.value) setPsalmDay(dateKey(event.target.value));
+  };
+  $$('#psalmQuick [data-day]').forEach((chip) => {
+    chip.onclick = () => {
+      const key = chip.dataset.day === 'today' ? todayKey()
+        : chip.dataset.day === 'tomorrow' ? dateKey(new Date(Date.now() + 86400000))
+          : nextSundayKey();
+      setPsalmDay(key);
+      loadPsalm();
+    };
+  });
   $('#pickFolder').onclick = () => {
     if (isNative) startNativeImport();
     else $('#folderInput').click();

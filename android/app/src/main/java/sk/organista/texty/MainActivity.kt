@@ -26,6 +26,8 @@ import androidx.webkit.WebViewAssetLoader
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.net.HttpURLConnection
+import java.net.URL
 
 class MainActivity : ComponentActivity() {
 
@@ -242,6 +244,47 @@ class MainActivity : ComponentActivity() {
             walk(tree, tree.name ?: "Piesne")
             flush()
             callJs("window.organistaImportDone", total.toString())
+        }.start()
+    }
+
+    // ----------------------------------------------- liturgický kalendár
+
+    /**
+     * Stiahne stránku lc.kbs.sk pre daný deň. Používa serverovú adresu
+     * `?den=YYYYMMDD`, takže netreba spúšťať JavaScript stránky.
+     */
+    fun fetchLiturgy(dayKey: String) {
+        val day = dayKey.filter { it.isDigit() }
+        val target = if (day.length == 8) "https://lc.kbs.sk/?den=$day" else "https://lc.kbs.sk/"
+
+        Thread {
+            val result = JSONObject().put("day", day)
+            try {
+                val connection = (URL(target).openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 15000
+                    readTimeout = 20000
+                    instanceFollowRedirects = true
+                    setRequestProperty("User-Agent", "Organista/${BuildConfigCompat.versionName} (Android)")
+                    setRequestProperty("Accept-Charset", "UTF-8")
+                }
+                try {
+                    val code = connection.responseCode
+                    if (code in 200..299) {
+                        val charset = connection.contentEncoding
+                            ?: Regex("charset=([\\w-]+)").find(connection.contentType ?: "")?.groupValues?.get(1)
+                            ?: "UTF-8"
+                        val html = connection.inputStream.bufferedReader(charset(charset)).use { it.readText() }
+                        result.put("ok", true).put("html", html)
+                    } else {
+                        result.put("ok", false).put("error", "Kalendár odpovedal $code.")
+                    }
+                } finally {
+                    connection.disconnect()
+                }
+            } catch (error: Exception) {
+                result.put("ok", false).put("error", "Kalendár sa nepodarilo načítať. Skontroluj pripojenie na internet.")
+            }
+            callJs("window.organistaLiturgy", result.toString())
         }.start()
     }
 
