@@ -5,6 +5,11 @@ on:
     branches: [claude/organista-android]
     paths-ignore: ['**.md']
   workflow_dispatch:
+    inputs:
+      refresh_notes:
+        description: 'Doplniť popisy zmien ku všetkým existujúcim vydaniam'
+        type: boolean
+        default: false
   release:
     types: [published]
 
@@ -77,6 +82,26 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           ls -la "$TARGET"
 
+      - name: Popis zmien
+        id: notes
+        env:
+          VERSION: ${{ steps.apk.outputs.version }}
+        run: |
+          # Vyberie z CHANGELOG.md časť patriacu k tejto verzii.
+          BODY=$(awk -v v="## $VERSION" '
+            $0 == v { found = 1; next }
+            found && /^## / { exit }
+            found { print }
+          ' CHANGELOG.md)
+          if [ -z "$(echo "$BODY" | tr -d '[:space:]')" ]; then
+            BODY="Táto verzia nemá zapísané zmeny v CHANGELOG.md."
+          fi
+          {
+            echo "body<<CHANGELOG_EOF"
+            echo "$BODY"
+            echo "CHANGELOG_EOF"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Uložiť ako artefakt
         uses: actions/upload-artifact@v4
         with:
@@ -93,12 +118,20 @@ jobs:
           VERSION: ${{ steps.apk.outputs.version }}
         run: |
           TAG=android-latest
-          NOTES="Aplikácia Organista pre Android, verzia $VERSION (zostavené z commitu ${GITHUB_SHA::7}).
+          NOTES="Aplikácia Organista pre Android, verzia **$VERSION** (commit ${GITHUB_SHA::7}).
 
           Stiahni súbor \`$APK\` do tabletu a otvor ho. Android sa spýta na povolenie
-          inštalácie z neznámych zdrojov – potvrď ho.
+          inštalácie z neznámych zdrojov – potvrď ho. Návod je v súbore README.md.
 
-          Návod je v súbore README.md."
+          ---
+
+          ## Čo je nové vo verzii $VERSION
+
+          ${{ steps.notes.outputs.body }}
+
+          ---
+
+          Staršie verzie zostávajú dostupné vo vydaniach \`v1.x.y\`."
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release edit "$TAG" --notes "$NOTES" --title "Organista pre Android (posledná verzia)" --target "$GITHUB_SHA"
             gh release upload "$TAG" "$APK" --clobber
@@ -120,12 +153,19 @@ jobs:
           VERSION: ${{ steps.apk.outputs.version }}
         run: |
           VTAG="v$VERSION"
-          NOTES="Organista pre Android $VERSION (commit ${GITHUB_SHA::7}).
+          NOTES="Organista pre Android **$VERSION** (commit ${GITHUB_SHA::7}).
 
           Súbor \`$APK\` stiahni do tabletu a otvor ho.
-          Najnovšiu verziu nájdeš vo vydaní **android-latest**."
+          Najnovšiu verziu nájdeš vždy vo vydaní **android-latest**.
+
+          ---
+
+          ## Zmeny v tejto verzii
+
+          ${{ steps.notes.outputs.body }}"
           if gh release view "$VTAG" >/dev/null 2>&1; then
             gh release upload "$VTAG" "$APK" --clobber
+            gh release edit "$VTAG" --notes "$NOTES"
             echo "Vydanie $VTAG aktualizované."
           else
             gh release create "$VTAG" "$APK" \
@@ -134,6 +174,29 @@ jobs:
               --target "$GITHUB_SHA"
             echo "Vydanie $VTAG vytvorené."
           fi
+
+      # Jednorazové doplnenie popisov k starším vydaniam z CHANGELOG.md.
+      - name: Doplniť popisy starších vydaní
+        if: inputs.refresh_notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for tag in $(gh release list --limit 50 --json tagName --jq '.[].tagName' | grep -E '^v[0-9]' || true); do
+            version="${tag#v}"
+            body=$(awk -v v="## $version" '
+              $0 == v { found = 1; next }
+              found && /^## / { exit }
+              found { print }
+            ' CHANGELOG.md)
+            if [ -z "$(echo "$body" | tr -d '[:space:]')" ]; then
+              echo "$tag: v CHANGELOG.md nie je záznam, preskakujem."
+              continue
+            fi
+            printf 'Organista pre Android **%s**.\n\nSúbor `organista-%s.apk` stiahni do tabletu a otvor ho.\n\n---\n\n## Zmeny v tejto verzii\n\n%s\n' \
+              "$version" "$version" "$body" > notes.md
+            gh release edit "$tag" --notes-file notes.md
+            echo "$tag: popis doplnený."
+          done
 
       - name: Pridať APK k vydaniu
         if: github.event_name == 'release'

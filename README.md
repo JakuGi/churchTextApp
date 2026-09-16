@@ -36,7 +36,8 @@ hosting, žiadny internet.**
    **Organista pre Android (posledná verzia)**.)
 
    Staršie verzie sa nemažú – každá má vlastné vydanie `v1.0.0`, `v1.0.1`, …
-   takže sa vieš kedykoľvek vrátiť späť.
+   aj s popisom svojich zmien, takže sa vieš kedykoľvek vrátiť späť.
+   Prehľad všetkých zmien je v súbore [CHANGELOG.md](CHANGELOG.md).
 2. Počkaj, kým sa súbor stiahne celý.
 3. Ťukni na stiahnutý súbor. Android sa spýta na povolenie inštalovať aplikácie
    z tohto zdroja – potvrď **Nastavenia → Povoliť z tohto zdroja** a vráť sa späť.
@@ -420,8 +421,13 @@ APK zostavuje aj GitHub Actions ([.github/workflows/android.yml](.github/workflo
 pri každej zmene. Výsledok zverejní na dvoch miestach:
 
 - **android-latest** – nemenná adresa na stiahnutie vždy najnovšej verzie,
-- **v1.0.1**, **v1.0.0**, … – vlastné vydanie pre každú verziu, ktoré sa už
+- **v1.1.0**, **v1.0.1**, … – vlastné vydanie pre každú verziu, ktoré sa už
   neprepisuje, takže staršie verzie zostávajú natrvalo dostupné.
+
+Popis zmien si vydania berú zo súboru [CHANGELOG.md](CHANGELOG.md) – pri zvýšení
+verzie stačí pridať naň nadpis `## <verzia>` a pod neho zoznam zmien. Staršie
+vydania sa dajú doplniť spustením workflow ručne so zaškrtnutou voľbou
+*Doplniť popisy zmien ku všetkým existujúcim vydaniam*.
 
 ### Vlastný podpisovací kľúč (odporúčané)
 
