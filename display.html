@@ -41,12 +41,13 @@
   };
   if (window.OrganistaNative) setStatus('Pripojené k tabletu. Čakám na text piesne…', true);
 
-  // Obrazovka na inom zariadení – stav chodí zo servera.
-  const net = subscribeNet(show, {
+  // V aplikácii pre Android posiela stav natívna časť, server tu nie je.
+  const native = !!window.OrganistaNative;
+  const net = native ? null : subscribeNet(show, {
     onOpen: () => setStatus('Pripojené k tabletu. Čakám na text piesne…', true),
     onError: () => setStatus('Server nedostupný – skontroluj Wi-Fi a adresu.', false),
   });
-  if (!net) setStatus('Táto obrazovka je riadená z toho istého zariadenia.', true);
+  if (!native && !net) setStatus('Táto obrazovka je riadená z toho istého zariadenia.', true);
   setTimeout(() => { if (!gotText) statusBox.hidden = false; }, 500);
 
   const fsButton = document.getElementById('fs');
