@@ -99,11 +99,7 @@ jobs:
           inštalácie z neznámych zdrojov – potvrď ho.
 
           Návod je v súbore README.md."
-          # Vo vydaní má byť vždy len jedna, aktuálna verzia APK.
           if gh release view "$TAG" >/dev/null 2>&1; then
-            for old in $(gh release view "$TAG" --json assets --jq '.assets[].name' | grep '\.apk$' || true); do
-              [ "$old" = "$APK" ] || gh release delete-asset "$TAG" "$old" -y
-            done
             gh release edit "$TAG" --notes "$NOTES" --title "Organista pre Android (posledná verzia)" --target "$GITHUB_SHA"
             gh release upload "$TAG" "$APK" --clobber
           else
@@ -112,6 +108,31 @@ jobs:
               --notes "$NOTES" \
               --target "$GITHUB_SHA" \
               --prerelease
+          fi
+
+      # Každá verzia má vlastné vydanie, ktoré sa už nikdy neprepisuje,
+      # takže staršie verzie zostávajú natrvalo dostupné na stiahnutie.
+      - name: Archív verzie
+        if: github.event_name != 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          APK: ${{ steps.apk.outputs.path }}
+          VERSION: ${{ steps.apk.outputs.version }}
+        run: |
+          VTAG="v$VERSION"
+          NOTES="Organista pre Android $VERSION (commit ${GITHUB_SHA::7}).
+
+          Súbor \`$APK\` stiahni do tabletu a otvor ho.
+          Najnovšiu verziu nájdeš vo vydaní **android-latest**."
+          if gh release view "$VTAG" >/dev/null 2>&1; then
+            gh release upload "$VTAG" "$APK" --clobber
+            echo "Vydanie $VTAG aktualizované."
+          else
+            gh release create "$VTAG" "$APK" \
+              --title "Organista $VERSION" \
+              --notes "$NOTES" \
+              --target "$GITHUB_SHA"
+            echo "Vydanie $VTAG vytvorené."
           fi
 
       - name: Pridať APK k vydaniu

@@ -33,6 +33,9 @@ hosting, žiadny internet.**
 
    (Alebo: stránka projektu na GitHube → vpravo **Releases** → vydanie
    **Organista pre Android (posledná verzia)**.)
+
+   Staršie verzie sa nemažú – každá má vlastné vydanie `v1.0.0`, `v1.0.1`, …
+   takže sa vieš kedykoľvek vrátiť späť.
 2. Počkaj, kým sa súbor stiahne celý.
 3. Ťukni na stiahnutý súbor. Android sa spýta na povolenie inštalovať aplikácie
    z tohto zdroja – potvrď **Nastavenia → Povoliť z tohto zdroja** a vráť sa späť.
@@ -371,7 +374,11 @@ Treba JDK 17 a Android SDK (platforma 35). Bez podpisovacích kľúčov sa APK
 podpíše ladiacim kľúčom, takže sa dá nainštalovať.
 
 APK zostavuje aj GitHub Actions ([.github/workflows/android.yml](.github/workflows/android.yml))
-pri každej zmene a zavesí ho na vydanie **android-latest**.
+pri každej zmene. Výsledok zverejní na dvoch miestach:
+
+- **android-latest** – nemenná adresa na stiahnutie vždy najnovšej verzie,
+- **v1.0.1**, **v1.0.0**, … – vlastné vydanie pre každú verziu, ktoré sa už
+  neprepisuje, takže staršie verzie zostávajú natrvalo dostupné.
 
 ### Vlastný podpisovací kľúč (odporúčané)
 
