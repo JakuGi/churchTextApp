@@ -1,92 +1,171 @@
-// Lokálne úložisko: piesne, priečinky, sety a nastavenia (IndexedDB + localStorage).
+// Lokálne úložisko: piesne, zbierky, sety a nastavenia.
+// Primárne IndexedDB; ak nie je dostupná (napr. pri otvorení jedného súboru
+// z disku cez file://), automaticky sa použije localStorage.
 
 const DB_NAME = 'organista-texty';
 const DB_VERSION = 1;
+const STORES = { songs: 'id', folders: 'name', sets: 'id' };
 
-let dbPromise = null;
+// ------------------------------------------------------------- IndexedDB ---
 
 function openDB() {
-  if (dbPromise) return dbPromise;
-  dbPromise = new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
-    request.onupgradeneeded = () => {
-      const db = request.result;
-      if (!db.objectStoreNames.contains('songs')) {
-        const songs = db.createObjectStore('songs', { keyPath: 'id' });
-        songs.createIndex('folder', 'folder');
-        songs.createIndex('numberKey', 'numberKey');
-      }
-      if (!db.objectStoreNames.contains('folders')) {
-        db.createObjectStore('folders', { keyPath: 'name' });
-      }
-      if (!db.objectStoreNames.contains('sets')) {
-        db.createObjectStore('sets', { keyPath: 'id' });
-      }
-    };
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
-  return dbPromise;
-}
-
-function tx(storeName, mode, run) {
-  return openDB().then((db) => new Promise((resolve, reject) => {
-    const transaction = db.transaction(storeName, mode);
-    const store = transaction.objectStore(storeName);
-    let result;
+  return new Promise((resolve, reject) => {
+    let request;
     try {
-      result = run(store);
+      request = indexedDB.open(DB_NAME, DB_VERSION);
     } catch (error) {
       reject(error);
       return;
     }
-    transaction.oncomplete = () => resolve(result && result.__req ? result.__req.result : result);
-    transaction.onerror = () => reject(transaction.error);
-    transaction.onabort = () => reject(transaction.error);
-  }));
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      for (const [name, keyPath] of Object.entries(STORES)) {
+        if (!db.objectStoreNames.contains(name)) db.createObjectStore(name, { keyPath });
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+    request.onblocked = () => reject(new Error('IndexedDB je zablokovaná'));
+    setTimeout(() => reject(new Error('IndexedDB neodpovedá')), 4000);
+  });
 }
 
-const wrap = (request) => ({ __req: request });
+function idbBackend(db) {
+  const run = (storeName, mode, action) => new Promise((resolve, reject) => {
+    const transaction = db.transaction(storeName, mode);
+    const store = transaction.objectStore(storeName);
+    let request = null;
+    try {
+      request = action(store);
+    } catch (error) {
+      reject(error);
+      return;
+    }
+    transaction.oncomplete = () => resolve(request ? request.result : undefined);
+    transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(transaction.error);
+  });
+
+  return {
+    kind: 'indexeddb',
+    getAll: (name) => run(name, 'readonly', (store) => store.getAll()),
+    putAll: (name, items) => run(name, 'readwrite', (store) => {
+      items.forEach((item) => store.put(item));
+      return null;
+    }),
+    remove: (name, keys) => run(name, 'readwrite', (store) => {
+      keys.forEach((key) => store.delete(key));
+      return null;
+    }),
+    clear: (name) => run(name, 'readwrite', (store) => {
+      store.clear();
+      return null;
+    }),
+  };
+}
+
+// ----------------------------------------------------------- localStorage ---
+
+function localBackend() {
+  const key = (name) => `organista-${name}`;
+  const read = (name) => {
+    try {
+      return JSON.parse(localStorage.getItem(key(name)) || '[]');
+    } catch {
+      return [];
+    }
+  };
+  const write = (name, items) => {
+    try {
+      localStorage.setItem(key(name), JSON.stringify(items));
+    } catch (error) {
+      throw new Error('Pamäť prehliadača je plná. Zmaž nepoužívané zbierky piesní.');
+    }
+  };
+  const keyPathOf = (name) => STORES[name];
+
+  return {
+    kind: 'localstorage',
+    async getAll(name) {
+      return read(name);
+    },
+    async putAll(name, items) {
+      const path = keyPathOf(name);
+      const all = read(name);
+      const index = new Map(all.map((item, position) => [item[path], position]));
+      for (const item of items) {
+        const position = index.get(item[path]);
+        if (position === undefined) {
+          index.set(item[path], all.length);
+          all.push(item);
+        } else {
+          all[position] = item;
+        }
+      }
+      write(name, all);
+    },
+    async remove(name, keys) {
+      const path = keyPathOf(name);
+      const drop = new Set(keys);
+      write(name, read(name).filter((item) => !drop.has(item[path])));
+    },
+    async clear(name) {
+      write(name, []);
+    },
+  };
+}
+
+let backendPromise = null;
+
+function backend() {
+  if (!backendPromise) {
+    backendPromise = openDB()
+      .then(idbBackend)
+      .catch(() => localBackend());
+  }
+  return backendPromise;
+}
+
+/** 'indexeddb' | 'localstorage' – pre informáciu v nastaveniach. */
+export async function storageKind() {
+  return (await backend()).kind;
+}
 
 export const store = {
   async allSongs() {
-    return tx('songs', 'readonly', (s) => wrap(s.getAll()));
+    return (await backend()).getAll('songs');
   },
   async putSongs(songs) {
-    return tx('songs', 'readwrite', (s) => {
-      songs.forEach((song) => s.put(song));
-      return songs.length;
-    });
+    await (await backend()).putAll('songs', songs);
+    return songs.length;
   },
   async deleteFolder(folder) {
-    const songs = await this.allSongs();
-    await tx('songs', 'readwrite', (s) => {
-      songs.filter((song) => song.folder === folder).forEach((song) => s.delete(song.id));
-      return true;
-    });
-    await tx('folders', 'readwrite', (s) => {
-      s.delete(folder);
-      return true;
-    });
+    const api = await backend();
+    const songs = await api.getAll('songs');
+    await api.remove('songs', songs.filter((song) => song.folder === folder).map((song) => song.id));
+    await api.remove('folders', [folder]);
   },
   async clearSongs() {
-    await tx('songs', 'readwrite', (s) => { s.clear(); return true; });
-    await tx('folders', 'readwrite', (s) => { s.clear(); return true; });
+    const api = await backend();
+    await api.clear('songs');
+    await api.clear('folders');
   },
   async folders() {
-    return tx('folders', 'readonly', (s) => wrap(s.getAll()));
+    return (await backend()).getAll('folders');
   },
   async putFolder(folder) {
-    return tx('folders', 'readwrite', (s) => { s.put(folder); return folder; });
+    await (await backend()).putAll('folders', [folder]);
+    return folder;
   },
   async sets() {
-    return tx('sets', 'readonly', (s) => wrap(s.getAll()));
+    return (await backend()).getAll('sets');
   },
   async putSet(set) {
-    return tx('sets', 'readwrite', (s) => { s.put(set); return set; });
+    await (await backend()).putAll('sets', [set]);
+    return set;
   },
   async deleteSet(id) {
-    return tx('sets', 'readwrite', (s) => { s.delete(id); return true; });
+    await (await backend()).remove('sets', [id]);
   },
 };
 
@@ -104,6 +183,9 @@ export const DEFAULT_SETTINGS = {
   lineSpacing: 1.25,
   keepAwake: true,
   defaultSystem: 'JKS',
+  vibrate: true,
+  presentHelpSeen: false,
+  presentButtons: false,  // viditeľné tlačidlá v prezentačnom režime
 };
 
 export function loadSettings() {

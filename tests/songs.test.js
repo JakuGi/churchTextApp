@@ -6,7 +6,7 @@ import { parseSongFile, searchSongs, parseNumber, numberFromFileName, normalize 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 
 test('natívny formát: názov, JKS číslo, slohy aj refrén', () => {
-  const [song] = parseSongFile(read('songs/JKS/342-Ó_Bože_náš.xml'), { folder: 'JKS', fileName: '342-Ó_Bože_náš.xml', folderSystem: 'JKS' });
+  const [song] = parseSongFile(read('songs/JKS/342-O_Boze_nas.xml'), { folder: 'JKS', fileName: '342-O_Boze_nas.xml', folderSystem: 'JKS' });
   assert.equal(song.title, 'Ó, Bože náš, k Tebe voláme');
   assert.equal(song.number, '342');
   assert.equal(song.system, 'JKS');
@@ -66,7 +66,7 @@ test('parseNumber a numberFromFileName', () => {
 
 test('vyhľadávanie podľa čísla aj názvu bez diakritiky', () => {
   const songs = [
-    ...parseSongFile(read('songs/JKS/342-Ó_Bože_náš.xml'), { folder: 'JKS', fileName: '342.xml', folderSystem: 'JKS' }),
+    ...parseSongFile(read('songs/JKS/342-O_Boze_nas.xml'), { folder: 'JKS', fileName: '342.xml', folderSystem: 'JKS' }),
     ...parseSongFile(read('songs/JKS/078-Vitaj_svetlo.xml'), { folder: 'JKS', fileName: '078.xml', folderSystem: 'JKS' }),
     ...parseSongFile(read('songs/Ukazkove/viacero-piesni.xml'), { folder: 'Ukazkove', fileName: 'viac.xml' }),
   ];

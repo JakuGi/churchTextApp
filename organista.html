@@ -1,0 +1,2914 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#111418">
+<title>Organista – texty piesní</title>
+<style>
+/* Premietacia plocha – spoločná pre TV, Chromecast aj náhľad v ovládaní.
+   Rozmery sú v jednotkách kontajnera (cqw/cqh), takže náhľad na tablete
+   vyzerá presne ako obraz na televízore, len zmenšený. */
+
+.screen-host { container-type: size; }
+
+.screen {
+  --bg: #000; --fg: #fff; --meta: rgba(255,255,255,.55);
+  width: 100%; height: 100%;
+  background: var(--bg); color: var(--fg);
+  display: flex; flex-direction: column;
+  padding: 3cqh 5cqw;
+  overflow: hidden;
+  transition: background-color .15s linear;
+}
+.screen.is-blank { background: #000; }
+
+.meta {
+  flex: 0 0 auto; height: 7cqh; color: var(--meta);
+  font-size: 3.4cqh; letter-spacing: .02em; line-height: 1;
+  display: flex; align-items: center; overflow: hidden; white-space: nowrap;
+}
+.meta-bottom { justify-content: flex-end; }
+
+.text {
+  flex: 1; min-height: 0; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+}
+.lines {
+  width: 100%; text-align: center; font-weight: 600;
+  text-shadow: 0 2px 10px rgba(0,0,0,.4);
+}
+.line { white-space: inherit; }
+
+/* Ovládacie rozhranie pre tablet – veľké dotykové plochy, tmavé pozadie. */
+:root {
+  --bg: #0f1216;
+  --panel: #171c22;
+  --panel-2: #1f262e;
+  --line: #2b333d;
+  --fg: #eef2f6;
+  --muted: #9aa7b4;
+  --accent: #ffb020;
+  --accent-ink: #1a1200;
+  --ok: #2ecc71;
+  --warn: #ff8a3d;
+  --danger: #e2574c;
+  --radius: 14px;
+  --touch: 64px;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 17px;
+  overscroll-behavior: none;
+}
+
+body { display: flex; flex-direction: column; }
+body.is-live .topbar { display: none; }
+
+h1, h2, h3 { margin: 0; font-weight: 700; }
+kbd {
+  background: var(--panel-2); border: 1px solid var(--line);
+  border-radius: 6px; padding: 2px 7px; font-size: .9em;
+}
+code { background: var(--panel-2); padding: 2px 6px; border-radius: 6px; }
+
+/* ------------------------------------------------------------ horná lišta */
+.topbar {
+  display: flex; align-items: center; gap: 16px;
+  padding: 10px 16px; background: var(--panel);
+  border-bottom: 1px solid var(--line);
+  padding-top: max(10px, env(safe-area-inset-top));
+}
+.topbar__brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 19px; }
+.topbar__cast { margin-left: auto; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+.tabs { display: flex; gap: 8px; }
+.tab {
+  min-height: 48px; padding: 0 20px; border: 1px solid var(--line);
+  background: var(--panel-2); color: var(--fg); border-radius: var(--radius);
+  font-size: 17px; font-weight: 600; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.tab.is-active { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+
+.pill {
+  background: rgba(255,255,255,.14); border-radius: 999px;
+  padding: 2px 10px; font-size: 14px; font-weight: 700;
+}
+.tab.is-active .pill { background: rgba(0,0,0,.18); }
+.pill--pos { background: var(--panel-2); padding: 8px 16px; font-size: 18px; }
+
+.badge {
+  font-size: 14px; color: var(--muted); border: 1px solid var(--line);
+  border-radius: 999px; padding: 6px 12px; white-space: nowrap;
+}
+.badge--ok { color: var(--ok); border-color: rgba(46,204,113,.5); }
+.badge--warn { color: var(--warn); border-color: rgba(255,138,61,.5); }
+
+/* -------------------------------------------------------------- tlačidlá */
+.btn {
+  min-height: var(--touch); padding: 0 20px;
+  border: 1px solid var(--line); background: var(--panel-2); color: var(--fg);
+  border-radius: var(--radius); font-size: 17px; font-weight: 600;
+  cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+}
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: .35; cursor: default; }
+.btn--primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn--danger { background: transparent; color: var(--danger); border-color: rgba(226,87,76,.5); }
+.btn--block { width: 100%; }
+.btn--big { min-height: 72px; font-size: 20px; padding: 0 28px; }
+.btn--icon { min-width: 52px; min-height: 52px; padding: 0; font-size: 18px; }
+.btn--add { min-height: 52px; white-space: nowrap; }
+.btn--nav {
+  flex: 1; min-height: 76px; flex-direction: column; gap: 2px; text-align: center;
+}
+.btn--nav small { color: var(--muted); font-weight: 500; font-size: 14px;
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.input {
+  min-height: var(--touch); width: 100%; padding: 0 16px;
+  background: var(--panel-2); border: 1px solid var(--line);
+  border-radius: var(--radius); color: var(--fg); font-size: 17px;
+}
+.input--big { min-height: 72px; font-size: 24px; font-weight: 600; }
+.input--small { min-height: 48px; width: auto; }
+.input:focus { outline: 2px solid var(--accent); }
+select.input { appearance: none; }
+input[type="range"] { width: 100%; height: 44px; accent-color: var(--accent); }
+
+/* --------------------------------------------------------------- pohľady */
+main { flex: 1; min-height: 0; display: flex; }
+.view { display: none; flex: 1; min-height: 0; }
+.view.is-active { display: flex; }
+
+.sidebar {
+  width: 280px; flex-shrink: 0; background: var(--panel);
+  border-right: 1px solid var(--line); padding: 16px;
+  display: flex; flex-direction: column; gap: 12px; overflow-y: auto;
+}
+.sidebar h2 { font-size: 14px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.sidebar__import { margin-top: auto; display: flex; flex-direction: column; gap: 10px; }
+
+.folders { display: flex; flex-direction: column; gap: 8px; }
+.folder {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  min-height: 56px; padding: 0 14px; border-radius: var(--radius);
+  border: 1px solid var(--line); background: var(--panel-2);
+  color: var(--fg); font-size: 16px; font-weight: 600; cursor: pointer; text-align: left;
+}
+.folder.is-active { border-color: var(--accent); background: rgba(255,176,32,.12); }
+.folder__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.folder__meta { color: var(--muted); font-size: 14px; display: flex; gap: 6px; }
+.folder__meta em { color: var(--accent); font-style: normal; font-weight: 700; }
+
+.content { flex: 1; min-width: 0; display: flex; flex-direction: column; padding: 16px; gap: 14px; overflow-y: auto; }
+.content--wide { max-width: 1100px; margin: 0 auto; width: 100%; }
+
+.searchbar { display: flex; gap: 10px; align-items: center; }
+.searchbar .input { flex: 1; }
+.hint { color: var(--muted); font-size: 14px; margin: 0; line-height: 1.5; }
+.section-title { font-size: 15px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-top: 10px; }
+
+.list { display: flex; flex-direction: column; gap: 8px; flex: 1; min-height: 0; }
+
+.song, .setrow, .savedset {
+  display: flex; align-items: center; gap: 14px;
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 10px 14px; min-height: 72px; cursor: pointer;
+}
+.song__num, .setrow__pos {
+  min-width: 78px; text-align: center; font-weight: 800; font-size: 20px;
+  color: var(--accent); background: var(--panel-2); border-radius: 10px; padding: 8px 6px;
+}
+.setrow__pos { min-width: 48px; color: var(--muted); font-size: 18px; }
+.song__body, .setrow__body { flex: 1; min-width: 0; }
+.song__title { font-size: 19px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.song__sub { color: var(--muted); font-size: 14px; display: block; }
+.setrow__tools { display: flex; gap: 6px; }
+
+.empty { text-align: center; color: var(--muted); padding: 48px 20px; }
+.empty h3 { color: var(--fg); margin-bottom: 8px; }
+
+.setheader { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.setheader .input { flex: 1; min-width: 220px; }
+
+.quickadd {
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 14px; display: flex; flex-direction: column; gap: 10px;
+}
+.quickadd label { font-size: 14px; color: var(--muted); }
+.quickresults { display: flex; flex-direction: column; gap: 6px; }
+.quickhit {
+  display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 0 14px;
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius);
+  color: var(--fg); font-size: 17px; cursor: pointer; text-align: left;
+}
+.quickhit__num { color: var(--accent); font-weight: 800; min-width: 80px; }
+.quickhit__title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.quickhit__folder { color: var(--muted); font-size: 14px; }
+
+.savedsets { display: flex; flex-direction: column; gap: 8px; }
+.savedset { cursor: default; }
+.savedset > div { flex: 1; }
+
+.card {
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 16px; display: flex; flex-direction: column; gap: 12px;
+}
+.card.row { flex-direction: row; flex-wrap: wrap; }
+.card label { display: flex; flex-direction: column; gap: 8px; font-size: 15px; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+.check { flex-direction: row !important; align-items: center; gap: 12px !important; min-height: 52px; }
+.check input { width: 26px; height: 26px; accent-color: var(--accent); }
+.value { color: var(--accent); font-weight: 700; }
+
+/* --------------------------------------------------------------- naživo */
+.view--live { background: var(--bg); }
+.live { flex: 1; display: flex; flex-direction: column; min-height: 0; padding: 12px; gap: 12px;
+  padding-top: max(12px, env(safe-area-inset-top)); }
+
+.live__top { display: flex; align-items: center; gap: 14px; }
+.live__title { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 12px; }
+.live__title h1 { font-size: 26px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.live__number { color: var(--accent); font-weight: 800; font-size: 22px; }
+
+.live__body { flex: 1; min-height: 0; display: flex; gap: 12px; }
+.live__left { flex: 1.35; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.live__right { flex: 1; min-width: 280px; overflow-y: auto; }
+
+.preview { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
+.preview__label { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.preview__screen {
+  flex: 1; min-height: 0; border-radius: var(--radius);
+  overflow: hidden; border: 2px solid var(--line); background: #000;
+}
+.notice {
+  background: rgba(226,87,76,.14); border: 1px solid rgba(226,87,76,.5);
+  color: #ffb3ad; border-radius: 10px; padding: 10px 14px; font-size: 15px; font-weight: 600;
+}
+
+.songnav { display: flex; gap: 10px; }
+
+.versegrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+.versebtn {
+  min-height: 104px; border-radius: var(--radius); border: 2px solid var(--line);
+  background: var(--panel); color: var(--fg); cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 8px;
+}
+.versebtn__num { font-size: 40px; font-weight: 800; line-height: 1; }
+.versebtn__hint { font-size: 12px; color: var(--muted); max-width: 100%; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap; }
+.versebtn--chorus { border-style: dashed; }
+.versebtn--chorus .versebtn__num { color: var(--accent); }
+.versebtn.is-active {
+  background: var(--accent); color: var(--accent-ink); border-color: var(--accent);
+}
+.versebtn.is-active .versebtn__hint, .versebtn.is-active .versebtn__num { color: var(--accent-ink); }
+
+.live__controls { display: flex; gap: 12px; padding-bottom: env(safe-area-inset-bottom); }
+.bigbtn {
+  flex: 1; min-height: 116px; border-radius: 18px; border: 2px solid var(--line);
+  background: var(--panel-2); color: var(--fg); cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+}
+.bigbtn__icon { font-size: 34px; line-height: 1; }
+.bigbtn__label { font-size: 19px; font-weight: 800; letter-spacing: .03em; }
+.bigbtn:active { background: var(--panel); }
+.bigbtn:disabled { opacity: .3; }
+.bigbtn--blank { flex: .9; background: #101317; border-color: #3a444f; }
+.bigbtn--blank.is-on { background: var(--danger); border-color: var(--danger); color: #fff; }
+
+.jumppanel {
+  position: fixed; inset: auto 12px 12px 12px; z-index: 40;
+  background: var(--panel); border: 2px solid var(--accent); border-radius: 18px;
+  padding: 16px; display: flex; flex-direction: column; gap: 12px;
+  max-height: 85vh; overflow-y: auto; box-shadow: 0 24px 60px rgba(0,0,0,.6);
+}
+[hidden] { display: none !important; }
+.jumppanel__head { display: flex; align-items: center; gap: 16px; }
+.chips { display: flex; gap: 8px; }
+.chip {
+  min-height: 52px; padding: 0 18px; border-radius: 999px; border: 1px solid var(--line);
+  background: var(--panel-2); color: var(--fg); font-weight: 700; font-size: 16px; cursor: pointer;
+}
+.chip.is-active { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.jumpvalue { flex: 1; text-align: right; font-size: 40px; font-weight: 800; color: var(--accent); min-height: 52px; }
+.keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.key {
+  min-height: 66px; font-size: 32px; font-weight: 700; border-radius: 14px;
+  border: 1px solid var(--line); background: var(--panel-2); color: var(--fg); cursor: pointer;
+}
+.key--alt { background: var(--panel); color: var(--muted); font-size: 24px; }
+.quickresults--live { max-height: 30vh; overflow-y: auto; }
+
+/* ----------------------------------------------------------------- dialóg */
+.dialog {
+  border: 1px solid var(--line); border-radius: 18px; background: var(--panel);
+  color: var(--fg); padding: 20px; max-width: 720px; width: 92vw; max-height: 86vh;
+}
+.dialog::backdrop { background: rgba(0,0,0,.65); }
+.dialog__body { max-height: 52vh; overflow-y: auto; margin: 14px 0; display: flex; flex-direction: column; gap: 14px; }
+.dialog__actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+.verse-preview { display: flex; gap: 14px; }
+.verse-preview__label { min-width: 70px; color: var(--accent); font-weight: 800; }
+.verse-preview__text { line-height: 1.55; }
+
+.toast {
+  position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 140%);
+  background: var(--panel-2); border: 1px solid var(--line); color: var(--fg);
+  padding: 14px 22px; border-radius: 999px; font-weight: 600; z-index: 100;
+  transition: transform .22s ease; max-width: 90vw; text-align: center;
+}
+.toast.is-visible { transform: translate(-50%, 0); }
+body.is-live .toast { bottom: auto; top: 88px; transform: translate(-50%, -200%); }
+body.is-live .toast.is-visible { transform: translate(-50%, 0); }
+.toast--ok { border-color: rgba(46,204,113,.6); }
+.toast--warn { border-color: rgba(255,138,61,.6); }
+
+/* ----------------------------------------------------- menšie obrazovky */
+@media (max-width: 1024px) {
+  .live__body { flex-direction: column; }
+  .live__right { min-width: 0; flex: none; max-height: 34vh; }
+  .versegrid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
+  .versebtn { min-height: 88px; }
+  .versebtn__num { font-size: 32px; }
+}
+@media (max-width: 860px) {
+  .sidebar { width: 190px; }
+  .topbar { flex-wrap: wrap; }
+  .bigbtn { min-height: 96px; }
+  .bigbtn__label { font-size: 16px; }
+}
+@media (orientation: portrait) and (max-width: 900px) {
+  .live__left { flex: none; }
+  .preview__screen { aspect-ratio: 16 / 9; flex: none; }
+  .live__right { flex: 1; max-height: none; }
+  .live__title { flex-direction: column; align-items: flex-start; gap: 0; }
+  .live__title h1 { font-size: 21px; }
+  .live__number { font-size: 17px; }
+}
+
+/* ------------------------------------------------- prezentačný režim (TV) */
+/* Tablet sa zrkadlí na televízor, preto tu nesmie byť nič okrem textu. */
+
+.present {
+  position: fixed; inset: 0; z-index: 200; background: #000;
+  display: flex; flex-direction: column;
+}
+.present__screen { position: absolute; inset: 0; }
+.present__zones { position: absolute; inset: 0; touch-action: none; }
+
+.present__buttons { display: none; }
+.present.has-buttons .present__buttons {
+  display: flex; gap: 10px; position: absolute; left: 12px; right: 12px; bottom: 12px; z-index: 2;
+}
+.present.has-buttons .present__buttons .bigbtn { min-height: 92px; opacity: .85; }
+.present.has-buttons .present__zones { bottom: 116px; }
+
+.present__overlay {
+  position: absolute; inset: 0; z-index: 3;
+  background: rgba(0,0,0,.88); display: flex; align-items: center; justify-content: center; padding: 20px;
+}
+.present__card {
+  background: var(--panel); border: 2px solid var(--accent); border-radius: 18px;
+  padding: 24px; max-width: 640px; width: 100%; display: flex; flex-direction: column; gap: 16px;
+}
+.present__card h3 { font-size: 24px; }
+.present__card p { margin: 0; color: var(--muted); }
+.present__menu { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+
+.zonelist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.zonelist li {
+  display: flex; gap: 14px; align-items: baseline;
+  background: var(--panel-2); border-radius: 10px; padding: 10px 14px;
+}
+.zonelist span { color: var(--accent); font-weight: 700; min-width: 190px; }
+
+body.is-presenting { overflow: hidden; }
+
+/* ------------------------------------------------ sprievodca pripojením TV */
+.dialog--wide { max-width: 860px; }
+.option {
+  border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: flex; flex-direction: column; gap: 10px; background: var(--panel-2);
+}
+.option--best { border-color: var(--accent); background: rgba(255,176,32,.07); }
+.option h4 { margin: 0; font-size: 19px; display: flex; flex-wrap: wrap; gap: 10px; align-items: baseline; }
+.option ol { margin: 0; padding-left: 22px; line-height: 1.7; }
+.option ol li { margin-bottom: 4px; }
+.tag {
+  font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--accent-ink); background: var(--accent); border-radius: 999px; padding: 3px 10px;
+}
+.option:not(.option--best) .tag { background: var(--panel); color: var(--muted); }
+
+.card--details { display: block; }
+.card--details summary { cursor: pointer; font-weight: 600; min-height: 44px; display: flex; align-items: center; }
+.card--details > *:not(summary) { margin-top: 12px; }
+.card--details label { display: block; margin-bottom: 8px; font-size: 15px; }
+
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar__brand">
+    <span aria-hidden="true">🎵</span>
+    <span>Organista</span>
+  </div>
+  <nav class="tabs">
+    <button class="tab" data-goto="library">Knižnica</button>
+    <button class="tab" data-goto="set">Set <span class="pill" id="setCount">0</span></button>
+    <button class="tab" data-goto="settings">Nastavenia</button>
+  </nav>
+  <div class="topbar__cast">
+    <span class="badge" id="castStatus">Televízor: nepripojený</span>
+    <button class="btn btn--primary" id="tvBtn">📺 Pripojiť televízor</button>
+  </div>
+</header>
+
+<main>
+  <!-- ============================== KNIŽNICA ============================== -->
+  <section class="view is-active" data-view="library">
+    <aside class="sidebar">
+      <h2>Zbierky</h2>
+      <div id="folders" class="folders"></div>
+      <div class="sidebar__import">
+        <button class="btn btn--primary btn--block" id="pickFolder">Načítať priečinok</button>
+        <button class="btn btn--block" id="pickFiles">Načítať súbory</button>
+        <p class="hint" id="importInfo">Podporované: .xml (vlastný formát, OpenSong, OpenLyrics/OpenLP).</p>
+        <input type="file" id="folderInput" webkitdirectory directory multiple accept=".xml" hidden>
+        <input type="file" id="fileInput" multiple accept=".xml,text/xml" hidden>
+      </div>
+    </aside>
+
+    <div class="content">
+      <div class="searchbar">
+        <input class="input input--search" id="searchInput" type="search" inputmode="search"
+               placeholder="Hľadaj podľa názvu alebo čísla (napr. 342, JKS 342, LS 12)" autocomplete="off">
+        <button class="btn" id="searchClear">Vymazať</button>
+        <span class="hint" id="songCount"></span>
+      </div>
+      <div class="list" id="songList"></div>
+    </div>
+  </section>
+
+  <!-- ================================= SET ================================ -->
+  <section class="view" data-view="set">
+    <div class="content content--wide">
+      <div class="setheader">
+        <input class="input" id="setNameInput" placeholder="Názov setu (napr. Nedeľa 10:30)">
+        <button class="btn" id="newSet">Nový</button>
+        <button class="btn" id="saveSet">Uložiť set</button>
+        <button class="btn btn--primary btn--big" id="startSet">▶ Spustiť premietanie</button>
+      </div>
+
+      <div class="quickadd">
+        <label for="quickAdd">Rýchle pridanie podľa čísla JKS/LS alebo názvu</label>
+        <input class="input input--big" id="quickAdd" inputmode="text" autocomplete="off"
+               placeholder="napr. 342 alebo LS 12 alebo Vitaj">
+        <div class="quickresults" id="quickAddResults"></div>
+      </div>
+
+      <div class="list" id="setList"></div>
+
+      <h2 class="section-title">Uložené sety</h2>
+      <div id="savedSets" class="savedsets"></div>
+    </div>
+  </section>
+
+  <!-- =============================== NAŽIVO =============================== -->
+  <section class="view view--live" data-view="live">
+    <div class="live">
+      <div class="live__top">
+        <button class="btn" id="exitLive">← Späť</button>
+        <div class="live__title">
+          <span class="live__number" id="liveNumber"></span>
+          <h1 id="liveTitle">Bez piesne</h1>
+        </div>
+        <span class="pill pill--pos" id="livePosition"></span>
+        <button class="btn" id="presentBtn" title="Tablet sa stane obrazom pre TV">📺 Premietať</button>
+        <button class="btn" id="jumpToggle">Rýchly výber čísla</button>
+      </div>
+
+      <div class="live__body">
+        <div class="live__left">
+          <div class="preview">
+            <div class="preview__label">Na televízore</div>
+            <div class="preview__screen" id="previewScreen"></div>
+            <div class="notice" id="blankNotice" hidden></div>
+          </div>
+          <div class="songnav">
+            <button class="btn btn--nav" id="prevSong">
+              <span>◀ Predošlá pieseň</span><small id="prevSongLabel"></small>
+            </button>
+            <button class="btn btn--nav" id="nextSong">
+              <span>Ďalšia pieseň ▶</span><small id="nextSongLabel"></small>
+            </button>
+          </div>
+        </div>
+
+        <div class="live__right">
+          <div class="versegrid" id="verseGrid"></div>
+        </div>
+      </div>
+
+      <div class="live__controls">
+        <button class="bigbtn" id="prevVerse">
+          <span class="bigbtn__icon">◀</span><span class="bigbtn__label">PREDOŠLÁ SLOHA</span>
+        </button>
+        <button class="bigbtn bigbtn--blank" id="blankBtn">
+          <span class="bigbtn__icon">◼</span><span class="bigbtn__label">ČIERNA OBRAZOVKA</span>
+        </button>
+        <button class="bigbtn" id="nextVerse">
+          <span class="bigbtn__icon">▶</span><span class="bigbtn__label">ĎALŠIA SLOHA</span>
+        </button>
+      </div>
+
+      <div class="jumppanel" id="jumpPanel" hidden>
+        <div class="jumppanel__head">
+          <div id="jumpSystem" class="chips">
+            <button class="chip is-active" data-system="">JKS/LS</button>
+            <button class="chip" data-system="JKS">JKS</button>
+            <button class="chip" data-system="LS">LS</button>
+          </div>
+          <div class="jumpvalue" id="jumpValue"></div>
+          <button class="btn btn--icon" id="jumpClose" title="Zavrieť">✕</button>
+        </div>
+        <div class="keypad" id="keypad">
+          <button class="key" data-key="1">1</button>
+          <button class="key" data-key="2">2</button>
+          <button class="key" data-key="3">3</button>
+          <button class="key" data-key="4">4</button>
+          <button class="key" data-key="5">5</button>
+          <button class="key" data-key="6">6</button>
+          <button class="key" data-key="7">7</button>
+          <button class="key" data-key="8">8</button>
+          <button class="key" data-key="9">9</button>
+          <button class="key key--alt" data-key="clr">C</button>
+          <button class="key" data-key="0">0</button>
+          <button class="key key--alt" data-key="del">⌫</button>
+        </div>
+        <div class="quickresults quickresults--live" id="jumpResults"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ NASTAVENIA ============================== -->
+  <section class="view" data-view="settings">
+    <div class="content content--wide">
+      <h2 class="section-title">Televízor</h2>
+      <div class="card">
+        <button class="btn btn--primary btn--big" id="tvBtnSettings">📺 Sprievodca pripojením televízora</button>
+        <label class="check"><input type="checkbox" id="vibrate"> Vibrácia pri ťuknutí v prezentačnom režime</label>
+        <label class="check"><input type="checkbox" id="presentButtons"> Zobraziť veľké tlačidlá aj v prezentačnom režime
+          <span class="hint">(pri zrkadlení budú viditeľné aj na televízore)</span></label>
+      </div>
+
+      <details class="card card--details">
+        <summary>Pokročilé: vlastný Chromecast prijímač</summary>
+        <p class="hint">
+          Nepovinné. Umožní posielať text priamo do Chromecastu bez zrkadlenia, ale vyžaduje
+          jednorazovú registráciu v Google Cast Developer Console (poplatok 5 USD) a umiestnenie
+          súboru <code>receiver.html</code> na adresu s HTTPS. Bežnému používateľovi stačí
+          zrkadlenie zo sprievodcu vyššie.
+        </p>
+        <label for="castAppId">Application ID prijímača</label>
+        <input class="input" id="castAppId" placeholder="napr. A1B2C3D4" autocomplete="off">
+        <div class="row">
+          <button class="btn" id="castBtn">Pripojiť Chromecast</button>
+          <span class="badge" id="castStatusDetail">nenastavené</span>
+        </div>
+      </details>
+
+      <h2 class="section-title">Vzhľad premietania</h2>
+      <div class="card grid2">
+        <label>Farebná téma
+          <select class="input" id="themeSelect">
+            <option value="dark">Tmavá (biely text na čiernom)</option>
+            <option value="light">Svetlá (čierny text na bielom)</option>
+            <option value="sepia">Teplá (krémová na hnedom)</option>
+          </select>
+        </label>
+        <label>Veľkosť písma <span class="value" id="fontScaleValue"></span>
+          <input type="range" id="fontScale" min="0.6" max="1.4" step="0.05">
+        </label>
+        <label>Riadkovanie <span class="value" id="lineSpacingValue"></span>
+          <input type="range" id="lineSpacing" min="1" max="2" step="0.05">
+        </label>
+        <label>Predvolený číselník
+          <select class="input" id="defaultSystem">
+            <option value="JKS">JKS</option>
+            <option value="LS">LS</option>
+            <option value="">žiadny</option>
+          </select>
+        </label>
+        <label class="check"><input type="checkbox" id="showTitle"> Zobrazovať názov a číslo piesne</label>
+        <label class="check"><input type="checkbox" id="showVerseLabel"> Zobrazovať číslo slohy</label>
+        <label class="check"><input type="checkbox" id="uppercase"> Veľké písmená</label>
+        <label class="check"><input type="checkbox" id="keepAwake"> Nezhasínať tablet počas premietania</label>
+      </div>
+
+      <h2 class="section-title">Zbierky piesní</h2>
+      <div class="card" id="folderAdmin"></div>
+
+      <h2 class="section-title">Údržba</h2>
+      <div class="card">
+        <div class="row">
+          <button class="btn" id="loadSamples">Načítať ukážkové piesne</button>
+          <button class="btn btn--danger" id="clearLibrary">Zmazať celú knižnicu</button>
+        </div>
+        <p class="hint" id="storageInfo"></p>
+      </div>
+
+      <h2 class="section-title">Klávesové skratky (aj pre pedál / bluetooth ovládač)</h2>
+      <div class="card">
+        <p class="hint">
+          <kbd>→</kbd> / <kbd>medzerník</kbd> ďalšia sloha · <kbd>←</kbd> predošlá sloha ·
+          <kbd>↓</kbd>/<kbd>↑</kbd> ďalšia/predošlá pieseň · <kbd>1</kbd>–<kbd>9</kbd> výber slohy ·
+          <kbd>0</kbd> refrén · <kbd>B</kbd> čierna obrazovka · <kbd>Esc</kbd> koniec prezentačného režimu
+        </p>
+        <p class="hint">
+          V prezentačnom režime sa dá ovládať aj dotykom: ľavá tretina obrazovky = predošlá sloha,
+          pravá tretina = ďalšia sloha, stred = čierna obrazovka, podržanie stredu = ponuka,
+          potiahnutie do strany = ďalšia/predošlá pieseň.
+        </p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<dialog id="tvDialog" class="dialog dialog--wide">
+  <h3>Ako dostať text na televízor</h3>
+  <p class="hint">Vyber spôsob podľa toho, čo máš k dispozícii. Všetky sú zadarmo.</p>
+
+  <div class="dialog__body">
+    <section class="option option--best">
+      <h4>1. Zrkadlenie tabletu <span class="tag">odporúčané · zadarmo · bez registrácie</span></h4>
+      <ol>
+        <li>Tablet aj Chromecast musia byť na rovnakej Wi-Fi.</li>
+        <li>Otvor aplikáciu <strong>Google Home</strong> → ťukni na svoj Chromecast →
+          <strong>Prenášať obrazovku</strong>. (Na mnohých tabletoch je to aj v rýchlych
+          nastaveniach ako <em>Prenášať</em> / <em>Smart View</em>.)</li>
+        <li>Vráť sa sem a stlač <strong>Spustiť prezentačný režim</strong>. Tablet sa zmení na
+          obraz pre televízor – ovláda sa dotykom celej plochy, takže na TV nie sú vidieť
+          žiadne tlačidlá.</li>
+      </ol>
+      <p class="hint">
+        Ovládanie: ľavá tretina = predošlá sloha · pravá tretina = ďalšia sloha ·
+        stred = čierna obrazovka · podržanie stredu = ponuka · potiahnutie do strany = iná pieseň.
+        Každé ťuknutie potvrdí vibrácia.
+      </p>
+      <button class="btn btn--primary btn--big" id="tvStartPresent">Spustiť prezentačný režim</button>
+    </section>
+
+    <section class="option">
+      <h4>2. Druhá obrazovka <span class="tag">počítač pri TV alebo HDMI kábel</span></h4>
+      <p class="hint">
+        Otvorí sa samostatné čierne okno len s textom. Prenes ho na televízor cez HDMI kábel,
+        alebo v prehliadači Chrome na počítači cez <em>⋮ → Prenášať… → Zdroje: Prenos karty</em>.
+        Ovládanie ostáva v tomto okne s veľkými tlačidlami.
+      </p>
+      <button class="btn btn--big" id="tvOpenWindow">Otvoriť okno s textom</button>
+    </section>
+
+    <section class="option">
+      <h4>3. Vlastný Chromecast prijímač <span class="tag">pokročilé · 5 USD registrácia</span></h4>
+      <p class="hint">
+        Posiela text priamo do Chromecastu bez zrkadlenia. Vyžaduje registráciu v Google Cast
+        Developer Console a hosting súboru <code>receiver.html</code>. Nastavuje sa
+        v <strong>Nastaveniach</strong>.
+      </p>
+      <button class="btn" id="tvOpenSettings">Otvoriť nastavenia</button>
+    </section>
+  </div>
+
+  <div class="dialog__actions">
+    <button class="btn" data-close-dialog>Zavrieť</button>
+  </div>
+</dialog>
+
+<div class="present" id="present" hidden>
+  <div class="present__screen" id="presentScreen"></div>
+  <div class="present__zones" id="presentZones"></div>
+
+  <div class="present__buttons">
+    <button class="bigbtn" data-present-action="prevVerse"><span class="bigbtn__icon">◀</span></button>
+    <button class="bigbtn bigbtn--blank" data-present-action="toggleBlank"><span class="bigbtn__icon">◼</span></button>
+    <button class="bigbtn" data-present-action="nextVerse"><span class="bigbtn__icon">▶</span></button>
+  </div>
+
+  <div class="present__overlay" id="presentHelp" hidden>
+    <div class="present__card">
+      <h3>Prezentačný režim</h3>
+      <p>Televízor teraz ukazuje presne túto obrazovku, preto je bez tlačidiel.</p>
+      <ul class="zonelist">
+        <li><span>◀ ľavá tretina</span> predošlá sloha</li>
+        <li><span>stred</span> čierna obrazovka</li>
+        <li><span>pravá tretina ▶</span> ďalšia sloha</li>
+        <li><span>podržanie stredu</span> ponuka a ukončenie</li>
+        <li><span>potiahnutie do strany</span> ďalšia / predošlá pieseň</li>
+      </ul>
+      <button class="btn btn--primary btn--big" id="presentHelpOk">Rozumiem, začať</button>
+    </div>
+  </div>
+
+  <div class="present__overlay" id="presentMenu" hidden>
+    <div class="present__card">
+      <h3>Ponuka</h3>
+      <div class="present__menu">
+        <button class="btn btn--big" data-present-action="prevSong">◀ Predošlá pieseň</button>
+        <button class="btn btn--big" data-present-action="nextSong">Ďalšia pieseň ▶</button>
+        <button class="btn btn--big" data-present-action="toggleBlank">Čierna obrazovka</button>
+        <button class="btn btn--big" data-present-action="close">Späť k premietaniu</button>
+        <button class="btn btn--big btn--danger" data-present-action="exit">Ukončiť prezentačný režim</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<dialog id="songDialog" class="dialog">
+  <h3 id="dialogTitle"></h3>
+  <p class="hint" id="dialogMeta"></p>
+  <div class="dialog__body" id="dialogBody"></div>
+  <div class="dialog__actions">
+    <button class="btn" data-close-dialog>Zavrieť</button>
+    <button class="btn" id="dialogAdd">+ Do setu</button>
+    <button class="btn btn--primary" id="dialogPlay">▶ Premietať</button>
+  </div>
+</dialog>
+
+<div class="toast" id="toast"></div>
+
+<script>
+window.DISPLAY_PAGE = "<!DOCTYPE html><html lang=\"sk\"><head><meta charset=\"utf-8\">\n<title>Texty piesní – obrazovka</title><style>/* Stránka premietacej plochy (okno na TV aj Chromecast prijímač). */\n* { box-sizing: border-box; }\n\nhtml, body, .display__root {\n  margin: 0; padding: 0; width: 100%; height: 100%;\n  background: #000; overflow: hidden;\n  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;\n}\nbody.is-idle { cursor: none; }\n\n.fsbtn {\n  position: fixed; left: 16px; bottom: 16px; z-index: 5;\n  width: 52px; height: 52px; border-radius: 12px; cursor: pointer;\n  background: rgba(255,255,255,.08); color: rgba(255,255,255,.5);\n  border: 1px solid rgba(255,255,255,.15); font-size: 22px;\n  transition: opacity .2s;\n}\nbody.is-idle .fsbtn { opacity: 0; }\n.fsbtn:hover { background: rgba(255,255,255,.16); color: #fff; }\n\n/* Premietacia plocha – spoločná pre TV, Chromecast aj náhľad v ovládaní.\n   Rozmery sú v jednotkách kontajnera (cqw/cqh), takže náhľad na tablete\n   vyzerá presne ako obraz na televízore, len zmenšený. */\n\n.screen-host { container-type: size; }\n\n.screen {\n  --bg: #000; --fg: #fff; --meta: rgba(255,255,255,.55);\n  width: 100%; height: 100%;\n  background: var(--bg); color: var(--fg);\n  display: flex; flex-direction: column;\n  padding: 3cqh 5cqw;\n  overflow: hidden;\n  transition: background-color .15s linear;\n}\n.screen.is-blank { background: #000; }\n\n.meta {\n  flex: 0 0 auto; height: 7cqh; color: var(--meta);\n  font-size: 3.4cqh; letter-spacing: .02em; line-height: 1;\n  display: flex; align-items: center; overflow: hidden; white-space: nowrap;\n}\n.meta-bottom { justify-content: flex-end; }\n\n.text {\n  flex: 1; min-height: 0; overflow: hidden;\n  display: flex; align-items: center; justify-content: center;\n}\n.lines {\n  width: 100%; text-align: center; font-weight: 600;\n  text-shadow: 0 2px 10px rgba(0,0,0,.4);\n}\n.line { white-space: inherit; }\n</style></head>\n<body class=\"display\"><div id=\"root\" class=\"display__root\"></div>\n<script>\n// Prenos stavu na zobrazovacie plochy.\n// 1) BroadcastChannel + localStorage – pre okno/kartu na tom istom zariadení\n//    (to sa zrkadlí na TV cez \"Prenášať kartu\" / mirroring),\n// 2) Google Cast – priamo na Chromecast prijímač (receiver.html).\nconst CHANNEL = 'organista-texty';\nconst MIRROR_KEY = 'organista-stav';\nconst CAST_NAMESPACE = 'urn:x-cast:sk.organista.texty';\nfunction createLocalBus() {\n  let channel = null;\n  try {\n    channel = new BroadcastChannel(CHANNEL);\n  } catch {\n    channel = null;\n  }\n  return {\n    send(state) {\n      const payload = JSON.stringify(state);\n      if (channel) channel.postMessage(state);\n      try {\n        localStorage.setItem(MIRROR_KEY, payload);\n      } catch {\n        /* ignorujeme */\n      }\n    },\n    subscribe(handler) {\n      if (channel) channel.onmessage = (event) => handler(event.data);\n      window.addEventListener('storage', (event) => {\n        if (event.key === MIRROR_KEY && event.newValue) {\n          try {\n            handler(JSON.parse(event.newValue));\n          } catch {\n            /* ignorujeme */\n          }\n        }\n      });\n      try {\n        const last = localStorage.getItem(MIRROR_KEY);\n        if (last) handler(JSON.parse(last));\n      } catch {\n        /* ignorujeme */\n      }\n    },\n  };\n}\n\n/** Stav, ktorý sa posiela na obrazovku. */\nfunction displayState({ song, verse, blank, settings, position }) {\n  return {\n    v: 1,\n    blank: !!blank,\n    title: song ? song.title : '',\n    number: song && song.number ? `${song.system || ''} ${song.number}`.trim() : '',\n    verseLabel: verse ? verse.label : '',\n    verseType: verse ? verse.type : '',\n    lines: verse ? verse.lines : [],\n    position: position || '',\n    theme: settings.theme,\n    fontScale: settings.fontScale,\n    showTitle: settings.showTitle,\n    showVerseLabel: settings.showVerseLabel,\n    uppercase: settings.uppercase,\n    lineSpacing: settings.lineSpacing,\n    ts: Date.now(),\n  };\n}\n\n// Vykreslenie textu na premietaciu plochu (okno na TV aj Chromecast prijímač).\n\nconst THEMES = {\n  dark: { bg: '#000000', fg: '#ffffff', meta: 'rgba(255,255,255,.55)' },\n  light: { bg: '#ffffff', fg: '#101010', meta: 'rgba(0,0,0,.5)' },\n  sepia: { bg: '#1b1408', fg: '#ffe9c2', meta: 'rgba(255,233,194,.55)' },\n};\nfunction createDisplay(root) {\n  root.classList.add('screen-host');\n  root.innerHTML = `\n    <div class=\"screen\" id=\"screen\">\n      <div class=\"meta meta-top\"><span id=\"metaTitle\"></span></div>\n      <div class=\"text\" id=\"text\"><div class=\"lines\" id=\"lines\"></div></div>\n      <div class=\"meta meta-bottom\"><span id=\"metaVerse\"></span></div>\n    </div>`;\n\n  const screen = root.querySelector('#screen');\n  const textBox = root.querySelector('#text');\n  const linesBox = root.querySelector('#lines');\n  const metaTitle = root.querySelector('#metaTitle');\n  const metaVerse = root.querySelector('#metaVerse');\n  let current = null;\n\n  // Najväčšie písmo, pri ktorom sa text ešte zmestí na plochu.\n  // Prvá voľba: každý riadok piesne zostane na jednom riadku obrazovky.\n  // Ak by bolo písmo príliš malé (veľmi dlhý verš), povolíme zalomenie.\n  function measure(wrap, available, width, cap) {\n    linesBox.style.whiteSpace = wrap ? 'pre-wrap' : 'pre';\n    let low = 6;\n    let high = cap;\n    let best = low;\n    while (low <= high) {\n      const mid = Math.floor((low + high) / 2);\n      linesBox.style.fontSize = `${mid}px`;\n      const fitsHeight = linesBox.scrollHeight <= available;\n      const fitsWidth = wrap ? true : linesBox.scrollWidth <= width + 1;\n      if (fitsHeight && fitsWidth) {\n        best = mid;\n        low = mid + 1;\n      } else {\n        high = mid - 1;\n      }\n    }\n    return best;\n  }\n\n  function fit() {\n    if (!current || current.blank || !current.lines.length) return;\n    const available = textBox.clientHeight;\n    const width = textBox.clientWidth;\n    if (available < 8 || width < 8) return;\n    const scale = current.fontScale || 1;\n    const cap = Math.max(10, Math.round(available * 0.42 * scale));\n\n    const wrapped = measure(true, available, width, cap);\n    const noWrap = measure(false, available, width, cap);\n\n    // Celé verše na jednom riadku sú prehľadnejšie; zalomíme len vtedy,\n    // ak by nás to stálo výraznú stratu veľkosti písma.\n    if (noWrap >= Math.max(14, wrapped * 0.72)) {\n      linesBox.style.whiteSpace = 'pre';\n      linesBox.style.fontSize = `${noWrap}px`;\n      return;\n    }\n    linesBox.style.whiteSpace = 'pre-wrap';\n    linesBox.style.fontSize = `${wrapped}px`;\n  }\n\n  function render(state) {\n    current = state;\n    const theme = THEMES[state.theme] || THEMES.dark;\n    screen.style.setProperty('--bg', theme.bg);\n    screen.style.setProperty('--fg', theme.fg);\n    screen.style.setProperty('--meta', theme.meta);\n    linesBox.style.lineHeight = String(state.lineSpacing || 1.25);\n    linesBox.style.textTransform = state.uppercase ? 'uppercase' : 'none';\n\n    const blank = state.blank || !state.lines || state.lines.length === 0;\n    screen.classList.toggle('is-blank', blank);\n    if (blank) {\n      linesBox.textContent = '';\n      metaTitle.textContent = '';\n      metaVerse.textContent = '';\n      return;\n    }\n\n    metaTitle.textContent = state.showTitle\n      ? [state.number, state.title].filter(Boolean).join(' · ')\n      : '';\n    metaVerse.textContent = state.showVerseLabel && state.verseLabel\n      ? (state.verseType === 'chorus' ? 'Refrén' : `${state.verseLabel}.`)\n      : '';\n\n    linesBox.innerHTML = '';\n    for (const line of state.lines) {\n      const div = document.createElement('div');\n      div.className = 'line';\n      div.textContent = line;\n      if (!line.trim()) div.innerHTML = '&nbsp;';\n      linesBox.appendChild(div);\n    }\n    fit();\n  }\n\n  window.addEventListener('resize', fit);\n  if (typeof ResizeObserver === 'function') new ResizeObserver(fit).observe(root);\n  render({ blank: true, theme: 'dark', lines: [] });\n  return { render };\n}\n\nconst display = createDisplay(document.getElementById('root'));\ncreateLocalBus().subscribe((state) => display.render(state));\ndocument.addEventListener('dblclick', () => {\n  if (document.fullscreenElement) document.exitFullscreen();\n  else document.documentElement.requestFullscreen().catch(() => {});\n});\n<\/script></body></html>";
+window.__SINGLE_FILE__ = true;
+
+/* ===== js/xmlparse.js ===== */
+// Minimálny XML parser bez závislostí.
+// Beží v prehliadači aj v Node.js (kvôli testom), takže nepoužíva DOMParser.
+
+const ENTITIES = {
+  amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ',
+};
+function decodeEntities(value) {
+  return value.replace(/&(#x?[0-9a-fA-F]+|[a-zA-Z][a-zA-Z0-9]*);/g, (match, body) => {
+    if (body[0] === '#') {
+      const code = body[1] === 'x' || body[1] === 'X'
+        ? parseInt(body.slice(2), 16)
+        : parseInt(body.slice(1), 10);
+      return Number.isFinite(code) ? String.fromCodePoint(code) : match;
+    }
+    const known = ENTITIES[body.toLowerCase()];
+    return known === undefined ? match : known;
+  });
+}
+
+function findTagEnd(src, from) {
+  let quote = null;
+  for (let i = from; i < src.length; i += 1) {
+    const ch = src[i];
+    if (quote) {
+      if (ch === quote) quote = null;
+    } else if (ch === '"' || ch === "'") {
+      quote = ch;
+    } else if (ch === '>') {
+      return i;
+    }
+  }
+  return -1;
+}
+
+const ATTR_RE = /([A-Za-z_:][\w.:-]*)\s*=\s*("([^"]*)"|'([^']*)')/g;
+
+function parseTag(raw) {
+  const selfClosing = raw.endsWith('/');
+  const body = selfClosing ? raw.slice(0, -1) : raw;
+  const nameMatch = /^\s*([^\s/>]+)/.exec(body);
+  const name = nameMatch ? nameMatch[1] : '';
+  const attrs = {};
+  ATTR_RE.lastIndex = nameMatch ? nameMatch[0].length : 0;
+  let attr;
+  while ((attr = ATTR_RE.exec(body)) !== null) {
+    attrs[attr[1].toLowerCase()] = decodeEntities(attr[3] !== undefined ? attr[3] : attr[4]);
+  }
+  return { name, attrs, selfClosing };
+}
+
+function makeElement(name, attrs) {
+  return { type: 'element', name, localName: name.replace(/^.*:/, '').toLowerCase(), attrs, children: [] };
+}
+
+/**
+ * Rozparsuje XML reťazec na jednoduchý strom.
+ * @returns {{type:'element', name:'#document', children: Array}}
+ */
+function parseXML(source) {
+  let src = String(source || '');
+  if (src.charCodeAt(0) === 0xfeff) src = src.slice(1);
+
+  const doc = makeElement('#document', {});
+  const stack = [doc];
+  const top = () => stack[stack.length - 1];
+  const addText = (value, cdata) => {
+    if (!value) return;
+    top().children.push({ type: 'text', value: cdata ? value : decodeEntities(value), cdata: !!cdata });
+  };
+
+  let i = 0;
+  while (i < src.length) {
+    const lt = src.indexOf('<', i);
+    if (lt === -1) {
+      addText(src.slice(i), false);
+      break;
+    }
+    if (lt > i) addText(src.slice(i, lt), false);
+
+    if (src.startsWith('<!--', lt)) {
+      const end = src.indexOf('-->', lt + 4);
+      i = end === -1 ? src.length : end + 3;
+      continue;
+    }
+    if (src.startsWith('<![CDATA[', lt)) {
+      const end = src.indexOf(']]>', lt + 9);
+      addText(src.slice(lt + 9, end === -1 ? src.length : end), true);
+      i = end === -1 ? src.length : end + 3;
+      continue;
+    }
+    if (src.startsWith('<?', lt)) {
+      const end = src.indexOf('?>', lt + 2);
+      i = end === -1 ? src.length : end + 2;
+      continue;
+    }
+    if (src.startsWith('<!', lt)) {
+      const end = findTagEnd(src, lt + 2);
+      i = end === -1 ? src.length : end + 1;
+      continue;
+    }
+
+    const gt = findTagEnd(src, lt + 1);
+    if (gt === -1) {
+      addText(src.slice(lt), false);
+      break;
+    }
+    const raw = src.slice(lt + 1, gt);
+    i = gt + 1;
+
+    if (raw[0] === '/') {
+      const closing = raw.slice(1).trim().toLowerCase();
+      for (let s = stack.length - 1; s > 0; s -= 1) {
+        if (stack[s].name.toLowerCase() === closing) {
+          stack.length = s;
+          break;
+        }
+      }
+      continue;
+    }
+
+    const tag = parseTag(raw);
+    if (!tag.name) continue;
+    const element = makeElement(tag.name, tag.attrs);
+    top().children.push(element);
+    if (!tag.selfClosing) stack.push(element);
+  }
+
+  return doc;
+}
+function elements(node, name) {
+  if (!node) return [];
+  const wanted = name ? name.toLowerCase() : null;
+  return node.children.filter((child) => child.type === 'element' && (!wanted || child.localName === wanted));
+}
+function firstElement(node, ...names) {
+  for (const name of names) {
+    const found = elements(node, name)[0];
+    if (found) return found;
+  }
+  return null;
+}
+
+/** Nájde prvý potomok v ľubovoľnej hĺbke. */
+function deepFirst(node, ...names) {
+  const wanted = names.map((n) => n.toLowerCase());
+  const queue = [...elements(node)];
+  while (queue.length) {
+    const current = queue.shift();
+    if (wanted.includes(current.localName)) return current;
+    queue.push(...elements(current));
+  }
+  return null;
+}
+
+/** Textový obsah uzla vrátane potomkov; <br/> sa prepíše na nový riadok. */
+function textOf(node) {
+  if (!node) return '';
+  let out = '';
+  for (const child of node.children) {
+    if (child.type === 'text') out += child.value;
+    else if (child.localName === 'br') out += '\n';
+    else out += textOf(child);
+  }
+  return out;
+}
+function attr(node, ...names) {
+  if (!node) return '';
+  for (const name of names) {
+    const value = node.attrs[name.toLowerCase()];
+    if (value !== undefined && value !== '') return value;
+  }
+  return '';
+}
+
+
+/* ===== js/songs.js ===== */
+// Prevod XML súborov na dátový model piesne.
+// Podporované formáty: vlastný (SK/EN), OpenSong, OpenLyrics / OpenLP.
+
+/** Odstráni diakritiku a zjednotí na malé písmená – pre vyhľadávanie. */
+function normalize(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .trim();
+}
+const VERSE_TYPES = {
+  verse: { label: 'Sloha', short: '' },
+  chorus: { label: 'Refrén', short: 'R' },
+  bridge: { label: 'Medzihra', short: 'B' },
+  prechorus: { label: 'Pred refrénom', short: 'P' },
+  ending: { label: 'Záver', short: 'Z' },
+  intro: { label: 'Úvod', short: 'Ú' },
+  other: { label: 'Časť', short: '*' },
+};
+
+const TYPE_ALIASES = {
+  v: 'verse', verse: 'verse', sloha: 'verse', slocha: 'verse', strofa: 'verse',
+  c: 'chorus', chorus: 'chorus', refren: 'chorus', ref: 'chorus', r: 'chorus',
+  b: 'bridge', bridge: 'bridge', medzihra: 'bridge',
+  p: 'prechorus', prechorus: 'prechorus', 'pre-chorus': 'prechorus',
+  e: 'ending', ending: 'ending', zaver: 'ending', koniec: 'ending',
+  i: 'intro', intro: 'intro', uvod: 'intro',
+  o: 'other', other: 'other',
+};
+
+function verseType(raw) {
+  const key = normalize(raw).replace(/\s+/g, '');
+  return TYPE_ALIASES[key] || (key ? 'other' : 'verse');
+}
+
+/** Rozpozná číselník (JKS / LS / iný) a číslo piesne. */
+function parseNumber(raw, fallbackSystem) {
+  const text = String(raw || '').trim();
+  if (!text) return null;
+  const match = /^([A-Za-zÀ-ž]{1,6})?\s*[.\-_ ]?\s*(\d{1,4})\s*([a-zA-Z])?$/.exec(text);
+  if (!match) return null;
+  const system = (match[1] || fallbackSystem || '').toUpperCase().replace(/[^A-ZÀ-Ž]/g, '');
+  const number = String(parseInt(match[2], 10));
+  return { system: system || '', number, suffix: (match[3] || '').toUpperCase() };
+}
+
+/** Skúsi vytiahnuť číslo z názvu súboru, napr. "JKS_342 - Nazov.xml" alebo "123.xml". */
+function numberFromFileName(fileName, fallbackSystem) {
+  const base = String(fileName || '').replace(/\.[a-z0-9]+$/i, '');
+  const match = /^\s*(JKS|LS)?[\s._-]*(\d{1,4})(?![\d])/i.exec(base);
+  if (!match) return null;
+  return {
+    system: (match[1] || fallbackSystem || '').toUpperCase(),
+    number: String(parseInt(match[2], 10)),
+    suffix: '',
+  };
+}
+
+function cleanLines(block) {
+  return String(block || '')
+    .replace(/\r\n?/g, '\n')
+    .replace(/\{\/?[^}\n]{0,40}\}/g, '') // formátovacie značky OpenLyrics {y}{/y}
+    .split('\n')
+    .map((line) => line.replace(/\s+$/g, '').replace(/^\s{1,2}(?=\S)/, ''))
+    .filter((line, index, all) => !(line.trim() === '' && (index === 0 || index === all.length - 1)));
+}
+
+function makeVerse(type, label, block) {
+  const lines = cleanLines(block).filter((line) => line.trim() !== '' || true);
+  while (lines.length && lines[0].trim() === '') lines.shift();
+  while (lines.length && lines[lines.length - 1].trim() === '') lines.pop();
+  return { type, label: String(label || ''), lines };
+}
+
+function labelFor(type, label, verseCounter) {
+  if (label) return label;
+  if (type === 'verse') return String(verseCounter);
+  return VERSE_TYPES[type] ? VERSE_TYPES[type].short : '*';
+}
+
+// ---------------------------------------------------------------- formáty ---
+
+function parseOwnFormat(root) {
+  const title = textOf(firstElement(root, 'nazov', 'názov', 'title', 'meno')).trim();
+  const numberNode = firstElement(root, 'cislo', 'číslo', 'number');
+  const numberText = numberNode ? textOf(numberNode).trim() : attr(root, 'cislo', 'číslo', 'number');
+  const systemHint = attr(numberNode || root, 'typ', 'type', 'system', 'spevnik', 'spevník')
+    || attr(root, 'typ', 'type', 'system', 'spevnik', 'spevník');
+  const author = textOf(firstElement(root, 'autor', 'author', 'text')).trim();
+  const melody = textOf(firstElement(root, 'melodia', 'melódia', 'melody', 'hudba')).trim();
+
+  const container = firstElement(root, 'slohy', 'verses', 'text', 'lyrics') || root;
+  const verses = [];
+  let counter = 0;
+  for (const node of elements(container)) {
+    const name = node.localName;
+    if (!['sloha', 'slocha', 'strofa', 'verse', 'refren', 'refrén', 'chorus', 'bridge', 'medzihra', 'zaver', 'záver', 'ending', 'cast', 'časť', 'part'].includes(name)) continue;
+    let type = verseType(attr(node, 'typ', 'type') || name);
+    if (['refren', 'refrén', 'chorus'].includes(name)) type = 'chorus';
+    if (['bridge', 'medzihra'].includes(name)) type = 'bridge';
+    if (['zaver', 'záver', 'ending'].includes(name)) type = 'ending';
+    if (type === 'verse') counter += 1;
+
+    const lineNodes = elements(node).filter((child) => ['riadok', 'line', 'l'].includes(child.localName));
+    const block = lineNodes.length
+      ? lineNodes.map((line) => textOf(line)).join('\n')
+      : textOf(node);
+    const label = labelFor(type, attr(node, 'cislo', 'číslo', 'label', 'n', 'number'), counter);
+    verses.push(makeVerse(type, label, block));
+  }
+  return { title, numberText, systemHint, author, melody, verses };
+}
+
+function parseOpenSong(root) {
+  const title = textOf(firstElement(root, 'title')).trim();
+  const author = textOf(firstElement(root, 'author')).trim();
+  const numberText = textOf(firstElement(root, 'hymn_number', 'number')).trim();
+  const lyrics = textOf(firstElement(root, 'lyrics'));
+  const verses = [];
+  let current = null;
+  let counter = 0;
+
+  const flush = () => {
+    if (current && current.block.join('\n').trim() !== '') {
+      verses.push(makeVerse(current.type, current.label, current.block.join('\n')));
+    }
+    current = null;
+  };
+
+  for (const rawLine of String(lyrics).replace(/\r\n?/g, '\n').split('\n')) {
+    const line = rawLine.replace(/\s+$/, '');
+    const marker = /^\s*\[([^\]]+)\]\s*$/.exec(line);
+    if (marker) {
+      flush();
+      const token = marker[1].trim();
+      const parsed = /^([A-Za-z]*)\s*(\d*)/.exec(token);
+      const type = verseType(parsed[1] || 'v');
+      if (type === 'verse') counter += 1;
+      current = { type, label: labelFor(type, parsed[2] || '', counter), block: [] };
+      continue;
+    }
+    if (/^\s*[;.]/.test(line)) continue; // komentár alebo akordy
+    if (!current) {
+      counter += 1;
+      current = { type: 'verse', label: String(counter), block: [] };
+    }
+    current.block.push(line.replace(/^\s?\d?\s?/, (prefix) => (/^\s\d\s$/.test(prefix) ? '' : prefix.trimStart())));
+  }
+  flush();
+  return { title, numberText, systemHint: '', author, melody: '', verses };
+}
+
+function parseOpenLyrics(root) {
+  const properties = firstElement(root, 'properties');
+  const titleNode = properties ? deepFirst(properties, 'title') : firstElement(root, 'title');
+  const title = textOf(titleNode).trim();
+  const author = properties ? textOf(deepFirst(properties, 'author')).trim() : textOf(firstElement(root, 'author')).trim();
+  const numberText = properties ? textOf(deepFirst(properties, 'songnumber', 'number')).trim() : '';
+  const lyrics = firstElement(root, 'lyrics');
+  const verses = [];
+  let counter = 0;
+
+  for (const verse of elements(lyrics, 'verse')) {
+    const rawType = attr(verse, 'type') || attr(verse, 'name').replace(/\d+$/, '');
+    const type = verseType(rawType || 'v');
+    if (type === 'verse') counter += 1;
+    const lineNodes = elements(verse, 'lines');
+    const block = lineNodes.length
+      ? lineNodes.map((lines) => textOf(lines)).join('\n')
+      : textOf(verse);
+    const label = labelFor(type, attr(verse, 'label') || (attr(verse, 'name').match(/\d+/) || [''])[0], counter);
+    verses.push(makeVerse(type, label, block));
+  }
+  return { title, numberText, systemHint: '', author, melody: '', verses };
+}
+
+function detect(root) {
+  if (firstElement(root, 'lyrics')) {
+    const lyrics = firstElement(root, 'lyrics');
+    if (elements(lyrics, 'verse').length) return parseOpenLyrics;
+    if (firstElement(root, 'nazov', 'názov', 'slohy')) return parseOwnFormat;
+    return parseOpenSong;
+  }
+  if (firstElement(root, 'slohy', 'verses')) return parseOwnFormat;
+  return parseOwnFormat;
+}
+
+function buildSong(root, context) {
+  const parser = detect(root);
+  const data = parser(root);
+
+  const fromXml = parseNumber(data.numberText, data.systemHint || context.folderSystem);
+  const fromFile = numberFromFileName(context.fileName, context.folderSystem);
+  const numberInfo = fromXml || fromFile;
+
+  let title = data.title;
+  if (!title) {
+    title = String(context.fileName || '')
+      .replace(/\.[a-z0-9]+$/i, '')
+      .replace(/^\s*(JKS|LS)?[\s._-]*\d{1,4}[\s._-]*/i, '')
+      .replace(/[_]+/g, ' ')
+      .trim() || 'Bez názvu';
+  }
+
+  const verses = data.verses.filter((verse) => verse.lines.join('').trim() !== '');
+  const number = numberInfo ? numberInfo.number + numberInfo.suffix : '';
+  const system = numberInfo && numberInfo.system ? numberInfo.system : (context.folderSystem || '');
+
+  return {
+    id: context.id,
+    folder: context.folder || 'Ostatné',
+    fileName: context.fileName || '',
+    title,
+    author: data.author || '',
+    melody: data.melody || '',
+    number,
+    system,
+    numberKey: number ? `${system}${parseInt(number, 10)}` : '',
+    searchKey: normalize(`${title} ${data.author || ''}`),
+    verses: verses.map((verse, index) => ({ ...verse, index })),
+    importedAt: context.importedAt || Date.now(),
+  };
+}
+
+/**
+ * Rozparsuje obsah XML súboru. Súbor môže obsahovať jednu alebo viac piesní.
+ * @returns {Array} zoznam piesní
+ */
+function parseSongFile(xmlText, context = {}) {
+  const doc = parseXML(xmlText);
+  const roots = elements(doc);
+  const base = {
+    folder: context.folder || 'Ostatné',
+    fileName: context.fileName || '',
+    folderSystem: (context.folderSystem || '').toUpperCase(),
+    importedAt: context.importedAt || Date.now(),
+  };
+
+  const songNodes = [];
+  for (const root of roots) {
+    const name = root.localName;
+    if (['piesne', 'songs', 'zbierka', 'spevnik', 'spevník'].includes(name)) {
+      songNodes.push(...elements(root).filter((node) => ['piesen', 'pieseň', 'song'].includes(node.localName)));
+    } else {
+      songNodes.push(root);
+    }
+  }
+
+  return songNodes
+    .map((node, index) => buildSong(node, {
+      ...base,
+      id: `${base.folder}/${base.fileName}${songNodes.length > 1 ? `#${index + 1}` : ''}`,
+    }))
+    .filter((song) => song.verses.length > 0);
+}
+
+/** Zoradenie piesní: najprv podľa čísla (ak je), potom podľa názvu. */
+function compareSongs(a, b) {
+  const an = a.number ? parseInt(a.number, 10) : Number.POSITIVE_INFINITY;
+  const bn = b.number ? parseInt(b.number, 10) : Number.POSITIVE_INFINITY;
+  if (an !== bn) return an - bn;
+  return a.searchKey.localeCompare(b.searchKey, 'sk');
+}
+
+/** Vyhľadávanie podľa názvu alebo podľa čísla (napr. "342", "JKS 342", "ls45"). */
+function searchSongs(songs, query) {
+  const raw = String(query || '').trim();
+  if (!raw) return songs.slice().sort(compareSongs);
+
+  const asNumber = parseNumber(raw);
+  const needle = normalize(raw);
+  const scored = [];
+
+  for (const song of songs) {
+    let score = 0;
+    if (asNumber) {
+      const sameSystem = !asNumber.system || asNumber.system === song.system;
+      if (sameSystem && song.number && parseInt(song.number, 10) === parseInt(asNumber.number, 10)) score = 1000;
+      else if (sameSystem && song.number && song.number.startsWith(asNumber.number)) score = 500;
+    }
+    if (!score && needle) {
+      const index = song.searchKey.indexOf(needle);
+      if (index === 0) score = 300;
+      else if (index > 0) score = 200;
+      else if (needle.split(/\s+/).every((word) => song.searchKey.includes(word))) score = 100;
+    }
+    if (score) scored.push({ song, score });
+  }
+
+  return scored
+    .sort((a, b) => (b.score - a.score) || compareSongs(a.song, b.song))
+    .map((entry) => entry.song);
+}
+
+
+/* ===== js/store.js ===== */
+// Lokálne úložisko: piesne, zbierky, sety a nastavenia.
+// Primárne IndexedDB; ak nie je dostupná (napr. pri otvorení jedného súboru
+// z disku cez file://), automaticky sa použije localStorage.
+
+const DB_NAME = 'organista-texty';
+const DB_VERSION = 1;
+const STORES = { songs: 'id', folders: 'name', sets: 'id' };
+
+// ------------------------------------------------------------- IndexedDB ---
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    let request;
+    try {
+      request = indexedDB.open(DB_NAME, DB_VERSION);
+    } catch (error) {
+      reject(error);
+      return;
+    }
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      for (const [name, keyPath] of Object.entries(STORES)) {
+        if (!db.objectStoreNames.contains(name)) db.createObjectStore(name, { keyPath });
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+    request.onblocked = () => reject(new Error('IndexedDB je zablokovaná'));
+    setTimeout(() => reject(new Error('IndexedDB neodpovedá')), 4000);
+  });
+}
+
+function idbBackend(db) {
+  const run = (storeName, mode, action) => new Promise((resolve, reject) => {
+    const transaction = db.transaction(storeName, mode);
+    const store = transaction.objectStore(storeName);
+    let request = null;
+    try {
+      request = action(store);
+    } catch (error) {
+      reject(error);
+      return;
+    }
+    transaction.oncomplete = () => resolve(request ? request.result : undefined);
+    transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(transaction.error);
+  });
+
+  return {
+    kind: 'indexeddb',
+    getAll: (name) => run(name, 'readonly', (store) => store.getAll()),
+    putAll: (name, items) => run(name, 'readwrite', (store) => {
+      items.forEach((item) => store.put(item));
+      return null;
+    }),
+    remove: (name, keys) => run(name, 'readwrite', (store) => {
+      keys.forEach((key) => store.delete(key));
+      return null;
+    }),
+    clear: (name) => run(name, 'readwrite', (store) => {
+      store.clear();
+      return null;
+    }),
+  };
+}
+
+// ----------------------------------------------------------- localStorage ---
+
+function localBackend() {
+  const key = (name) => `organista-${name}`;
+  const read = (name) => {
+    try {
+      return JSON.parse(localStorage.getItem(key(name)) || '[]');
+    } catch {
+      return [];
+    }
+  };
+  const write = (name, items) => {
+    try {
+      localStorage.setItem(key(name), JSON.stringify(items));
+    } catch (error) {
+      throw new Error('Pamäť prehliadača je plná. Zmaž nepoužívané zbierky piesní.');
+    }
+  };
+  const keyPathOf = (name) => STORES[name];
+
+  return {
+    kind: 'localstorage',
+    async getAll(name) {
+      return read(name);
+    },
+    async putAll(name, items) {
+      const path = keyPathOf(name);
+      const all = read(name);
+      const index = new Map(all.map((item, position) => [item[path], position]));
+      for (const item of items) {
+        const position = index.get(item[path]);
+        if (position === undefined) {
+          index.set(item[path], all.length);
+          all.push(item);
+        } else {
+          all[position] = item;
+        }
+      }
+      write(name, all);
+    },
+    async remove(name, keys) {
+      const path = keyPathOf(name);
+      const drop = new Set(keys);
+      write(name, read(name).filter((item) => !drop.has(item[path])));
+    },
+    async clear(name) {
+      write(name, []);
+    },
+  };
+}
+
+let backendPromise = null;
+
+function backend() {
+  if (!backendPromise) {
+    backendPromise = openDB()
+      .then(idbBackend)
+      .catch(() => localBackend());
+  }
+  return backendPromise;
+}
+
+/** 'indexeddb' | 'localstorage' – pre informáciu v nastaveniach. */
+async function storageKind() {
+  return (await backend()).kind;
+}
+const store = {
+  async allSongs() {
+    return (await backend()).getAll('songs');
+  },
+  async putSongs(songs) {
+    await (await backend()).putAll('songs', songs);
+    return songs.length;
+  },
+  async deleteFolder(folder) {
+    const api = await backend();
+    const songs = await api.getAll('songs');
+    await api.remove('songs', songs.filter((song) => song.folder === folder).map((song) => song.id));
+    await api.remove('folders', [folder]);
+  },
+  async clearSongs() {
+    const api = await backend();
+    await api.clear('songs');
+    await api.clear('folders');
+  },
+  async folders() {
+    return (await backend()).getAll('folders');
+  },
+  async putFolder(folder) {
+    await (await backend()).putAll('folders', [folder]);
+    return folder;
+  },
+  async sets() {
+    return (await backend()).getAll('sets');
+  },
+  async putSet(set) {
+    await (await backend()).putAll('sets', [set]);
+    return set;
+  },
+  async deleteSet(id) {
+    await (await backend()).remove('sets', [id]);
+  },
+};
+
+// --------------------------------------------------------------- nastavenia
+
+const SETTINGS_KEY = 'organista-nastavenia';
+const DEFAULT_SETTINGS = {
+  castAppId: '',
+  theme: 'dark',          // dark | light | sepia
+  fontScale: 1,
+  showTitle: true,
+  showVerseLabel: true,
+  uppercase: false,
+  lineSpacing: 1.25,
+  keepAwake: true,
+  defaultSystem: 'JKS',
+  vibrate: true,
+  presentHelpSeen: false,
+  presentButtons: false,  // viditeľné tlačidlá v prezentačnom režime
+};
+function loadSettings() {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    return { ...DEFAULT_SETTINGS, ...(raw ? JSON.parse(raw) : {}) };
+  } catch {
+    return { ...DEFAULT_SETTINGS };
+  }
+}
+function saveSettings(settings) {
+  try {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  } catch {
+    /* súkromný režim – nastavenia sa neuložia */
+  }
+  return settings;
+}
+
+
+/* ===== js/import.js ===== */
+// Načítanie .xml súborov z priečinka (alebo výberu súborov) do knižnice.
+
+
+function folderOf(file, fallback) {
+  const path = file.webkitRelativePath || file.relativePath || '';
+  const parts = path.split('/').filter(Boolean);
+  if (parts.length > 1) return parts[parts.length - 2];
+  return fallback || 'Ostatné';
+}
+
+/** Odhad číselníka podľa názvu priečinka: "JKS", "LS", "Liturgicky spevnik". */
+function systemForFolder(folderName, defaultSystem) {
+  const name = String(folderName || '').toUpperCase();
+  if (/\bJKS\b|JEDNOTN/.test(name)) return 'JKS';
+  if (/\bLS\b|LITURGIC/.test(name)) return 'LS';
+  return defaultSystem && /^JKS|LS$/.test(defaultSystem) ? '' : '';
+}
+
+/**
+ * @param {FileList|File[]} fileList
+ * @param {{folderName?:string, system?:string, onProgress?:Function}} options
+ */
+async function importFiles(fileList, options = {}) {
+  const files = Array.from(fileList).filter((file) => /\.xml$/i.test(file.name));
+  const result = { files: files.length, songs: 0, folders: new Set(), errors: [] };
+  if (!files.length) return result;
+
+  const songs = [];
+  const importedAt = Date.now();
+
+  for (let i = 0; i < files.length; i += 1) {
+    const file = files[i];
+    const folder = options.folderName || folderOf(file, options.folderName);
+    const system = (options.system || systemForFolder(folder)).toUpperCase();
+    try {
+      const text = await file.text();
+      const parsed = parseSongFile(text, {
+        folder,
+        fileName: file.name,
+        folderSystem: system,
+        importedAt,
+      });
+      if (!parsed.length) result.errors.push(`${file.name}: nenašli sa slohy`);
+      songs.push(...parsed);
+      result.folders.add(folder);
+    } catch (error) {
+      result.errors.push(`${file.name}: ${error.message}`);
+    }
+    if (options.onProgress) options.onProgress(i + 1, files.length);
+  }
+
+  if (songs.length) await store.putSongs(songs);
+  for (const folder of result.folders) {
+    const inFolder = songs.filter((song) => song.folder === folder);
+    await store.putFolder({
+      name: folder,
+      system: (options.system || systemForFolder(folder) || (inFolder.find((s) => s.system) || {}).system || '').toUpperCase(),
+      count: inFolder.length,
+      updatedAt: importedAt,
+    });
+  }
+  result.songs = songs.length;
+  result.folders = Array.from(result.folders);
+  return result;
+}
+
+
+/* ===== js/bus.js ===== */
+// Prenos stavu na zobrazovacie plochy.
+// 1) BroadcastChannel + localStorage – pre okno/kartu na tom istom zariadení
+//    (to sa zrkadlí na TV cez "Prenášať kartu" / mirroring),
+// 2) Google Cast – priamo na Chromecast prijímač (receiver.html).
+const CHANNEL = 'organista-texty';
+const MIRROR_KEY = 'organista-stav';
+const CAST_NAMESPACE = 'urn:x-cast:sk.organista.texty';
+function createLocalBus() {
+  let channel = null;
+  try {
+    channel = new BroadcastChannel(CHANNEL);
+  } catch {
+    channel = null;
+  }
+  return {
+    send(state) {
+      const payload = JSON.stringify(state);
+      if (channel) channel.postMessage(state);
+      try {
+        localStorage.setItem(MIRROR_KEY, payload);
+      } catch {
+        /* ignorujeme */
+      }
+    },
+    subscribe(handler) {
+      if (channel) channel.onmessage = (event) => handler(event.data);
+      window.addEventListener('storage', (event) => {
+        if (event.key === MIRROR_KEY && event.newValue) {
+          try {
+            handler(JSON.parse(event.newValue));
+          } catch {
+            /* ignorujeme */
+          }
+        }
+      });
+      try {
+        const last = localStorage.getItem(MIRROR_KEY);
+        if (last) handler(JSON.parse(last));
+      } catch {
+        /* ignorujeme */
+      }
+    },
+  };
+}
+
+/** Stav, ktorý sa posiela na obrazovku. */
+function displayState({ song, verse, blank, settings, position }) {
+  return {
+    v: 1,
+    blank: !!blank,
+    title: song ? song.title : '',
+    number: song && song.number ? `${song.system || ''} ${song.number}`.trim() : '',
+    verseLabel: verse ? verse.label : '',
+    verseType: verse ? verse.type : '',
+    lines: verse ? verse.lines : [],
+    position: position || '',
+    theme: settings.theme,
+    fontScale: settings.fontScale,
+    showTitle: settings.showTitle,
+    showVerseLabel: settings.showVerseLabel,
+    uppercase: settings.uppercase,
+    lineSpacing: settings.lineSpacing,
+    ts: Date.now(),
+  };
+}
+
+
+/* ===== js/display-core.js ===== */
+// Vykreslenie textu na premietaciu plochu (okno na TV aj Chromecast prijímač).
+
+const THEMES = {
+  dark: { bg: '#000000', fg: '#ffffff', meta: 'rgba(255,255,255,.55)' },
+  light: { bg: '#ffffff', fg: '#101010', meta: 'rgba(0,0,0,.5)' },
+  sepia: { bg: '#1b1408', fg: '#ffe9c2', meta: 'rgba(255,233,194,.55)' },
+};
+function createDisplay(root) {
+  root.classList.add('screen-host');
+  root.innerHTML = `
+    <div class="screen" id="screen">
+      <div class="meta meta-top"><span id="metaTitle"></span></div>
+      <div class="text" id="text"><div class="lines" id="lines"></div></div>
+      <div class="meta meta-bottom"><span id="metaVerse"></span></div>
+    </div>`;
+
+  const screen = root.querySelector('#screen');
+  const textBox = root.querySelector('#text');
+  const linesBox = root.querySelector('#lines');
+  const metaTitle = root.querySelector('#metaTitle');
+  const metaVerse = root.querySelector('#metaVerse');
+  let current = null;
+
+  // Najväčšie písmo, pri ktorom sa text ešte zmestí na plochu.
+  // Prvá voľba: každý riadok piesne zostane na jednom riadku obrazovky.
+  // Ak by bolo písmo príliš malé (veľmi dlhý verš), povolíme zalomenie.
+  function measure(wrap, available, width, cap) {
+    linesBox.style.whiteSpace = wrap ? 'pre-wrap' : 'pre';
+    let low = 6;
+    let high = cap;
+    let best = low;
+    while (low <= high) {
+      const mid = Math.floor((low + high) / 2);
+      linesBox.style.fontSize = `${mid}px`;
+      const fitsHeight = linesBox.scrollHeight <= available;
+      const fitsWidth = wrap ? true : linesBox.scrollWidth <= width + 1;
+      if (fitsHeight && fitsWidth) {
+        best = mid;
+        low = mid + 1;
+      } else {
+        high = mid - 1;
+      }
+    }
+    return best;
+  }
+
+  function fit() {
+    if (!current || current.blank || !current.lines.length) return;
+    const available = textBox.clientHeight;
+    const width = textBox.clientWidth;
+    if (available < 8 || width < 8) return;
+    const scale = current.fontScale || 1;
+    const cap = Math.max(10, Math.round(available * 0.42 * scale));
+
+    const wrapped = measure(true, available, width, cap);
+    const noWrap = measure(false, available, width, cap);
+
+    // Celé verše na jednom riadku sú prehľadnejšie; zalomíme len vtedy,
+    // ak by nás to stálo výraznú stratu veľkosti písma.
+    if (noWrap >= Math.max(14, wrapped * 0.72)) {
+      linesBox.style.whiteSpace = 'pre';
+      linesBox.style.fontSize = `${noWrap}px`;
+      return;
+    }
+    linesBox.style.whiteSpace = 'pre-wrap';
+    linesBox.style.fontSize = `${wrapped}px`;
+  }
+
+  function render(state) {
+    current = state;
+    const theme = THEMES[state.theme] || THEMES.dark;
+    screen.style.setProperty('--bg', theme.bg);
+    screen.style.setProperty('--fg', theme.fg);
+    screen.style.setProperty('--meta', theme.meta);
+    linesBox.style.lineHeight = String(state.lineSpacing || 1.25);
+    linesBox.style.textTransform = state.uppercase ? 'uppercase' : 'none';
+
+    const blank = state.blank || !state.lines || state.lines.length === 0;
+    screen.classList.toggle('is-blank', blank);
+    if (blank) {
+      linesBox.textContent = '';
+      metaTitle.textContent = '';
+      metaVerse.textContent = '';
+      return;
+    }
+
+    metaTitle.textContent = state.showTitle
+      ? [state.number, state.title].filter(Boolean).join(' · ')
+      : '';
+    metaVerse.textContent = state.showVerseLabel && state.verseLabel
+      ? (state.verseType === 'chorus' ? 'Refrén' : `${state.verseLabel}.`)
+      : '';
+
+    linesBox.innerHTML = '';
+    for (const line of state.lines) {
+      const div = document.createElement('div');
+      div.className = 'line';
+      div.textContent = line;
+      if (!line.trim()) div.innerHTML = '&nbsp;';
+      linesBox.appendChild(div);
+    }
+    fit();
+  }
+
+  window.addEventListener('resize', fit);
+  if (typeof ResizeObserver === 'function') new ResizeObserver(fit).observe(root);
+  render({ blank: true, theme: 'dark', lines: [] });
+  return { render };
+}
+
+
+/* ===== js/cast.js ===== */
+// Google Cast – odosielacia strana (tablet).
+// Vyžaduje vlastné Application ID zaregistrované v Google Cast SDK Developer Console,
+// ktoré si používateľ zadá v Nastaveniach. Bez neho appka používa zrkadlenie karty.
+
+const SENDER_SRC = 'https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1';
+function createCast({ appId, onStatus }) {
+  const state = {
+    appId: appId || '',
+    available: false,
+    connected: false,
+    deviceName: '',
+    error: '',
+  };
+
+  const notify = () => onStatus({ ...state });
+
+  function session() {
+    const context = window.cast && window.cast.framework
+      ? window.cast.framework.CastContext.getInstance()
+      : null;
+    return context ? context.getCurrentSession() : null;
+  }
+
+  function initialize() {
+    if (!state.appId || !window.cast || !window.cast.framework || !window.chrome || !window.chrome.cast) return;
+    const context = window.cast.framework.CastContext.getInstance();
+    context.setOptions({
+      receiverApplicationId: state.appId,
+      autoJoinPolicy: window.chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED,
+    });
+    context.addEventListener(
+      window.cast.framework.CastContextEventType.SESSION_STATE_CHANGED,
+      (event) => {
+        const types = window.cast.framework.SessionState;
+        state.connected = event.sessionState === types.SESSION_STARTED || event.sessionState === types.SESSION_RESUMED;
+        const active = session();
+        state.deviceName = active && active.getCastDevice() ? active.getCastDevice().friendlyName : '';
+        notify();
+      },
+    );
+    state.available = true;
+    notify();
+  }
+
+  window.__onGCastApiAvailable = (isAvailable) => {
+    if (isAvailable) initialize();
+  };
+
+  function load() {
+    if (document.querySelector(`script[src="${SENDER_SRC}"]`)) {
+      initialize();
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = SENDER_SRC;
+    script.onerror = () => {
+      state.error = 'Cast SDK sa nepodarilo načítať (offline?).';
+      notify();
+    };
+    document.head.appendChild(script);
+  }
+
+  return {
+    get state() { return { ...state }; },
+    start() {
+      if (state.appId) load();
+      else notify();
+    },
+    setAppId(appId) {
+      state.appId = appId || '';
+      state.connected = false;
+      state.available = false;
+      if (state.appId) load();
+      notify();
+    },
+    async connect() {
+      const context = window.cast && window.cast.framework
+        ? window.cast.framework.CastContext.getInstance()
+        : null;
+      if (!context) {
+        state.error = 'Cast nie je dostupný v tomto prehliadači.';
+        notify();
+        return;
+      }
+      try {
+        await context.requestSession();
+      } catch (error) {
+        if (error !== 'cancel') {
+          state.error = 'Pripojenie k Chromecastu zlyhalo.';
+          notify();
+        }
+      }
+    },
+    disconnect() {
+      const active = session();
+      if (active) active.endSession(true);
+      state.connected = false;
+      notify();
+    },
+    send(payload) {
+      const active = session();
+      if (!active) return false;
+      active.sendMessage(CAST_NAMESPACE, payload);
+      return true;
+    },
+  };
+}
+
+
+/* ===== js/present.js ===== */
+// Prezentačný režim pre zrkadlenie obrazovky na TV (Chromecast „Prenášať obrazovku“).
+//
+// Pri zrkadlení vidí televízor presne to, čo je na tablete, takže na obrazovke
+// nesmie byť žiadne ovládanie. Riadi sa preto neviditeľnými dotykovými zónami:
+//   ľavá tretina  = predošlá sloha
+//   pravá tretina = ďalšia sloha
+//   stred         = čierna obrazovka (ťuknutie) / ponuka (podržanie)
+//   potiahnutie vľavo-vpravo = predošlá/ďalšia pieseň
+// Každý dotyk potvrdí krátka vibrácia, aby organista nemusel pozerať na tablet.
+
+const LONG_PRESS_MS = 600;
+const SWIPE_MIN = 90;
+function createPresenter({ root, actions, isVibrationOn }) {
+  let active = false;
+
+  const buzz = (pattern) => {
+    if (!isVibrationOn() || !navigator.vibrate) return;
+    try {
+      navigator.vibrate(pattern);
+    } catch {
+      /* zariadenie vibrácie nepodporuje */
+    }
+  };
+
+  const zones = root.querySelector('#presentZones');
+  const menu = root.querySelector('#presentMenu');
+  const help = root.querySelector('#presentHelp');
+
+  const showMenu = (show) => {
+    menu.hidden = !show;
+    if (show) buzz(25);
+  };
+
+  // ---------------------------------------------------------------- dotyk ---
+  let start = null;
+  let longPressTimer = null;
+
+  const zoneOf = (x) => {
+    const width = zones.clientWidth || window.innerWidth;
+    if (x < width * 0.35) return 'prev';
+    if (x > width * 0.65) return 'next';
+    return 'center';
+  };
+
+  zones.addEventListener('pointerdown', (event) => {
+    if (!menu.hidden || !help.hidden) return;
+    start = { x: event.clientX, y: event.clientY, t: Date.now(), zone: zoneOf(event.clientX) };
+    clearTimeout(longPressTimer);
+    if (start.zone === 'center') {
+      longPressTimer = setTimeout(() => {
+        start = null;
+        showMenu(true);
+      }, LONG_PRESS_MS);
+    }
+  });
+
+  zones.addEventListener('pointercancel', () => {
+    clearTimeout(longPressTimer);
+    start = null;
+  });
+
+  zones.addEventListener('pointerup', (event) => {
+    clearTimeout(longPressTimer);
+    if (!start) return;
+    const dx = event.clientX - start.x;
+    const dy = event.clientY - start.y;
+    const moved = Math.abs(dx);
+    start = null;
+
+    if (moved > SWIPE_MIN && moved > Math.abs(dy)) {
+      if (dx < 0) actions.nextSong();
+      else actions.prevSong();
+      buzz([20, 40, 20]);
+      return;
+    }
+
+    const zone = zoneOf(event.clientX);
+    if (zone === 'prev') actions.prevVerse();
+    else if (zone === 'next') actions.nextVerse();
+    else actions.toggleBlank();
+    buzz(zone === 'center' ? [15, 30, 15] : 18);
+  });
+
+  // ---------------------------------------------------------------- ponuka ---
+  root.querySelectorAll('[data-present-action]').forEach((button) => {
+    button.onclick = () => {
+      const action = button.dataset.presentAction;
+      if (action === 'close') showMenu(false);
+      else if (action === 'exit') {
+        showMenu(false);
+        exit();
+      } else if (actions[action]) {
+        actions[action]();
+        showMenu(false);
+      }
+    };
+  });
+
+  root.querySelector('#presentHelpOk').onclick = () => {
+    help.hidden = true;
+    actions.helpSeen();
+  };
+
+  // ------------------------------------------------------------ fullscreen ---
+  async function goFullscreen() {
+    try {
+      if (!document.fullscreenElement) await document.documentElement.requestFullscreen({ navigationUI: 'hide' });
+    } catch {
+      /* prehliadač celú obrazovku odmietol – režim funguje aj bez nej */
+    }
+    try {
+      if (screen.orientation && screen.orientation.lock) await screen.orientation.lock('landscape');
+    } catch {
+      /* uzamknutie orientácie nie je povinné */
+    }
+  }
+
+  async function enter({ showHelp }) {
+    active = true;
+    root.hidden = false;
+    document.body.classList.add('is-presenting');
+    help.hidden = !showHelp;
+    menu.hidden = true;
+    await goFullscreen();
+    actions.changed();
+  }
+
+  function exit() {
+    active = false;
+    root.hidden = true;
+    document.body.classList.remove('is-presenting');
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    actions.changed();
+  }
+
+  document.addEventListener('fullscreenchange', () => {
+    // Používateľ vyskočil z celej obrazovky (systémové gesto) – režim ukončíme,
+    // aby sa na televízore neobjavilo rozhrané rozhranie.
+    if (active && !document.fullscreenElement) exit();
+  });
+
+  return {
+    get active() { return active; },
+    enter,
+    exit,
+    toggleButtons(show) {
+      root.classList.toggle('has-buttons', !!show);
+    },
+  };
+}
+
+
+/* ===== js/app.js ===== */
+// Ovládacia aplikácia pre organistu (tablet).
+
+
+
+
+
+
+
+const $ = (selector, scope = document) => scope.querySelector(selector);
+const $$ = (selector, scope = document) => Array.from(scope.querySelectorAll(selector));
+
+const state = {
+  songs: [],
+  folders: [],
+  sets: [],
+  activeFolder: null,
+  query: '',
+  set: { id: null, name: 'Nový set', items: [] },   // items = id piesní
+  live: { songs: [], songIndex: 0, verseIndex: 0, blank: false },
+  settings: loadSettings(),
+  view: 'library',
+};
+
+const bus = createLocalBus();
+let preview = null;
+let presentScreen = null;
+let presenter = null;
+let displayWindow = null;
+let wakeLock = null;
+
+const cast = createCast({
+  appId: state.settings.castAppId,
+  onStatus: (status) => renderCastStatus(status),
+});
+
+// ------------------------------------------------------------------ pomôcky
+
+function songById(id) {
+  return state.songs.find((song) => song.id === id) || null;
+}
+
+/** Slovenské skloňovanie: 1 pieseň, 2–4 piesne, 5+ piesní. */
+function pluralSongs(count) {
+  if (count === 1) return '1 pieseň';
+  if (count >= 2 && count <= 4) return `${count} piesne`;
+  return `${count} piesní`;
+}
+
+/** Slovenské skloňovanie: 1 sloha, 2–4 slohy, 5+ slôh. */
+function pluralVerses(count) {
+  if (count === 1) return '1 sloha';
+  if (count >= 2 && count <= 4) return `${count} slohy`;
+  return `${count} slôh`;
+}
+
+function songLabel(song) {
+  return song.number ? `${song.system || ''} ${song.number}`.trim() : '';
+}
+
+function toast(message, kind = 'info') {
+  const box = $('#toast');
+  box.textContent = message;
+  box.className = `toast toast--${kind} is-visible`;
+  clearTimeout(box._timer);
+  box._timer = setTimeout(() => box.classList.remove('is-visible'), 3200);
+}
+
+function setView(view) {
+  state.view = view;
+  $$('.view').forEach((node) => node.classList.toggle('is-active', node.dataset.view === view));
+  $$('.tab').forEach((node) => node.classList.toggle('is-active', node.dataset.goto === view));
+  document.body.classList.toggle('is-live', view === 'live');
+  if (view === 'live') enableWakeLock();
+  else releaseWakeLock();
+}
+
+async function enableWakeLock() {
+  if (!state.settings.keepAwake || !navigator.wakeLock || wakeLock) return;
+  try {
+    wakeLock = await navigator.wakeLock.request('screen');
+    wakeLock.addEventListener('release', () => { wakeLock = null; });
+  } catch {
+    wakeLock = null;
+  }
+}
+
+function releaseWakeLock() {
+  if (wakeLock) {
+    wakeLock.release().catch(() => {});
+    wakeLock = null;
+  }
+}
+
+// ------------------------------------------------------------ dáta / načítanie
+
+async function reloadLibrary() {
+  const [songs, folders, sets] = await Promise.all([store.allSongs(), store.folders(), store.sets()]);
+  state.songs = songs.sort(compareSongs);
+  state.folders = folders.sort((a, b) => a.name.localeCompare(b.name, 'sk'));
+  state.sets = sets.sort((a, b) => b.updatedAt - a.updatedAt);
+  renderFolders();
+  renderSongList();
+  renderSetList();
+  renderSavedSets();
+}
+
+// ------------------------------------------------------------------ knižnica
+
+function renderFolders() {
+  const box = $('#folders');
+  const counts = new Map();
+  for (const song of state.songs) counts.set(song.folder, (counts.get(song.folder) || 0) + 1);
+
+  const items = [{ name: null, label: 'Všetky piesne', count: state.songs.length, system: '' }]
+    .concat(state.folders.map((folder) => ({
+      name: folder.name,
+      label: folder.name,
+      count: counts.get(folder.name) || 0,
+      system: folder.system || '',
+    })));
+
+  box.innerHTML = '';
+  for (const item of items) {
+    const button = document.createElement('button');
+    button.className = 'folder';
+    button.classList.toggle('is-active', state.activeFolder === item.name);
+    button.innerHTML = `<span class="folder__name">${item.label}</span>
+      <span class="folder__meta">${item.system ? `<em>${item.system}</em>` : ''}${item.count}</span>`;
+    button.onclick = () => {
+      state.activeFolder = item.name;
+      renderFolders();
+      renderSongList();
+    };
+    box.appendChild(button);
+  }
+}
+
+function visibleSongs() {
+  const pool = state.activeFolder
+    ? state.songs.filter((song) => song.folder === state.activeFolder)
+    : state.songs;
+  return searchSongs(pool, state.query);
+}
+
+function songRow(song, { action, actionLabel, subtitle }) {
+  const row = document.createElement('div');
+  row.className = 'song';
+  const number = songLabel(song);
+  row.innerHTML = `
+    <div class="song__num">${number || '—'}</div>
+    <div class="song__body">
+      <div class="song__title">${song.title}</div>
+      <div class="song__sub">${subtitle || `${song.folder} · ${pluralVerses(song.verses.length)}`}</div>
+    </div>`;
+  const button = document.createElement('button');
+  button.className = 'btn btn--add';
+  button.textContent = actionLabel;
+  button.onclick = (event) => {
+    event.stopPropagation();
+    action(song);
+  };
+  row.appendChild(button);
+  row.onclick = () => openSongPreview(song);
+  return row;
+}
+
+function renderSongList() {
+  const box = $('#songList');
+  const songs = visibleSongs();
+  $('#songCount').textContent = songs.length ? pluralSongs(songs.length) : '';
+  box.innerHTML = '';
+
+  if (!state.songs.length) {
+    box.innerHTML = `<div class="empty">
+      <h3>Knižnica je prázdna</h3>
+      <p>Načítaj priečinok s .xml súbormi piesní tlačidlom <strong>Načítať priečinok</strong>.
+      Každý podpriečinok sa stane samostatnou zbierkou (napr. <em>JKS</em>).</p></div>`;
+    return;
+  }
+  if (!songs.length) {
+    box.innerHTML = '<div class="empty"><h3>Nič sa nenašlo</h3><p>Skús iný názov alebo číslo.</p></div>';
+    return;
+  }
+  const fragment = document.createDocumentFragment();
+  for (const song of songs.slice(0, 400)) {
+    fragment.appendChild(songRow(song, {
+      actionLabel: '+ Do setu',
+      action: (target) => addToSet(target.id),
+    }));
+  }
+  box.appendChild(fragment);
+}
+
+function openSongPreview(song) {
+  const dialog = $('#songDialog');
+  $('#dialogTitle').textContent = song.title;
+  $('#dialogMeta').textContent = [songLabel(song), song.folder, song.author].filter(Boolean).join(' · ');
+  $('#dialogBody').innerHTML = song.verses.map((verse) => `
+    <div class="verse-preview">
+      <div class="verse-preview__label">${verse.type === 'chorus' ? 'Refrén' : `${verse.label}.`}</div>
+      <div class="verse-preview__text">${verse.lines.map((line) => line || '&nbsp;').join('<br>')}</div>
+    </div>`).join('');
+  $('#dialogAdd').onclick = () => {
+    addToSet(song.id);
+    dialog.close();
+  };
+  $('#dialogPlay').onclick = () => {
+    dialog.close();
+    startLive([song.id], 0);
+  };
+  dialog.showModal();
+}
+
+// ------------------------------------------------------------------- set
+
+function addToSet(songId, { silent } = {}) {
+  if (!songById(songId)) return;
+  state.set.items.push(songId);
+  renderSetList();
+  if (!silent) toast(`Pridané: ${songById(songId).title}`, 'ok');
+}
+
+function removeFromSet(index) {
+  state.set.items.splice(index, 1);
+  renderSetList();
+}
+
+function moveInSet(index, delta) {
+  const target = index + delta;
+  if (target < 0 || target >= state.set.items.length) return;
+  const [item] = state.set.items.splice(index, 1);
+  state.set.items.splice(target, 0, item);
+  renderSetList();
+}
+
+function renderSetList() {
+  const box = $('#setList');
+  $('#setCount').textContent = String(state.set.items.length);
+  $('#setNameInput').value = state.set.name;
+  box.innerHTML = '';
+
+  if (!state.set.items.length) {
+    box.innerHTML = `<div class="empty">
+      <h3>Set je prázdny</h3>
+      <p>Pridaj piesne z knižnice alebo rýchlo zadaj číslo JKS/LS nižšie.</p></div>`;
+    return;
+  }
+
+  state.set.items.forEach((id, index) => {
+    const song = songById(id);
+    const row = document.createElement('div');
+    row.className = 'setrow';
+    row.innerHTML = `
+      <div class="setrow__pos">${index + 1}</div>
+      <div class="setrow__body">
+        <div class="song__title">${song ? song.title : 'Pieseň sa nenašla'}</div>
+        <div class="song__sub">${song ? [songLabel(song), pluralVerses(song.verses.length)].filter(Boolean).join(' · ') : id}</div>
+      </div>
+      <div class="setrow__tools">
+        <button class="btn btn--icon" data-up title="Hore">▲</button>
+        <button class="btn btn--icon" data-down title="Dole">▼</button>
+        <button class="btn btn--icon btn--danger" data-del title="Odobrať">✕</button>
+      </div>`;
+    $('[data-up]', row).onclick = () => moveInSet(index, -1);
+    $('[data-down]', row).onclick = () => moveInSet(index, 1);
+    $('[data-del]', row).onclick = () => removeFromSet(index);
+    row.onclick = (event) => {
+      if (event.target.closest('button')) return;
+      if (song) startLive(state.set.items, index);
+    };
+    box.appendChild(row);
+  });
+}
+
+function renderSavedSets() {
+  const box = $('#savedSets');
+  box.innerHTML = '';
+  if (!state.sets.length) {
+    box.innerHTML = '<p class="hint">Zatiaľ nemáš uložený žiadny set.</p>';
+    return;
+  }
+  for (const saved of state.sets) {
+    const row = document.createElement('div');
+    row.className = 'savedset';
+    const date = new Date(saved.updatedAt).toLocaleDateString('sk-SK');
+    row.innerHTML = `<div><strong>${saved.name}</strong><span class="song__sub">${pluralSongs(saved.items.length)} · ${date}</span></div>`;
+    const open = document.createElement('button');
+    open.className = 'btn';
+    open.textContent = 'Otvoriť';
+    open.onclick = () => {
+      state.set = { id: saved.id, name: saved.name, items: saved.items.slice() };
+      renderSetList();
+      toast(`Načítaný set „${saved.name}“`, 'ok');
+    };
+    const remove = document.createElement('button');
+    remove.className = 'btn btn--danger';
+    remove.textContent = 'Zmazať';
+    remove.onclick = async () => {
+      if (!confirm(`Zmazať set „${saved.name}“?`)) return;
+      await store.deleteSet(saved.id);
+      await reloadLibrary();
+    };
+    row.append(open, remove);
+    box.appendChild(row);
+  }
+}
+
+async function saveCurrentSet() {
+  if (!state.set.items.length) {
+    toast('Set je prázdny.', 'warn');
+    return;
+  }
+  const set = {
+    id: state.set.id || `set-${Date.now()}`,
+    name: $('#setNameInput').value.trim() || 'Set bez názvu',
+    items: state.set.items.slice(),
+    updatedAt: Date.now(),
+  };
+  await store.putSet(set);
+  state.set.id = set.id;
+  state.set.name = set.name;
+  await reloadLibrary();
+  toast(`Set „${set.name}“ uložený.`, 'ok');
+}
+
+// -------------------------------------------------------- rýchly výber čísla
+
+function quickMatches(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return [];
+  const asNumber = parseNumber(raw);
+  if (asNumber) {
+    return state.songs.filter((song) => song.number
+      && parseInt(song.number, 10) === parseInt(asNumber.number, 10)
+      && (!asNumber.system || song.system === asNumber.system));
+  }
+  return searchSongs(state.songs, raw).slice(0, 8);
+}
+
+function renderQuickResults(boxId, value, onPick) {
+  const box = $(boxId);
+  const matches = quickMatches(value);
+  box.innerHTML = '';
+  if (!value.trim()) return;
+  if (!matches.length) {
+    box.innerHTML = '<p class="hint">Žiadna zhoda.</p>';
+    return;
+  }
+  for (const song of matches.slice(0, 8)) {
+    const button = document.createElement('button');
+    button.className = 'quickhit';
+    button.innerHTML = `<span class="quickhit__num">${songLabel(song) || '—'}</span>
+      <span class="quickhit__title">${song.title}</span><span class="quickhit__folder">${song.folder}</span>`;
+    button.onclick = () => onPick(song);
+    box.appendChild(button);
+  }
+}
+
+// -------------------------------------------------------------- živý režim
+
+function currentSong() {
+  return state.live.songs[state.live.songIndex] || null;
+}
+
+function currentVerse() {
+  const song = currentSong();
+  return song ? song.verses[state.live.verseIndex] || null : null;
+}
+
+function startLive(ids, index = 0) {
+  const songs = ids.map(songById).filter(Boolean);
+  if (!songs.length) {
+    toast('Najprv pridaj aspoň jednu pieseň.', 'warn');
+    return;
+  }
+  state.live = { songs, songIndex: Math.min(index, songs.length - 1), verseIndex: 0, blank: state.live.blank };
+  setView('live');
+  renderLive();
+}
+
+function selectVerse(index) {
+  const song = currentSong();
+  if (!song) return;
+  state.live.verseIndex = Math.max(0, Math.min(index, song.verses.length - 1));
+  renderLive();
+}
+
+function stepVerse(delta) {
+  const song = currentSong();
+  if (!song) return;
+  const next = state.live.verseIndex + delta;
+  if (next < 0) {
+    if (state.live.songIndex > 0) {
+      state.live.songIndex -= 1;
+      state.live.verseIndex = Math.max(0, currentSong().verses.length - 1);
+    }
+  } else if (next >= song.verses.length) {
+    if (state.live.songIndex < state.live.songs.length - 1) {
+      state.live.songIndex += 1;
+      state.live.verseIndex = 0;
+    }
+  } else {
+    state.live.verseIndex = next;
+  }
+  renderLive();
+}
+
+function stepSong(delta) {
+  const next = state.live.songIndex + delta;
+  if (next < 0 || next >= state.live.songs.length) return;
+  state.live.songIndex = next;
+  state.live.verseIndex = 0;
+  renderLive();
+}
+
+/** Čierna obrazovka – výber slohy zostáva nezmenený. */
+function toggleBlank(force) {
+  state.live.blank = force === undefined ? !state.live.blank : !!force;
+  renderLive();
+}
+
+const jump = { system: '' };
+
+function toggleJumpPanel(force) {
+  const panel = $('#jumpPanel');
+  const open = force === undefined ? panel.hidden : force;
+  panel.hidden = !open;
+  if (open) {
+    $('#jumpValue').textContent = '';
+    $('#jumpResults').innerHTML = '';
+  }
+}
+
+/** Otvorí pieseň podľa zadaného čísla – ak nie je v sete, vloží ju hneď za aktuálnu. */
+function jumpToSong(song) {
+  const index = state.live.songs.findIndex((item) => item.id === song.id);
+  if (index >= 0) {
+    state.live.songIndex = index;
+  } else {
+    state.live.songs.splice(state.live.songIndex + 1, 0, song);
+    state.live.songIndex += 1;
+  }
+  state.live.verseIndex = 0;
+  toggleJumpPanel(false);
+  renderLive();
+}
+
+function renderJump() {
+  const query = `${jump.system} ${$('#jumpValue').textContent}`.trim();
+  renderQuickResults('#jumpResults', query, jumpToSong);
+}
+
+function renderLive() {
+  const song = currentSong();
+  const verse = currentVerse();
+
+  $('#liveTitle').textContent = song ? song.title : 'Bez piesne';
+  $('#liveNumber').textContent = song ? songLabel(song) : '';
+  $('#livePosition').textContent = state.live.songs.length > 1
+    ? `${state.live.songIndex + 1}/${state.live.songs.length}`
+    : '';
+  $('#prevSong').disabled = state.live.songIndex === 0;
+  $('#nextSong').disabled = state.live.songIndex >= state.live.songs.length - 1;
+  $('#prevSongLabel').textContent = state.live.songIndex > 0
+    ? state.live.songs[state.live.songIndex - 1].title : '';
+  $('#nextSongLabel').textContent = state.live.songIndex < state.live.songs.length - 1
+    ? state.live.songs[state.live.songIndex + 1].title : '';
+
+  const blankButton = $('#blankBtn');
+  blankButton.classList.toggle('is-on', state.live.blank);
+  blankButton.querySelector('.bigbtn__label').textContent = state.live.blank ? 'ZOBRAZIŤ TEXT' : 'ČIERNA OBRAZOVKA';
+  $('#blankNotice').hidden = !state.live.blank;
+  if (state.live.blank && verse) {
+    $('#blankNotice').textContent = `Čierna obrazovka – vybraná ostáva ${verse.type === 'chorus' ? 'refrén' : `${verse.label}. sloha`}`;
+  }
+
+  const grid = $('#verseGrid');
+  grid.innerHTML = '';
+  if (song) {
+    song.verses.forEach((item, index) => {
+      const button = document.createElement('button');
+      button.className = `versebtn versebtn--${item.type}`;
+      button.classList.toggle('is-active', index === state.live.verseIndex);
+      const short = item.type === 'chorus' ? 'R' : item.label;
+      button.innerHTML = `<span class="versebtn__num">${short}</span>
+        <span class="versebtn__hint">${(item.lines[0] || '').slice(0, 28)}</span>`;
+      button.setAttribute('aria-label', `${VERSE_TYPES[item.type] ? VERSE_TYPES[item.type].label : 'Sloha'} ${item.label}`);
+      button.onclick = () => selectVerse(index);
+      grid.appendChild(button);
+    });
+  }
+
+  $('#prevVerse').disabled = !song || (state.live.verseIndex === 0 && state.live.songIndex === 0);
+  $('#nextVerse').disabled = !song
+    || (state.live.verseIndex >= song.verses.length - 1 && state.live.songIndex >= state.live.songs.length - 1);
+
+  publish();
+}
+
+// ------------------------------------------------------------- publikovanie
+
+function publish() {
+  const payload = displayState({
+    song: currentSong(),
+    verse: currentVerse(),
+    blank: state.live.blank || (state.view !== 'live' && !(presenter && presenter.active)),
+    settings: state.settings,
+    position: state.live.songs.length > 1 ? `${state.live.songIndex + 1}/${state.live.songs.length}` : '',
+  });
+  bus.send(payload);
+  cast.send(payload);
+  if (preview) preview.render(payload);
+  if (presentScreen) presentScreen.render(payload);
+}
+
+function renderCastStatus(status) {
+  const badge = $('#castStatus');
+  const detail = $('#castStatusDetail');
+  const button = $('#castBtn');
+
+  let text = 'Televízor: nepripojený';
+  let kind = 'badge';
+  if (presenter && presenter.active) {
+    text = 'Televízor: prezentačný režim';
+    kind = 'badge badge--ok';
+  } else if (displayWindow && !displayWindow.closed) {
+    text = 'Televízor: okno s textom';
+    kind = 'badge badge--ok';
+  } else if (status.connected) {
+    text = `Chromecast: ${status.deviceName || 'pripojený'}`;
+    kind = 'badge badge--ok';
+  }
+  badge.textContent = text;
+  badge.className = kind;
+
+  if (!detail || !button) return;
+  if (!state.settings.castAppId) {
+    detail.textContent = 'nenastavené';
+    detail.className = 'badge';
+    button.disabled = true;
+    button.textContent = 'Pripojiť Chromecast';
+    return;
+  }
+  button.disabled = false;
+  if (status.connected) {
+    detail.textContent = status.deviceName || 'pripojený';
+    detail.className = 'badge badge--ok';
+    button.textContent = 'Odpojiť';
+    button.onclick = () => cast.disconnect();
+    publish();
+    return;
+  }
+  detail.textContent = status.error || (status.available ? 'pripravené' : 'hľadám zariadenia...');
+  detail.className = status.error ? 'badge badge--warn' : 'badge';
+  button.textContent = 'Pripojiť Chromecast';
+  button.onclick = () => cast.connect();
+}
+
+// ------------------------------------------------------ prezentačný režim
+
+async function startPresenting() {
+  if (!currentSong()) {
+    const ids = state.set.items.length ? state.set.items : state.songs.slice(0, 1).map((song) => song.id);
+    if (!ids.length) {
+      toast('Najprv načítaj piesne do knižnice.', 'warn');
+      return;
+    }
+    startLive(ids, 0);
+  } else if (state.view !== 'live') {
+    setView('live');
+  }
+  await presenter.enter({ showHelp: !state.settings.presentHelpSeen });
+  enableWakeLock();
+  renderLive();
+}
+
+function setupPresenter() {
+  presentScreen = createDisplay($('#presentScreen'));
+  presenter = createPresenter({
+    root: $('#present'),
+    isVibrationOn: () => state.settings.vibrate,
+    actions: {
+      prevVerse: () => stepVerse(-1),
+      nextVerse: () => stepVerse(1),
+      prevSong: () => stepSong(-1),
+      nextSong: () => stepSong(1),
+      toggleBlank: () => toggleBlank(),
+      helpSeen: () => updateSettings({ presentHelpSeen: true }),
+      changed: () => {
+        renderCastStatus(cast.state);
+        publish();
+      },
+    },
+  });
+  presenter.toggleButtons(state.settings.presentButtons);
+}
+
+function openDisplayWindow() {
+  if (displayWindow && !displayWindow.closed) {
+    displayWindow.focus();
+    publish();
+    return;
+  }
+  const single = typeof window.__SINGLE_FILE__ !== 'undefined' && window.__SINGLE_FILE__;
+  displayWindow = window.open(single ? '' : 'display.html', 'organista-display', 'width=1280,height=720');
+  if (single && displayWindow) {
+    displayWindow.document.write(window.DISPLAY_PAGE);
+    displayWindow.document.close();
+  }
+  if (!displayWindow) {
+    toast('Prehliadač zablokoval nové okno. Povoľ vyskakovacie okná.', 'warn');
+    return;
+  }
+  renderCastStatus(cast.state);
+  setTimeout(publish, 600);
+}
+
+// ------------------------------------------------------------- nastavenia
+
+function renderSettings() {
+  $('#castAppId').value = state.settings.castAppId;
+  $('#themeSelect').value = state.settings.theme;
+  $('#fontScale').value = String(state.settings.fontScale);
+  $('#fontScaleValue').textContent = `${Math.round(state.settings.fontScale * 100)} %`;
+  $('#lineSpacing').value = String(state.settings.lineSpacing);
+  $('#lineSpacingValue').textContent = state.settings.lineSpacing.toFixed(2);
+  $('#showTitle').checked = state.settings.showTitle;
+  $('#showVerseLabel').checked = state.settings.showVerseLabel;
+  $('#uppercase').checked = state.settings.uppercase;
+  $('#keepAwake').checked = state.settings.keepAwake;
+  $('#defaultSystem').value = state.settings.defaultSystem;
+  $('#vibrate').checked = state.settings.vibrate;
+  $('#presentButtons').checked = state.settings.presentButtons;
+  renderFolderAdmin();
+}
+
+function renderFolderAdmin() {
+  const box = $('#folderAdmin');
+  box.innerHTML = '';
+  if (!state.folders.length) {
+    box.innerHTML = '<p class="hint">Zatiaľ žiadne zbierky.</p>';
+    return;
+  }
+  for (const folder of state.folders) {
+    const row = document.createElement('div');
+    row.className = 'savedset';
+    row.innerHTML = `<div><strong>${folder.name}</strong>
+      <span class="song__sub">${pluralSongs(folder.count || 0)}</span></div>`;
+    const select = document.createElement('select');
+    select.className = 'input input--small';
+    for (const option of ['', 'JKS', 'LS']) {
+      const node = document.createElement('option');
+      node.value = option;
+      node.textContent = option || 'bez čísel';
+      node.selected = (folder.system || '') === option;
+      select.appendChild(node);
+    }
+    select.onchange = async () => {
+      const system = select.value;
+      const songs = state.songs.filter((song) => song.folder === folder.name)
+        .map((song) => ({
+          ...song,
+          system: song.number ? system : song.system,
+          numberKey: song.number ? `${system}${parseInt(song.number, 10)}` : '',
+        }));
+      await store.putSongs(songs);
+      await store.putFolder({ ...folder, system });
+      await reloadLibrary();
+      toast(`Zbierka ${folder.name}: číselník ${system || 'vypnutý'}`, 'ok');
+    };
+    const remove = document.createElement('button');
+    remove.className = 'btn btn--danger';
+    remove.textContent = 'Odstrániť';
+    remove.onclick = async () => {
+      if (!confirm(`Odstrániť zbierku „${folder.name}“ z knižnice?`)) return;
+      await store.deleteFolder(folder.name);
+      if (state.activeFolder === folder.name) state.activeFolder = null;
+      await reloadLibrary();
+      renderSettings();
+    };
+    row.append(select, remove);
+    box.appendChild(row);
+  }
+}
+
+function updateSettings(patch) {
+  state.settings = saveSettings({ ...state.settings, ...patch });
+  publish();
+}
+
+// ------------------------------------------------------------------- vstupy
+
+function bindEvents() {
+  $$('[data-goto]').forEach((node) => {
+    node.onclick = () => {
+      setView(node.dataset.goto);
+      if (node.dataset.goto === 'settings') renderSettings();
+      publish();
+    };
+  });
+
+  $('#searchInput').oninput = (event) => {
+    state.query = event.target.value;
+    renderSongList();
+  };
+  $('#searchClear').onclick = () => {
+    state.query = '';
+    $('#searchInput').value = '';
+    renderSongList();
+  };
+
+  // import priečinka / súborov
+  $('#pickFolder').onclick = () => $('#folderInput').click();
+  $('#pickFiles').onclick = () => $('#fileInput').click();
+  const handleFiles = async (files, folderName) => {
+    if (!files || !files.length) return;
+    $('#importInfo').textContent = 'Načítavam...';
+    const result = await importFiles(files, {
+      folderName,
+      onProgress: (done, total) => { $('#importInfo').textContent = `Načítavam ${done}/${total}...`; },
+    });
+    await reloadLibrary();
+    renderSettings();
+    $('#importInfo').textContent = `Načítaných ${pluralSongs(result.songs)} z ${result.files} ${result.files === 1 ? 'súboru' : 'súborov'}.`;
+    if (result.errors.length) {
+      toast(`Načítaných ${pluralSongs(result.songs)}, ${result.errors.length} súborov s chybou.`, 'warn');
+      console.warn('Chyby pri načítaní:', result.errors);
+    } else {
+      toast(`Načítaných ${pluralSongs(result.songs)}.`, 'ok');
+    }
+  };
+  $('#folderInput').onchange = (event) => handleFiles(event.target.files);
+  $('#fileInput').onchange = (event) => {
+    const name = prompt('Do ktorej zbierky uložiť tieto súbory?', 'Ostatné');
+    if (name === null) return;
+    handleFiles(event.target.files, name.trim() || 'Ostatné');
+  };
+
+  const dropZone = document.body;
+  dropZone.addEventListener('dragover', (event) => { event.preventDefault(); });
+  dropZone.addEventListener('drop', async (event) => {
+    event.preventDefault();
+    const files = Array.from(event.dataTransfer.files || []);
+    if (files.length) await handleFiles(files, 'Ostatné');
+  });
+
+  // set
+  $('#setNameInput').oninput = (event) => { state.set.name = event.target.value; };
+  $('#saveSet').onclick = saveCurrentSet;
+  $('#newSet').onclick = () => {
+    if (state.set.items.length && !confirm('Vyprázdniť aktuálny set?')) return;
+    state.set = { id: null, name: 'Nový set', items: [] };
+    renderSetList();
+  };
+  $('#startSet').onclick = () => startLive(state.set.items, 0);
+
+  $('#quickAdd').oninput = (event) => {
+    renderQuickResults('#quickAddResults', event.target.value, (song) => {
+      addToSet(song.id);
+      $('#quickAdd').value = '';
+      $('#quickAddResults').innerHTML = '';
+    });
+  };
+  $('#quickAdd').onkeydown = (event) => {
+    if (event.key !== 'Enter') return;
+    const matches = quickMatches(event.target.value);
+    if (matches.length) {
+      addToSet(matches[0].id);
+      event.target.value = '';
+      $('#quickAddResults').innerHTML = '';
+    } else {
+      toast('Pieseň s týmto číslom sa nenašla.', 'warn');
+    }
+  };
+
+  // sprievodca pripojením televízora
+  const openTvWizard = () => $('#tvDialog').showModal();
+  $('#tvBtn').onclick = openTvWizard;
+  $('#tvBtnSettings').onclick = openTvWizard;
+  $('#tvStartPresent').onclick = () => {
+    $('#tvDialog').close();
+    startPresenting();
+  };
+  $('#tvOpenWindow').onclick = () => {
+    $('#tvDialog').close();
+    openDisplayWindow();
+  };
+  $('#tvOpenSettings').onclick = () => {
+    $('#tvDialog').close();
+    setView('settings');
+    renderSettings();
+    $('.card--details').open = true;
+  };
+  $('#presentBtn').onclick = startPresenting;
+
+  // živý režim
+  $('#prevVerse').onclick = () => stepVerse(-1);
+  $('#nextVerse').onclick = () => stepVerse(1);
+  $('#blankBtn').onclick = () => toggleBlank();
+  $('#prevSong').onclick = () => stepSong(-1);
+  $('#nextSong').onclick = () => stepSong(1);
+  $('#exitLive').onclick = () => {
+    setView(state.set.items.length ? 'set' : 'library');
+    publish();
+  };
+
+  // rýchly skok na pieseň podľa čísla počas hrania
+  $('#jumpToggle').onclick = () => toggleJumpPanel();
+  $('#jumpClose').onclick = () => toggleJumpPanel(false);
+  $$('#keypad [data-key]').forEach((key) => {
+    key.onclick = () => {
+      const node = $('#jumpValue');
+      const digit = key.dataset.key;
+      if (digit === 'del') node.textContent = node.textContent.slice(0, -1);
+      else if (digit === 'clr') node.textContent = '';
+      else node.textContent = (node.textContent + digit).slice(0, 4);
+      renderJump();
+    };
+  });
+  $$('#jumpSystem [data-system]').forEach((button) => {
+    button.onclick = () => {
+      $$('#jumpSystem [data-system]').forEach((other) => other.classList.remove('is-active'));
+      button.classList.add('is-active');
+      jump.system = button.dataset.system;
+      renderJump();
+    };
+  });
+
+  // nastavenia
+  $('#castAppId').onchange = (event) => {
+    const value = event.target.value.trim();
+    updateSettings({ castAppId: value });
+    cast.setAppId(value);
+    toast(value ? 'Cast Application ID uložené.' : 'Cast vypnutý.', 'ok');
+  };
+  $('#themeSelect').onchange = (event) => updateSettings({ theme: event.target.value });
+  $('#fontScale').oninput = (event) => {
+    updateSettings({ fontScale: Number(event.target.value) });
+    $('#fontScaleValue').textContent = `${Math.round(state.settings.fontScale * 100)} %`;
+  };
+  $('#lineSpacing').oninput = (event) => {
+    updateSettings({ lineSpacing: Number(event.target.value) });
+    $('#lineSpacingValue').textContent = state.settings.lineSpacing.toFixed(2);
+  };
+  $('#showTitle').onchange = (event) => updateSettings({ showTitle: event.target.checked });
+  $('#showVerseLabel').onchange = (event) => updateSettings({ showVerseLabel: event.target.checked });
+  $('#uppercase').onchange = (event) => updateSettings({ uppercase: event.target.checked });
+  $('#vibrate').onchange = (event) => updateSettings({ vibrate: event.target.checked });
+  $('#presentButtons').onchange = (event) => {
+    updateSettings({ presentButtons: event.target.checked });
+    presenter.toggleButtons(event.target.checked);
+  };
+  $('#keepAwake').onchange = (event) => {
+    updateSettings({ keepAwake: event.target.checked });
+    if (event.target.checked && state.view === 'live') enableWakeLock();
+    else releaseWakeLock();
+  };
+  $('#defaultSystem').onchange = (event) => updateSettings({ defaultSystem: event.target.value });
+  $('#clearLibrary').onclick = async () => {
+    if (!confirm('Naozaj zmazať celú knižnicu piesní?')) return;
+    await store.clearSongs();
+    state.activeFolder = null;
+    await reloadLibrary();
+    renderSettings();
+    toast('Knižnica vymazaná.', 'ok');
+  };
+  $('#loadSamples').onclick = loadSampleSongs;
+
+  $$('[data-close-dialog]').forEach((node) => {
+    node.onclick = () => node.closest('dialog').close();
+  });
+
+  // klávesnica / pedál
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && presenter.active) {
+      presenter.exit();
+      event.preventDefault();
+      return;
+    }
+    if (state.view !== 'live') return;
+    if (event.target.matches('input, textarea, select')) return;
+    const song = currentSong();
+    switch (event.key) {
+      case 'ArrowRight': case 'PageDown': case ' ': stepVerse(1); event.preventDefault(); break;
+      case 'ArrowLeft': case 'PageUp': stepVerse(-1); event.preventDefault(); break;
+      case 'ArrowDown': stepSong(1); event.preventDefault(); break;
+      case 'ArrowUp': stepSong(-1); event.preventDefault(); break;
+      case 'b': case 'B': case '.': toggleBlank(); event.preventDefault(); break;
+      default:
+        if (/^[1-9]$/.test(event.key) && song) {
+          const index = song.verses.findIndex((verse) => verse.label === event.key);
+          selectVerse(index >= 0 ? index : Number(event.key) - 1);
+          event.preventDefault();
+        } else if (event.key === '0' && song) {
+          const index = song.verses.findIndex((verse) => verse.type === 'chorus');
+          if (index >= 0) selectVerse(index);
+          event.preventDefault();
+        }
+    }
+  });
+}
+
+async function loadSampleSongs() {
+  const samples = [
+    ['JKS', '342-O_Boze_nas.xml'],
+    ['JKS', '078-Vitaj_svetlo.xml'],
+    ['JKS', '501-Chvalme_Pana.xml'],
+    ['Ukazkove', 'adventna.xml'],
+    ['Ukazkove', 'velkonocna.xml'],
+    ['Ukazkove', 'viacero-piesni.xml'],
+  ];
+  try {
+    const files = await Promise.all(samples.map(async ([folder, name]) => {
+      const response = await fetch(`songs/${folder}/${encodeURIComponent(name)}`);
+      if (!response.ok) throw new Error(name);
+      const text = await response.text();
+      const file = new File([text], name, { type: 'text/xml' });
+      Object.defineProperty(file, 'webkitRelativePath', { value: `songs/${folder}/${name}` });
+      return file;
+    }));
+    const byFolder = new Map();
+    files.forEach((file, index) => {
+      const folder = samples[index][0];
+      if (!byFolder.has(folder)) byFolder.set(folder, []);
+      byFolder.get(folder).push(file);
+    });
+    let total = 0;
+    for (const [folder, group] of byFolder) {
+      const result = await importFiles(group, { folderName: folder, system: systemForFolder(folder) });
+      total += result.songs;
+    }
+    await reloadLibrary();
+    renderSettings();
+    toast(`Načítaných ${pluralSongs(total)} (ukážky).`, 'ok');
+  } catch (error) {
+    toast('Ukážkové piesne sú dostupné len pri spustení cez adresu http://. '
+      + 'Použi Knižnica → Načítať priečinok.', 'warn');
+  }
+}
+
+// -------------------------------------------------------------------- štart
+
+async function main() {
+  preview = createDisplay($('#previewScreen'));
+  setupPresenter();
+  bindEvents();
+  renderSettings();
+  renderCastStatus(cast.state);
+  cast.start();
+  await reloadLibrary();
+  setView('library');
+  publish();
+
+  const kind = await storageKind();
+  $('#storageInfo').textContent = kind === 'indexeddb'
+    ? 'Piesne sa ukladajú do databázy prehliadača (IndexedDB) – zmestí sa aj celý spevník.'
+    : 'Tento prehliadač nepovolil databázu, piesne sa ukladajú do lokálnej pamäte (limit ~5 MB). '
+      + 'Pre veľké zbierky spusti aplikáciu cez adresu http:// namiesto otvorenia súboru z disku.';
+
+  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+}
+
+main();
+
+</script>
+</body>
+</html>

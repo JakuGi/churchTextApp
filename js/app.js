@@ -1,11 +1,12 @@
 // Ovládacia aplikácia pre organistu (tablet).
 
-import { store, loadSettings, saveSettings, DEFAULT_SETTINGS } from './store.js';
+import { store, loadSettings, saveSettings, storageKind } from './store.js';
 import { searchSongs, compareSongs, normalize, parseNumber, VERSE_TYPES } from './songs.js';
 import { importFiles, systemForFolder } from './import.js';
 import { createLocalBus, displayState } from './bus.js';
 import { createDisplay } from './display-core.js';
 import { createCast } from './cast.js';
+import { createPresenter } from './present.js';
 
 const $ = (selector, scope = document) => scope.querySelector(selector);
 const $$ = (selector, scope = document) => Array.from(scope.querySelectorAll(selector));
@@ -24,6 +25,8 @@ const state = {
 
 const bus = createLocalBus();
 let preview = null;
+let presentScreen = null;
+let presenter = null;
 let displayWindow = null;
 let wakeLock = null;
 
@@ -502,37 +505,96 @@ function publish() {
   const payload = displayState({
     song: currentSong(),
     verse: currentVerse(),
-    blank: state.live.blank || state.view !== 'live',
+    blank: state.live.blank || (state.view !== 'live' && !(presenter && presenter.active)),
     settings: state.settings,
     position: state.live.songs.length > 1 ? `${state.live.songIndex + 1}/${state.live.songs.length}` : '',
   });
   bus.send(payload);
   cast.send(payload);
   if (preview) preview.render(payload);
+  if (presentScreen) presentScreen.render(payload);
 }
 
 function renderCastStatus(status) {
   const badge = $('#castStatus');
+  const detail = $('#castStatusDetail');
   const button = $('#castBtn');
+
+  let text = 'Televízor: nepripojený';
+  let kind = 'badge';
+  if (presenter && presenter.active) {
+    text = 'Televízor: prezentačný režim';
+    kind = 'badge badge--ok';
+  } else if (displayWindow && !displayWindow.closed) {
+    text = 'Televízor: okno s textom';
+    kind = 'badge badge--ok';
+  } else if (status.connected) {
+    text = `Chromecast: ${status.deviceName || 'pripojený'}`;
+    kind = 'badge badge--ok';
+  }
+  badge.textContent = text;
+  badge.className = kind;
+
+  if (!detail || !button) return;
   if (!state.settings.castAppId) {
-    badge.textContent = 'Chromecast: nenastavený';
-    badge.className = 'badge';
-    button.textContent = 'Nastaviť Cast';
-    button.onclick = () => setView('settings');
+    detail.textContent = 'nenastavené';
+    detail.className = 'badge';
+    button.disabled = true;
+    button.textContent = 'Pripojiť Chromecast';
     return;
   }
+  button.disabled = false;
   if (status.connected) {
-    badge.textContent = `Chromecast: ${status.deviceName || 'pripojený'}`;
-    badge.className = 'badge badge--ok';
+    detail.textContent = status.deviceName || 'pripojený';
+    detail.className = 'badge badge--ok';
     button.textContent = 'Odpojiť';
     button.onclick = () => cast.disconnect();
     publish();
     return;
   }
-  badge.textContent = status.error || (status.available ? 'Chromecast: pripravený' : 'Chromecast: hľadám...');
-  badge.className = status.error ? 'badge badge--warn' : 'badge';
+  detail.textContent = status.error || (status.available ? 'pripravené' : 'hľadám zariadenia...');
+  detail.className = status.error ? 'badge badge--warn' : 'badge';
   button.textContent = 'Pripojiť Chromecast';
   button.onclick = () => cast.connect();
+}
+
+// ------------------------------------------------------ prezentačný režim
+
+async function startPresenting() {
+  if (!currentSong()) {
+    const ids = state.set.items.length ? state.set.items : state.songs.slice(0, 1).map((song) => song.id);
+    if (!ids.length) {
+      toast('Najprv načítaj piesne do knižnice.', 'warn');
+      return;
+    }
+    startLive(ids, 0);
+  } else if (state.view !== 'live') {
+    setView('live');
+  }
+  await presenter.enter({ showHelp: !state.settings.presentHelpSeen });
+  enableWakeLock();
+  renderLive();
+}
+
+function setupPresenter() {
+  presentScreen = createDisplay($('#presentScreen'));
+  presenter = createPresenter({
+    root: $('#present'),
+    isVibrationOn: () => state.settings.vibrate,
+    actions: {
+      prevVerse: () => stepVerse(-1),
+      nextVerse: () => stepVerse(1),
+      prevSong: () => stepSong(-1),
+      nextSong: () => stepSong(1),
+      toggleBlank: () => toggleBlank(),
+      helpSeen: () => updateSettings({ presentHelpSeen: true }),
+      changed: () => {
+        renderCastStatus(cast.state);
+        publish();
+      },
+    },
+  });
+  presenter.toggleButtons(state.settings.presentButtons);
 }
 
 function openDisplayWindow() {
@@ -541,11 +603,17 @@ function openDisplayWindow() {
     publish();
     return;
   }
-  displayWindow = window.open('display.html', 'organista-display', 'width=1280,height=720');
+  const single = typeof window.__SINGLE_FILE__ !== 'undefined' && window.__SINGLE_FILE__;
+  displayWindow = window.open(single ? '' : 'display.html', 'organista-display', 'width=1280,height=720');
+  if (single && displayWindow) {
+    displayWindow.document.write(window.DISPLAY_PAGE);
+    displayWindow.document.close();
+  }
   if (!displayWindow) {
     toast('Prehliadač zablokoval nové okno. Povoľ vyskakovacie okná.', 'warn');
     return;
   }
+  renderCastStatus(cast.state);
   setTimeout(publish, 600);
 }
 
@@ -563,6 +631,8 @@ function renderSettings() {
   $('#uppercase').checked = state.settings.uppercase;
   $('#keepAwake').checked = state.settings.keepAwake;
   $('#defaultSystem').value = state.settings.defaultSystem;
+  $('#vibrate').checked = state.settings.vibrate;
+  $('#presentButtons').checked = state.settings.presentButtons;
   renderFolderAdmin();
 }
 
@@ -705,6 +775,26 @@ function bindEvents() {
     }
   };
 
+  // sprievodca pripojením televízora
+  const openTvWizard = () => $('#tvDialog').showModal();
+  $('#tvBtn').onclick = openTvWizard;
+  $('#tvBtnSettings').onclick = openTvWizard;
+  $('#tvStartPresent').onclick = () => {
+    $('#tvDialog').close();
+    startPresenting();
+  };
+  $('#tvOpenWindow').onclick = () => {
+    $('#tvDialog').close();
+    openDisplayWindow();
+  };
+  $('#tvOpenSettings').onclick = () => {
+    $('#tvDialog').close();
+    setView('settings');
+    renderSettings();
+    $('.card--details').open = true;
+  };
+  $('#presentBtn').onclick = startPresenting;
+
   // živý režim
   $('#prevVerse').onclick = () => stepVerse(-1);
   $('#nextVerse').onclick = () => stepVerse(1);
@@ -715,7 +805,6 @@ function bindEvents() {
     setView(state.set.items.length ? 'set' : 'library');
     publish();
   };
-  $('#openDisplay').onclick = openDisplayWindow;
 
   // rýchly skok na pieseň podľa čísla počas hrania
   $('#jumpToggle').onclick = () => toggleJumpPanel();
@@ -758,6 +847,11 @@ function bindEvents() {
   $('#showTitle').onchange = (event) => updateSettings({ showTitle: event.target.checked });
   $('#showVerseLabel').onchange = (event) => updateSettings({ showVerseLabel: event.target.checked });
   $('#uppercase').onchange = (event) => updateSettings({ uppercase: event.target.checked });
+  $('#vibrate').onchange = (event) => updateSettings({ vibrate: event.target.checked });
+  $('#presentButtons').onchange = (event) => {
+    updateSettings({ presentButtons: event.target.checked });
+    presenter.toggleButtons(event.target.checked);
+  };
   $('#keepAwake').onchange = (event) => {
     updateSettings({ keepAwake: event.target.checked });
     if (event.target.checked && state.view === 'live') enableWakeLock();
@@ -780,6 +874,11 @@ function bindEvents() {
 
   // klávesnica / pedál
   document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && presenter.active) {
+      presenter.exit();
+      event.preventDefault();
+      return;
+    }
     if (state.view !== 'live') return;
     if (event.target.matches('input, textarea, select')) return;
     const song = currentSong();
@@ -805,7 +904,7 @@ function bindEvents() {
 
 async function loadSampleSongs() {
   const samples = [
-    ['JKS', '342-Ó_Bože_náš.xml'],
+    ['JKS', '342-O_Boze_nas.xml'],
     ['JKS', '078-Vitaj_svetlo.xml'],
     ['JKS', '501-Chvalme_Pana.xml'],
     ['Ukazkove', 'adventna.xml'],
@@ -836,7 +935,8 @@ async function loadSampleSongs() {
     renderSettings();
     toast(`Načítaných ${pluralSongs(total)} (ukážky).`, 'ok');
   } catch (error) {
-    toast('Ukážkové piesne sa nepodarilo načítať.', 'warn');
+    toast('Ukážkové piesne sú dostupné len pri spustení cez adresu http://. '
+      + 'Použi Knižnica → Načítať priečinok.', 'warn');
   }
 }
 
@@ -844,6 +944,7 @@ async function loadSampleSongs() {
 
 async function main() {
   preview = createDisplay($('#previewScreen'));
+  setupPresenter();
   bindEvents();
   renderSettings();
   renderCastStatus(cast.state);
@@ -852,7 +953,13 @@ async function main() {
   setView('library');
   publish();
 
-  if ('serviceWorker' in navigator) {
+  const kind = await storageKind();
+  $('#storageInfo').textContent = kind === 'indexeddb'
+    ? 'Piesne sa ukladajú do databázy prehliadača (IndexedDB) – zmestí sa aj celý spevník.'
+    : 'Tento prehliadač nepovolil databázu, piesne sa ukladajú do lokálnej pamäte (limit ~5 MB). '
+      + 'Pre veľké zbierky spusti aplikáciu cez adresu http:// namiesto otvorenia súboru z disku.';
+
+  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
 }

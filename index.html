@@ -23,9 +23,8 @@
     <button class="tab" data-goto="settings">Nastavenia</button>
   </nav>
   <div class="topbar__cast">
-    <span class="badge" id="castStatus">Chromecast</span>
-    <button class="btn" id="castBtn">Pripojiť Chromecast</button>
-    <button class="btn" id="openDisplay" title="Otvorí okno s textom, ktoré prenesieš na TV">Okno na TV</button>
+    <span class="badge" id="castStatus">Televízor: nepripojený</span>
+    <button class="btn btn--primary" id="tvBtn">📺 Pripojiť televízor</button>
   </div>
 </header>
 
@@ -89,6 +88,7 @@
           <h1 id="liveTitle">Bez piesne</h1>
         </div>
         <span class="pill pill--pos" id="livePosition"></span>
+        <button class="btn" id="presentBtn" title="Tablet sa stane obrazom pre TV">📺 Premietať</button>
         <button class="btn" id="jumpToggle">Rýchly výber čísla</button>
       </div>
 
@@ -158,16 +158,29 @@
   <!-- ============================ NASTAVENIA ============================== -->
   <section class="view" data-view="settings">
     <div class="content content--wide">
-      <h2 class="section-title">Chromecast</h2>
+      <h2 class="section-title">Televízor</h2>
       <div class="card">
-        <label for="castAppId">Application ID prijímača (Google Cast Developer Console)</label>
-        <input class="input" id="castAppId" placeholder="napr. A1B2C3D4" autocomplete="off">
-        <p class="hint">
-          Zaregistruj si vlastný prijímač (Custom Receiver) s adresou súboru <code>receiver.html</code>
-          tejto aplikácie a sem vlož jeho Application ID. Bez neho použi tlačidlo
-          <strong>Okno na TV</strong> a prenes kartu cez Google Cast (zrkadlenie).
-        </p>
+        <button class="btn btn--primary btn--big" id="tvBtnSettings">📺 Sprievodca pripojením televízora</button>
+        <label class="check"><input type="checkbox" id="vibrate"> Vibrácia pri ťuknutí v prezentačnom režime</label>
+        <label class="check"><input type="checkbox" id="presentButtons"> Zobraziť veľké tlačidlá aj v prezentačnom režime
+          <span class="hint">(pri zrkadlení budú viditeľné aj na televízore)</span></label>
       </div>
+
+      <details class="card card--details">
+        <summary>Pokročilé: vlastný Chromecast prijímač</summary>
+        <p class="hint">
+          Nepovinné. Umožní posielať text priamo do Chromecastu bez zrkadlenia, ale vyžaduje
+          jednorazovú registráciu v Google Cast Developer Console (poplatok 5 USD) a umiestnenie
+          súboru <code>receiver.html</code> na adresu s HTTPS. Bežnému používateľovi stačí
+          zrkadlenie zo sprievodcu vyššie.
+        </p>
+        <label for="castAppId">Application ID prijímača</label>
+        <input class="input" id="castAppId" placeholder="napr. A1B2C3D4" autocomplete="off">
+        <div class="row">
+          <button class="btn" id="castBtn">Pripojiť Chromecast</button>
+          <span class="badge" id="castStatusDetail">nenastavené</span>
+        </div>
+      </details>
 
       <h2 class="section-title">Vzhľad premietania</h2>
       <div class="card grid2">
@@ -201,9 +214,12 @@
       <div class="card" id="folderAdmin"></div>
 
       <h2 class="section-title">Údržba</h2>
-      <div class="card row">
-        <button class="btn" id="loadSamples">Načítať ukážkové piesne</button>
-        <button class="btn btn--danger" id="clearLibrary">Zmazať celú knižnicu</button>
+      <div class="card">
+        <div class="row">
+          <button class="btn" id="loadSamples">Načítať ukážkové piesne</button>
+          <button class="btn btn--danger" id="clearLibrary">Zmazať celú knižnicu</button>
+        </div>
+        <p class="hint" id="storageInfo"></p>
       </div>
 
       <h2 class="section-title">Klávesové skratky (aj pre pedál / bluetooth ovládač)</h2>
@@ -211,12 +227,106 @@
         <p class="hint">
           <kbd>→</kbd> / <kbd>medzerník</kbd> ďalšia sloha · <kbd>←</kbd> predošlá sloha ·
           <kbd>↓</kbd>/<kbd>↑</kbd> ďalšia/predošlá pieseň · <kbd>1</kbd>–<kbd>9</kbd> výber slohy ·
-          <kbd>0</kbd> refrén · <kbd>B</kbd> čierna obrazovka
+          <kbd>0</kbd> refrén · <kbd>B</kbd> čierna obrazovka · <kbd>Esc</kbd> koniec prezentačného režimu
+        </p>
+        <p class="hint">
+          V prezentačnom režime sa dá ovládať aj dotykom: ľavá tretina obrazovky = predošlá sloha,
+          pravá tretina = ďalšia sloha, stred = čierna obrazovka, podržanie stredu = ponuka,
+          potiahnutie do strany = ďalšia/predošlá pieseň.
         </p>
       </div>
     </div>
   </section>
 </main>
+
+<dialog id="tvDialog" class="dialog dialog--wide">
+  <h3>Ako dostať text na televízor</h3>
+  <p class="hint">Vyber spôsob podľa toho, čo máš k dispozícii. Všetky sú zadarmo.</p>
+
+  <div class="dialog__body">
+    <section class="option option--best">
+      <h4>1. Zrkadlenie tabletu <span class="tag">odporúčané · zadarmo · bez registrácie</span></h4>
+      <ol>
+        <li>Tablet aj Chromecast musia byť na rovnakej Wi-Fi.</li>
+        <li>Otvor aplikáciu <strong>Google Home</strong> → ťukni na svoj Chromecast →
+          <strong>Prenášať obrazovku</strong>. (Na mnohých tabletoch je to aj v rýchlych
+          nastaveniach ako <em>Prenášať</em> / <em>Smart View</em>.)</li>
+        <li>Vráť sa sem a stlač <strong>Spustiť prezentačný režim</strong>. Tablet sa zmení na
+          obraz pre televízor – ovláda sa dotykom celej plochy, takže na TV nie sú vidieť
+          žiadne tlačidlá.</li>
+      </ol>
+      <p class="hint">
+        Ovládanie: ľavá tretina = predošlá sloha · pravá tretina = ďalšia sloha ·
+        stred = čierna obrazovka · podržanie stredu = ponuka · potiahnutie do strany = iná pieseň.
+        Každé ťuknutie potvrdí vibrácia.
+      </p>
+      <button class="btn btn--primary btn--big" id="tvStartPresent">Spustiť prezentačný režim</button>
+    </section>
+
+    <section class="option">
+      <h4>2. Druhá obrazovka <span class="tag">počítač pri TV alebo HDMI kábel</span></h4>
+      <p class="hint">
+        Otvorí sa samostatné čierne okno len s textom. Prenes ho na televízor cez HDMI kábel,
+        alebo v prehliadači Chrome na počítači cez <em>⋮ → Prenášať… → Zdroje: Prenos karty</em>.
+        Ovládanie ostáva v tomto okne s veľkými tlačidlami.
+      </p>
+      <button class="btn btn--big" id="tvOpenWindow">Otvoriť okno s textom</button>
+    </section>
+
+    <section class="option">
+      <h4>3. Vlastný Chromecast prijímač <span class="tag">pokročilé · 5 USD registrácia</span></h4>
+      <p class="hint">
+        Posiela text priamo do Chromecastu bez zrkadlenia. Vyžaduje registráciu v Google Cast
+        Developer Console a hosting súboru <code>receiver.html</code>. Nastavuje sa
+        v <strong>Nastaveniach</strong>.
+      </p>
+      <button class="btn" id="tvOpenSettings">Otvoriť nastavenia</button>
+    </section>
+  </div>
+
+  <div class="dialog__actions">
+    <button class="btn" data-close-dialog>Zavrieť</button>
+  </div>
+</dialog>
+
+<div class="present" id="present" hidden>
+  <div class="present__screen" id="presentScreen"></div>
+  <div class="present__zones" id="presentZones"></div>
+
+  <div class="present__buttons">
+    <button class="bigbtn" data-present-action="prevVerse"><span class="bigbtn__icon">◀</span></button>
+    <button class="bigbtn bigbtn--blank" data-present-action="toggleBlank"><span class="bigbtn__icon">◼</span></button>
+    <button class="bigbtn" data-present-action="nextVerse"><span class="bigbtn__icon">▶</span></button>
+  </div>
+
+  <div class="present__overlay" id="presentHelp" hidden>
+    <div class="present__card">
+      <h3>Prezentačný režim</h3>
+      <p>Televízor teraz ukazuje presne túto obrazovku, preto je bez tlačidiel.</p>
+      <ul class="zonelist">
+        <li><span>◀ ľavá tretina</span> predošlá sloha</li>
+        <li><span>stred</span> čierna obrazovka</li>
+        <li><span>pravá tretina ▶</span> ďalšia sloha</li>
+        <li><span>podržanie stredu</span> ponuka a ukončenie</li>
+        <li><span>potiahnutie do strany</span> ďalšia / predošlá pieseň</li>
+      </ul>
+      <button class="btn btn--primary btn--big" id="presentHelpOk">Rozumiem, začať</button>
+    </div>
+  </div>
+
+  <div class="present__overlay" id="presentMenu" hidden>
+    <div class="present__card">
+      <h3>Ponuka</h3>
+      <div class="present__menu">
+        <button class="btn btn--big" data-present-action="prevSong">◀ Predošlá pieseň</button>
+        <button class="btn btn--big" data-present-action="nextSong">Ďalšia pieseň ▶</button>
+        <button class="btn btn--big" data-present-action="toggleBlank">Čierna obrazovka</button>
+        <button class="btn btn--big" data-present-action="close">Späť k premietaniu</button>
+        <button class="btn btn--big btn--danger" data-present-action="exit">Ukončiť prezentačný režim</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <dialog id="songDialog" class="dialog">
   <h3 id="dialogTitle"></h3>
