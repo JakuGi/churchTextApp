@@ -63,5 +63,5 @@ class WebBridge(private val activity: MainActivity) {
 
 /** Verzia aplikácie bez potreby generovaného BuildConfig. */
 object BuildConfigCompat {
-    const val versionName: String = "1.0.0"
+    const val versionName: String = "1.0.1"
 }

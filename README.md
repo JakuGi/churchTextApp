@@ -29,7 +29,7 @@ hosting, žiadny internet.**
 
 1. V tablete otvor priamy odkaz na stiahnutie:
 
-   **https://github.com/JakuGi/churchTextApp/releases/download/android-latest/organista-1.0.0.apk**
+   **https://github.com/JakuGi/churchTextApp/releases/download/android-latest/organista-1.0.1.apk**
 
    (Alebo: stránka projektu na GitHube → vpravo **Releases** → vydanie
    **Organista pre Android (posledná verzia)**.)
@@ -119,8 +119,24 @@ ju nepridáš dvakrát.
 | Pieseň mimo setu | **Rýchly výber čísla** hore | – |
 
 - **Náhľad vľavo** ukazuje presne to, čo je v danej chvíli na televízore.
+- **Premietanie začína čiernou obrazovkou**, aby sa text objavil až keď chceš –
+  prvé stlačenie prostredného tlačidla text zobrazí. Dá sa to vypnúť
+  v *Nastaveniach*.
 - **Čierna obrazovka nezruší výber slohy** – po vypnutí pokračuješ tam, kde si skončil.
 - Tablet počas premietania nezhasína.
+
+### Čo sa dá nastaviť pre obraz na televízore
+
+*Nastavenia → Vzhľad premietania*:
+
+| Voľba | Čo robí |
+|---|---|
+| **Hlavička na televízore** | či sa hore zobrazuje číslo aj názov piesne, len číslo, len názov, alebo nič |
+| **Prelínanie pri zmene slohy** | jemný prechod namiesto tvrdého preblikania (vypnuté / jemné / stredné / pomalé); platí aj pre čiernu obrazovku |
+| **Zobrazovať číslo slohy v rohu obrazovky** | malé „2.“ / „Refrén“ vpravo dole |
+| **Zobrazovať číslo slohy pred textom** | text začne ako „**1.** Ó, Bože náš…“, refrén ako „**R:** …“ |
+| **Spustiť premietanie s čiernou obrazovkou** | správanie popísané vyššie |
+| Téma, veľkosť písma, riadkovanie, veľké písmená | vzhľad textu |
 
 ---
 
@@ -166,18 +182,73 @@ Podrobný popis: [docs/format-xml.md](docs/format-xml.md). Ukážky: [songs/](so
 
 ## 8. Kde sú uložené dáta a ako ich zálohovať
 
-- Piesne, zbierky a sety sú v **súkromnom priečinku aplikácie** v tablete.
-  Žiadna iná aplikácia sa k nim nedostane a nikam sa neodosielajú.
-- Zápis je **dvojfázový**: najprv sa zapíše dočasný súbor, potom sa premenuje,
-  a predchádzajúca verzia zostáva ako záloha. Výpadok batérie uprostred
-  ukladania teda knižnicu nezničí.
-- Priečinok je zahrnutý v **zálohovaní Androidu**, takže pri prenose na nový
-  tablet sa piesne prenesú spolu s aplikáciou.
-- **Vlastná záloha:** *Nastavenia → Údržba → Zálohovať knižnicu do súboru*.
-  Uloží všetky piesne do jedného `.xml` súboru v *Stiahnuté/Organista*. Ten si
-  odlož mimo tabletu – pri výmene tabletu ho jednoducho načítaš späť.
+### Kam ukladá aplikácia
 
-Odinštalovanie aplikácie zmaže aj dáta, preto si pred ňou vždy sprav zálohu.
+Knižnica piesní, zbierky a sety sú v **súkromnom priečinku aplikácie**:
+
+```
+/data/data/sk.organista.texty/files/data/
+├── songs.json     všetky piesne
+├── folders.json   zbierky (JKS, LS, vlastné…)
+└── sets.json      uložené sety
+```
+
+Ku každému súboru appka drží ešte `*.bak` – kópiu predchádzajúcej verzie.
+Zápis je dvojfázový (najprv `*.tmp`, potom premenovanie), takže ani výpadok
+batériu uprostred ukladania knižnicu nezničí. Priečinok je zahrnutý
+v zálohovaní Androidu, takže sa prenesie aj na nový tablet.
+
+> ⚠️ **Do tohto priečinka sa z počítača nedostaneš** a je to zámer – takto sa
+> k tvojim piesňam nedostane žiadna iná aplikácia. Android ho ukazuje len
+> samotnej aplikácii (bez rootnutého zariadenia). Ak chceš nahrať piesne
+> z počítača, použi postup nižšie – je jednoduchší a bezpečnejší.
+
+### Ako nahrať piesne z počítača (odporúčaný postup)
+
+1. Tablet pripoj k počítaču USB káblom a na tablete zvoľ **Prenos súborov**.
+   V počítači sa objaví ako *Interné úložisko*.
+2. Vytvor si tam priečinok, napríklad:
+
+   ```
+   Interné úložisko/Organista/Piesne/
+   ├── JKS/     ← piesne z Jednotného katolíckeho spevníka
+   ├── LS/      ← piesne z Liturgického spevníka
+   └── Vlastne/
+   ```
+
+   Na tablete je to cesta `/storage/emulated/0/Organista/Piesne`.
+3. Nakopíruj do neho svoje `.xml` súbory.
+4. Odpoj tablet, otvor Organistu a zvoľ **Knižnica → Načítať priečinok** →
+   vyber `Organista/Piesne` → potvrď.
+5. Podpriečinky sa stanú zbierkami a piesne sa uložia do aplikácie.
+
+Rovnako to funguje aj cez Google Drive, e-mail či USB kľúč – dôležité je len to,
+aby bol priečinok na tablete viditeľný v systémovom výbere súborov.
+
+> Po pridaní ďalších piesní do toho istého priečinka zopakuj krok 4. Piesne
+> s rovnakým názvom súboru sa prepíšu, ostatné pribudnú.
+
+### Kam ukladá aplikácia zálohy a exporty
+
+*Nastavenia → Údržba → Zálohovať knižnicu do súboru* a tlačidlo **Stiahnuť XML**
+v editore ukladajú do:
+
+```
+Interné úložisko/Download/Organista/
+```
+
+Na tablete je to `/storage/emulated/0/Download/Organista/`. Tento priečinok
+z počítača **vidíš**, takže si zálohu vieš hneď odložiť. Záloha je jeden `.xml`
+súbor so všetkými piesňami a načítaš ju späť rovnako ako ktorýkoľvek priečinok
+s piesňami.
+
+Odinštalovanie aplikácie zmaže aj jej dáta, preto si pred ním vždy sprav zálohu.
+
+### Verzia pre prehliadač
+
+Tá istá webová verzia spustená v prehliadači (`npm start`) ukladá piesne do
+databázy prehliadača (IndexedDB), nie do súborov. Prenesieš ich zálohou do `.xml`
+rovnakým tlačidlom.
 
 ---
 
@@ -245,7 +316,7 @@ správať s televízorom.
 3. V okne emulátora klikni na **⋯** (Extended controls) → **Displays** →
    **Add secondary display** → zvoľ rozlíšenie → *Apply changes*.
 4. Nainštaluj APK: stiahnutý súbor pretiahni myšou do okna emulátora, alebo
-   `adb install organista-1.0.0.apk`.
+   `adb install organista-1.0.1.apk`.
 5. Spusti aplikáciu a premietaj – text sa objaví na druhej obrazovke emulátora.
 
 Overiť, či Android naozaj hlási druhú obrazovku, sa dá aj z príkazového riadka:

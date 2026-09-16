@@ -21,6 +21,7 @@ export function createDisplay(root) {
   const metaTitle = root.querySelector('#metaTitle');
   const metaVerse = root.querySelector('#metaVerse');
   let current = null;
+  let fadeTimer = null;
 
   // Najväčšie písmo, pri ktorom sa text ešte zmestí na plochu.
   // Prvá voľba: každý riadok piesne zostane na jednom riadku obrazovky.
@@ -67,17 +68,26 @@ export function createDisplay(root) {
     linesBox.style.fontSize = `${wrapped}px`;
   }
 
-  function render(state) {
-    current = state;
-    const theme = THEMES[state.theme] || THEMES.dark;
-    screen.style.setProperty('--bg', theme.bg);
-    screen.style.setProperty('--fg', theme.fg);
-    screen.style.setProperty('--meta', theme.meta);
-    linesBox.style.lineHeight = String(state.lineSpacing || 1.25);
-    linesBox.style.textTransform = state.uppercase ? 'uppercase' : 'none';
+  /** Popisok slohy: „1.“ alebo „Refrén“. */
+  function verseLabel(state, inline) {
+    if (!state.verseLabel) return '';
+    if (state.verseType === 'chorus') return inline ? 'R:' : 'Refrén';
+    return `${state.verseLabel}.`;
+  }
 
+  function headerText(state) {
+    const mode = state.header || (state.showTitle === false ? 'none' : 'both');
+    if (mode === 'none') return '';
+    if (mode === 'number') return state.number || '';
+    if (mode === 'title') return state.title || '';
+    return [state.number, state.title].filter(Boolean).join(' · ');
+  }
+
+  /** Vypíše obsah bez prelínania. */
+  function paint(state) {
     const blank = state.blank || !state.lines || state.lines.length === 0;
     screen.classList.toggle('is-blank', blank);
+
     if (blank) {
       linesBox.textContent = '';
       metaTitle.textContent = '';
@@ -85,22 +95,62 @@ export function createDisplay(root) {
       return;
     }
 
-    metaTitle.textContent = state.showTitle
-      ? [state.number, state.title].filter(Boolean).join(' · ')
-      : '';
-    metaVerse.textContent = state.showVerseLabel && state.verseLabel
-      ? (state.verseType === 'chorus' ? 'Refrén' : `${state.verseLabel}.`)
-      : '';
+    metaTitle.textContent = headerText(state);
+    metaVerse.textContent = state.showVerseLabel ? verseLabel(state, false) : '';
 
+    const prefix = state.verseNumberInline ? verseLabel(state, true) : '';
     linesBox.innerHTML = '';
-    for (const line of state.lines) {
+    state.lines.forEach((line, index) => {
       const div = document.createElement('div');
       div.className = 'line';
-      div.textContent = line;
-      if (!line.trim()) div.innerHTML = '&nbsp;';
+      const text = index === 0 && prefix ? `${prefix} ${line}` : line;
+      div.textContent = text;
+      if (!text.trim()) div.innerHTML = '&nbsp;';
       linesBox.appendChild(div);
-    }
+    });
     fit();
+  }
+
+  /** Porovnanie toho, čo je vidieť – podľa toho sa rozhodne o prelínaní. */
+  function contentKey(state) {
+    if (!state) return '';
+    const blank = state.blank || !state.lines || state.lines.length === 0;
+    return JSON.stringify([
+      blank,
+      blank ? '' : state.lines,
+      headerText(state),
+      state.showVerseLabel ? verseLabel(state, false) : '',
+      state.verseNumberInline ? verseLabel(state, true) : '',
+    ]);
+  }
+
+  function render(state) {
+    const previousKey = contentKey(current);
+    current = state;
+
+    const theme = THEMES[state.theme] || THEMES.dark;
+    screen.style.setProperty('--bg', theme.bg);
+    screen.style.setProperty('--fg', theme.fg);
+    screen.style.setProperty('--meta', theme.meta);
+    linesBox.style.lineHeight = String(state.lineSpacing || 1.25);
+    linesBox.style.textTransform = state.uppercase ? 'uppercase' : 'none';
+
+    const fade = Math.max(0, Math.min(1500, Number(state.fade) || 0));
+    screen.style.setProperty('--fade', `${fade}ms`);
+
+    clearTimeout(fadeTimer);
+    if (!fade || previousKey === contentKey(state) || !previousKey) {
+      screen.classList.remove('is-fading');
+      paint(state);
+      return;
+    }
+
+    // Text sa najprv stmaví, potom sa vymení a znovu rozsvieti.
+    screen.classList.add('is-fading');
+    fadeTimer = setTimeout(() => {
+      paint(state);
+      screen.classList.remove('is-fading');
+    }, fade);
   }
 
   window.addEventListener('resize', fit);

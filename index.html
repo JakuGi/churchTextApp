@@ -216,8 +216,25 @@
             <option value="">žiadny</option>
           </select>
         </label>
-        <label class="check"><input type="checkbox" id="showTitle"> Zobrazovať názov a číslo piesne</label>
-        <label class="check"><input type="checkbox" id="showVerseLabel"> Zobrazovať číslo slohy</label>
+        <label>Hlavička na televízore
+          <select class="input" id="headerMode">
+            <option value="both">číslo aj názov piesne</option>
+            <option value="number">len číslo piesne</option>
+            <option value="title">len názov piesne</option>
+            <option value="none">nezobrazovať nič</option>
+          </select>
+        </label>
+        <label>Prelínanie pri zmene slohy
+          <select class="input" id="fadeSelect">
+            <option value="0">vypnuté</option>
+            <option value="120">jemné</option>
+            <option value="250">stredné</option>
+            <option value="400">pomalé</option>
+          </select>
+        </label>
+        <label class="check"><input type="checkbox" id="showVerseLabel"> Zobrazovať číslo slohy v rohu obrazovky</label>
+        <label class="check"><input type="checkbox" id="verseNumberInline"> Zobrazovať číslo slohy pred textom (napr. „1. Ó, Bože náš…“)</label>
+        <label class="check"><input type="checkbox" id="blankOnStart"> Spustiť premietanie s čiernou obrazovkou</label>
         <label class="check"><input type="checkbox" id="uppercase"> Veľké písmená</label>
         <label class="check"><input type="checkbox" id="keepAwake"> Nezhasínať tablet počas premietania</label>
       </div>

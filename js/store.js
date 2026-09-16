@@ -183,23 +183,32 @@ const SETTINGS_KEY = 'organista-nastavenia';
 
 export const DEFAULT_SETTINGS = {
   castAppId: '',
-  theme: 'dark',          // dark | light | sepia
+  theme: 'dark',            // dark | light | sepia
   fontScale: 1,
-  showTitle: true,
-  showVerseLabel: true,
+  header: 'both',           // none | number | title | both – hlavička na televízore
+  showVerseLabel: true,     // číslo slohy v rohu obrazovky
+  verseNumberInline: false, // číslo slohy pred prvým riadkom textu
+  fade: 120,                // prelínanie pri zmene slohy (ms, 0 = vypnuté)
   uppercase: false,
   lineSpacing: 1.25,
   keepAwake: true,
+  blankOnStart: true,       // premietanie začína čiernou obrazovkou
   defaultSystem: 'JKS',
 };
 
 export function loadSettings() {
+  let stored = {};
   try {
-    const raw = localStorage.getItem(SETTINGS_KEY);
-    return { ...DEFAULT_SETTINGS, ...(raw ? JSON.parse(raw) : {}) };
+    stored = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
   } catch {
-    return { ...DEFAULT_SETTINGS };
+    stored = {};
   }
+  // Staršie verzie mali len prepínač „zobrazovať názov a číslo“.
+  if (stored.header === undefined && stored.showTitle !== undefined) {
+    stored.header = stored.showTitle ? 'both' : 'none';
+  }
+  delete stored.showTitle;
+  return { ...DEFAULT_SETTINGS, ...stored };
 }
 
 export function saveSettings(settings) {

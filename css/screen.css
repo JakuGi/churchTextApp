@@ -31,3 +31,14 @@
   text-shadow: 0 2px 10px rgba(0,0,0,.4);
 }
 .line { white-space: inherit; }
+
+/* Prelínanie pri zmene slohy alebo pri čiernej obrazovke.
+   Dĺžku nastavuje aplikácia cez premennú --fade (0ms = vypnuté). */
+.screen .lines,
+.screen .meta {
+  transition: opacity var(--fade, 0ms) ease-in-out;
+}
+.screen.is-fading .lines,
+.screen.is-fading .meta {
+  opacity: 0;
+}

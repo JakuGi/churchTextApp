@@ -456,7 +456,13 @@ function startLive(ids, index = 0) {
     toast('Najprv pridaj aspoň jednu pieseň.', 'warn');
     return;
   }
-  state.live = { songs, songIndex: Math.min(index, songs.length - 1), verseIndex: 0, blank: state.live.blank };
+  state.live = {
+    songs,
+    songIndex: Math.min(index, songs.length - 1),
+    verseIndex: 0,
+    // Premietanie začína čierno, aby sa text objavil až keď organista chce.
+    blank: state.settings.blankOnStart,
+  };
   setView('live');
   renderLive();
 }
@@ -742,8 +748,11 @@ function renderSettings() {
   $('#fontScaleValue').textContent = `${Math.round(state.settings.fontScale * 100)} %`;
   $('#lineSpacing').value = String(state.settings.lineSpacing);
   $('#lineSpacingValue').textContent = state.settings.lineSpacing.toFixed(2);
-  $('#showTitle').checked = state.settings.showTitle;
+  $('#headerMode').value = state.settings.header;
+  $('#fadeSelect').value = String(state.settings.fade);
   $('#showVerseLabel').checked = state.settings.showVerseLabel;
+  $('#verseNumberInline').checked = state.settings.verseNumberInline;
+  $('#blankOnStart').checked = state.settings.blankOnStart;
   $('#uppercase').checked = state.settings.uppercase;
   $('#keepAwake').checked = state.settings.keepAwake;
   $('#defaultSystem').value = state.settings.defaultSystem;
@@ -952,8 +961,11 @@ function bindEvents() {
     updateSettings({ lineSpacing: Number(event.target.value) });
     $('#lineSpacingValue').textContent = state.settings.lineSpacing.toFixed(2);
   };
-  $('#showTitle').onchange = (event) => updateSettings({ showTitle: event.target.checked });
+  $('#headerMode').onchange = (event) => updateSettings({ header: event.target.value });
+  $('#fadeSelect').onchange = (event) => updateSettings({ fade: Number(event.target.value) });
   $('#showVerseLabel').onchange = (event) => updateSettings({ showVerseLabel: event.target.checked });
+  $('#verseNumberInline').onchange = (event) => updateSettings({ verseNumberInline: event.target.checked });
+  $('#blankOnStart').onchange = (event) => updateSettings({ blankOnStart: event.target.checked });
   $('#uppercase').onchange = (event) => updateSettings({ uppercase: event.target.checked });
   $('#keepAwake').onchange = (event) => {
     updateSettings({ keepAwake: event.target.checked });
