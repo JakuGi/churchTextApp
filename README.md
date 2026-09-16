@@ -141,6 +141,16 @@ Ak už tento projekt na GitHube máš (napr. `JakuGi/churchTextApp`), preskoč n
 
 6. **Túto adresu si zapíš** – budeš ju potrebovať dvakrát.
 
+> **Pre tento repozitár (`JakuGi/churchTextApp`) je časť A už hotová.**
+> GitHub Pages je zapnutý a nasadenie prebehlo úspešne, publikuje sa z vetvy
+> `claude/cool-feynman-88sk88-chromecast`. Tvoje adresy sú:
+>
+> - aplikácia (otvor na tablete): `https://jakugi.github.io/churchTextApp/`
+> - prijímač (vložíš do Cast konzoly v časti B3): `https://jakugi.github.io/churchTextApp/receiver.html`
+>
+> Vetvu, z ktorej sa publikuje, vieš kedykoľvek zmeniť v *Settings → Pages*.
+> Pokračuj časťou B.
+
 **✅ Kontrola:** otvor v počítači adresu z bodu 5. Musí sa zobraziť aplikácia
 s tmavým pozadím a nápisom *Organista*. Ak sa zobrazí chyba „404“, počkaj ešte
 pár minút a skús znova.
