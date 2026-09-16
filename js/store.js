@@ -58,6 +58,12 @@ export const store = {
       return songs.length;
     });
   },
+  async deleteSongs(ids) {
+    return tx('songs', 'readwrite', (s) => {
+      ids.forEach((id) => s.delete(id));
+      return true;
+    });
+  },
   async deleteFolder(folder) {
     const songs = await this.allSongs();
     await tx('songs', 'readwrite', (s) => {

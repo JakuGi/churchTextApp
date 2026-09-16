@@ -2,6 +2,7 @@
 
 import { store, loadSettings, saveSettings, DEFAULT_SETTINGS } from './store.js';
 import { searchSongs, compareSongs, normalize, parseNumber, VERSE_TYPES } from './songs.js';
+import { createEditor } from './editor.js';
 import { importFiles, systemForFolder } from './import.js';
 import { createLocalBus, displayState } from './bus.js';
 import { createDisplay } from './display-core.js';
@@ -23,6 +24,7 @@ const state = {
 };
 
 const bus = createLocalBus();
+let editor = null;
 let preview = null;
 let displayWindow = null;
 let wakeLock = null;
@@ -151,6 +153,15 @@ function songRow(song, { action, actionLabel, subtitle }) {
       <div class="song__title">${song.title}</div>
       <div class="song__sub">${subtitle || `${song.folder} · ${pluralVerses(song.verses.length)}`}</div>
     </div>`;
+  const edit = document.createElement('button');
+  edit.className = 'btn btn--icon';
+  edit.textContent = '✎';
+  edit.title = 'Upraviť pieseň';
+  edit.onclick = (event) => {
+    event.stopPropagation();
+    openEditor(song);
+  };
+
   const button = document.createElement('button');
   button.className = 'btn btn--add';
   button.textContent = actionLabel;
@@ -158,7 +169,7 @@ function songRow(song, { action, actionLabel, subtitle }) {
     event.stopPropagation();
     action(song);
   };
-  row.appendChild(button);
+  row.append(edit, button);
   row.onclick = () => openSongPreview(song);
   return row;
 }
@@ -172,8 +183,9 @@ function renderSongList() {
   if (!state.songs.length) {
     box.innerHTML = `<div class="empty">
       <h3>Knižnica je prázdna</h3>
-      <p>Načítaj priečinok s .xml súbormi piesní tlačidlom <strong>Načítať priečinok</strong>.
-      Každý podpriečinok sa stane samostatnou zbierkou (napr. <em>JKS</em>).</p></div>`;
+      <p>Napíš prvú pieseň tlačidlom <strong>✎ Nová pieseň</strong>, alebo načítaj priečinok
+      s .xml súbormi tlačidlom <strong>Načítať priečinok</strong> – každý podpriečinok sa stane
+      samostatnou zbierkou (napr. <em>JKS</em>).</p></div>`;
     return;
   }
   if (!songs.length) {
@@ -199,6 +211,10 @@ function openSongPreview(song) {
       <div class="verse-preview__label">${verse.type === 'chorus' ? 'Refrén' : `${verse.label}.`}</div>
       <div class="verse-preview__text">${verse.lines.map((line) => line || '&nbsp;').join('<br>')}</div>
     </div>`).join('');
+  $('#dialogEdit').onclick = () => {
+    dialog.close();
+    openEditor(song);
+  };
   $('#dialogAdd').onclick = () => {
     addToSet(song.id);
     dialog.close();
@@ -208,6 +224,47 @@ function openSongPreview(song) {
     startLive([song.id], 0);
   };
   dialog.showModal();
+}
+
+// ---------------------------------------------------------------- editor
+
+function openEditor(song) {
+  editor.open(song || null);
+  setView('editor');
+}
+
+function setupEditor() {
+  editor = createEditor({
+    getFolders: () => state.folders,
+    getSongs: () => state.songs,
+    getSettings: () => state.settings,
+    toast,
+    onSave: async (song, replacedId) => {
+      if (replacedId) {
+        await store.deleteSongs([replacedId]);
+        state.set.items = state.set.items.map((id) => (id === replacedId ? song.id : id));
+      }
+      await store.putSongs([song]);
+      const others = state.songs.filter((item) => item.folder === song.folder && item.id !== song.id).length;
+      await store.putFolder({
+        name: song.folder,
+        system: (state.folders.find((folder) => folder.name === song.folder) || {}).system
+          || (song.number ? song.system : ''),
+        count: others + 1,
+        updatedAt: Date.now(),
+      });
+      await reloadLibrary();
+      toast(`Pieseň „${song.title}“ uložená.`, 'ok');
+    },
+    onDelete: async (song) => {
+      await store.deleteSongs([song.id]);
+      state.set.items = state.set.items.filter((id) => id !== song.id);
+      await reloadLibrary();
+      toast(`Pieseň „${song.title}“ zmazaná.`, 'ok');
+      setView('library');
+    },
+    onClose: () => setView('library'),
+  });
 }
 
 // ------------------------------------------------------------------- set
@@ -625,6 +682,8 @@ function updateSettings(patch) {
 function bindEvents() {
   $$('[data-goto]').forEach((node) => {
     node.onclick = () => {
+      if (state.view === 'editor' && editor.isDirty()
+        && !confirm('Máš neuložené zmeny v piesni. Naozaj odísť bez uloženia?')) return;
       setView(node.dataset.goto);
       if (node.dataset.goto === 'settings') renderSettings();
       publish();
@@ -642,6 +701,7 @@ function bindEvents() {
   };
 
   // import priečinka / súborov
+  $('#newSong').onclick = () => openEditor(null);
   $('#pickFolder').onclick = () => $('#folderInput').click();
   $('#pickFiles').onclick = () => $('#fileInput').click();
   const handleFiles = async (files, folderName) => {
@@ -844,6 +904,7 @@ async function loadSampleSongs() {
 
 async function main() {
   preview = createDisplay($('#previewScreen'));
+  setupEditor();
   bindEvents();
   renderSettings();
   renderCastStatus(cast.state);

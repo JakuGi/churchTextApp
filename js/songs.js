@@ -295,3 +295,131 @@ export function searchSongs(songs, query) {
     .sort((a, b) => (b.score - a.score) || compareSongs(a.song, b.song))
     .map((entry) => entry.song);
 }
+
+// ------------------------------------------------- vytváranie a úprava piesní
+
+/** Z názvu spraví bezpečný názov súboru (bez diakritiky a medzier). */
+export function slugify(value) {
+  const base = normalize(value)
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60);
+  return base || 'piesen';
+}
+
+/** Popisok tlačidla podľa typu a poradia – „1“, „2“, „R“… */
+function autoLabel(type, verseCounter, typeCounter) {
+  if (type === 'verse') return String(verseCounter);
+  const short = VERSE_TYPES[type] ? VERSE_TYPES[type].short : '*';
+  return typeCounter > 1 ? `${short}${typeCounter}` : short;
+}
+
+/**
+ * Poskladá pieseň z údajov editora do rovnakého tvaru, aký vracia parseSongFile.
+ * @param {{title, folder, system, number, author, melody, verses}} input
+ * @param {{id?:string, fileName?:string, importedAt?:number}} options
+ */
+export function composeSong(input, options = {}) {
+  const title = String(input.title || '').trim();
+  const folder = String(input.folder || '').trim() || 'Vlastné';
+  const system = String(input.system || '').trim().toUpperCase();
+  const numberRaw = String(input.number || '').trim();
+  const number = numberRaw ? String(parseInt(numberRaw, 10)) : '';
+
+  const counters = {};
+  let verseCounter = 0;
+  const verses = [];
+  for (const item of input.verses || []) {
+    const lines = (Array.isArray(item.lines) ? item.lines : String(item.text || '').split('\n'))
+      .map((line) => line.replace(/\s+$/, ''));
+    while (lines.length && lines[0].trim() === '') lines.shift();
+    while (lines.length && lines[lines.length - 1].trim() === '') lines.pop();
+    if (!lines.length) continue;
+
+    const type = VERSE_TYPES[item.type] ? item.type : 'verse';
+    counters[type] = (counters[type] || 0) + 1;
+    if (type === 'verse') verseCounter += 1;
+    verses.push({
+      type,
+      label: String(item.label || '').trim() || autoLabel(type, verseCounter, counters[type]),
+      lines,
+      index: verses.length,
+    });
+  }
+
+  const fileName = options.fileName || `${number ? `${number}-` : ''}${slugify(title)}.xml`;
+  return {
+    id: options.id || `${folder}/${fileName}`,
+    folder,
+    fileName,
+    title: title || 'Bez názvu',
+    author: String(input.author || '').trim(),
+    melody: String(input.melody || '').trim(),
+    number,
+    system: number ? system : '',
+    numberKey: number ? `${number ? system : ''}${parseInt(number, 10)}` : '',
+    searchKey: normalize(`${title} ${input.author || ''}`),
+    verses,
+    importedAt: options.importedAt || Date.now(),
+    updatedAt: Date.now(),
+    source: 'editor',
+  };
+}
+
+const CHORUS_MARKER = /^\s*(ref(?:rén|ren)?|r)\s*[:.)-]\s*/i;
+const VERSE_MARKER = /^\s*(\d{1,2})\s*[.):-]\s+/;
+
+/**
+ * Rozdelí naraz vložený text piesne na slohy.
+ * Oddeľovač je prázdny riadok; „R:“ na začiatku bloku označí refrén,
+ * „1.“ alebo „2)“ číslo slohy.
+ */
+export function splitPastedText(text) {
+  const blocks = String(text || '')
+    .replace(/\r\n?/g, '\n')
+    .split(/\n\s*\n+/)
+    .map((block) => block.split('\n').map((line) => line.replace(/\s+$/, '')))
+    .filter((lines) => lines.join('').trim() !== '');
+
+  return blocks.map((lines) => {
+    const first = lines[0] || '';
+    if (CHORUS_MARKER.test(first)) {
+      const rest = first.replace(CHORUS_MARKER, '');
+      return { type: 'chorus', label: '', lines: (rest.trim() ? [rest] : []).concat(lines.slice(1)) };
+    }
+    const match = VERSE_MARKER.exec(first);
+    if (match) {
+      const rest = first.replace(VERSE_MARKER, '');
+      return { type: 'verse', label: match[1], lines: (rest.trim() ? [rest] : []).concat(lines.slice(1)) };
+    }
+    return { type: 'verse', label: '', lines };
+  }).filter((verse) => verse.lines.join('').trim() !== '');
+}
+
+function escapeXml(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+const XML_TAGS = { verse: 'sloha', chorus: 'refren', bridge: 'medzihra', ending: 'zaver' };
+
+/** Prevedie pieseň späť do XML – na zálohu alebo prenos do iného zariadenia. */
+export function songToXml(song) {
+  const lines = ['<?xml version="1.0" encoding="UTF-8"?>', '<piesen>'];
+  lines.push(`  <nazov>${escapeXml(song.title)}</nazov>`);
+  if (song.number) {
+    lines.push(`  <cislo${song.system ? ` typ="${escapeXml(song.system)}"` : ''}>${escapeXml(song.number)}</cislo>`);
+  }
+  if (song.author) lines.push(`  <autor>${escapeXml(song.author)}</autor>`);
+  if (song.melody) lines.push(`  <melodia>${escapeXml(song.melody)}</melodia>`);
+  lines.push('  <slohy>');
+  for (const verse of song.verses) {
+    const tag = XML_TAGS[verse.type] || 'sloha';
+    const attr = tag === 'sloha' && verse.label ? ` cislo="${escapeXml(verse.label)}"` : '';
+    lines.push(`    <${tag}${attr}>${escapeXml(verse.lines.join('\n'))}</${tag}>`);
+  }
+  lines.push('  </slohy>', '</piesen>', '');
+  return lines.join('\n');
+}

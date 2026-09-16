@@ -36,7 +36,8 @@
       <h2>Zbierky</h2>
       <div id="folders" class="folders"></div>
       <div class="sidebar__import">
-        <button class="btn btn--primary btn--block" id="pickFolder">Načítať priečinok</button>
+        <button class="btn btn--primary btn--block btn--big" id="newSong">✎ Nová pieseň</button>
+        <button class="btn btn--block" id="pickFolder">Načítať priečinok</button>
         <button class="btn btn--block" id="pickFiles">Načítať súbory</button>
         <p class="hint" id="importInfo">Podporované: .xml (vlastný formát, OpenSong, OpenLyrics/OpenLP).</p>
         <input type="file" id="folderInput" webkitdirectory directory multiple accept=".xml" hidden>
@@ -216,7 +217,107 @@
       </div>
     </div>
   </section>
+<section class="view view--editor" data-view="editor">
+  <div class="editor">
+    <div class="editor__top">
+      <button class="btn" id="editorCancel">← Späť</button>
+      <h1 id="editorHeading">Nová pieseň</h1>
+      <span class="badge badge--warn" id="editorDirty" hidden>neuložené zmeny</span>
+      <button class="btn" id="editorExport" title="Uloží pieseň ako .xml súbor do tabletu">Stiahnuť XML</button>
+      <button class="btn btn--danger" id="editorDelete" hidden>Zmazať</button>
+      <button class="btn btn--primary btn--big" id="editorSave">Uložiť pieseň</button>
+    </div>
+
+    <div class="draftbar" id="editorDraft" hidden>
+      <span id="editorDraftText"></span>
+      <button class="btn" id="editorDraftRestore">Obnoviť</button>
+      <button class="btn" id="editorDraftDiscard">Zahodiť</button>
+    </div>
+
+    <div class="editor__body">
+      <div class="editor__form">
+        <div class="field">
+          <label for="edTitle">Názov piesne</label>
+          <input class="input input--big" id="edTitle" placeholder="napr. Ó, Bože náš, k Tebe voláme" autocomplete="off">
+          <p class="field__error" id="edTitleError" hidden>Zadaj názov piesne.</p>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="edFolder">Zbierka</label>
+            <select class="input" id="edFolder"></select>
+          </div>
+          <div class="field" id="edNewFolderField" hidden>
+            <label for="edNewFolder">Názov novej zbierky</label>
+            <input class="input" id="edNewFolder" placeholder="napr. Vlastné piesne" autocomplete="off">
+          </div>
+          <div class="field field--narrow">
+            <label for="edSystem">Spevník</label>
+            <select class="input" id="edSystem">
+              <option value="">bez čísla</option>
+              <option value="JKS">JKS</option>
+              <option value="LS">LS</option>
+            </select>
+          </div>
+          <div class="field field--narrow">
+            <label for="edNumber">Číslo</label>
+            <input class="input" id="edNumber" inputmode="numeric" placeholder="342" autocomplete="off">
+          </div>
+        </div>
+        <p class="field__warn" id="edNumberWarn" hidden></p>
+
+        <details class="field-more">
+          <summary>Autor a melódia (nepovinné)</summary>
+          <div class="field-row">
+            <div class="field"><label for="edAuthor">Autor textu</label><input class="input" id="edAuthor" autocomplete="off"></div>
+            <div class="field"><label for="edMelody">Melódia</label><input class="input" id="edMelody" autocomplete="off"></div>
+          </div>
+        </details>
+
+        <div class="verses-head">
+          <h2 class="section-title">Slohy</h2>
+          <button class="btn" id="edPasteAll">Vložiť celý text naraz</button>
+        </div>
+        <div class="verses" id="edVerses"></div>
+        <p class="field__error" id="edVersesError" hidden>Pridaj aspoň jednu slohu s textom.</p>
+        <div class="verses-add">
+          <button class="btn btn--big" id="edAddVerse">+ Pridať slohu</button>
+          <button class="btn btn--big" id="edAddChorus">+ Pridať refrén</button>
+        </div>
+      </div>
+
+      <aside class="editor__preview">
+        <div class="preview__label">Náhľad na televízore</div>
+        <div class="preview__screen" id="edPreview"></div>
+        <p class="hint">Ukazuje slohu, ktorú práve píšeš. Písmo sa na televízore samo zväčší alebo zmenší tak,
+          aby sa text vždy zmestil – riadky teda deľ tak, ako sa spievajú.</p>
+      </aside>
+    </div>
+  </div>
+</section>
 </main>
+
+<dialog id="pasteDialog" class="dialog">
+  <h3>Vložiť celý text piesne</h3>
+  <p class="hint">
+    Vlož sem text celej piesne a aplikácia ho sama rozdelí na slohy.
+    Slohy oddeľ <strong>prázdnym riadkom</strong>, refrén označ na začiatku ako <strong>R:</strong>
+    alebo <strong>Refrén:</strong>. Čísla slôh („1.“, „2)“) sa automaticky odstránia.
+  </p>
+  <textarea class="input textarea textarea--tall" id="pasteText" placeholder="1. Prvá sloha piesne,
+druhý riadok slohy.
+
+R: Refrén piesne,
+druhý riadok refrénu.
+
+2. Druhá sloha piesne,
+jej druhý riadok."></textarea>
+  <div class="dialog__actions">
+    <button class="btn" data-close-dialog>Zrušiť</button>
+    <button class="btn" id="pasteAppend">Pridať k slohám</button>
+    <button class="btn btn--primary" id="pasteReplace">Nahradiť všetky slohy</button>
+  </div>
+</dialog>
 
 <dialog id="songDialog" class="dialog">
   <h3 id="dialogTitle"></h3>
@@ -224,6 +325,7 @@
   <div class="dialog__body" id="dialogBody"></div>
   <div class="dialog__actions">
     <button class="btn" data-close-dialog>Zavrieť</button>
+    <button class="btn" id="dialogEdit">✎ Upraviť</button>
     <button class="btn" id="dialogAdd">+ Do setu</button>
     <button class="btn btn--primary" id="dialogPlay">▶ Premietať</button>
   </div>

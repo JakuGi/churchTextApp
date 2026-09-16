@@ -1,10 +1,10 @@
 // Offline režim – v kostole býva internet slabý, appka musí fungovať bez neho.
-const CACHE = 'organista-v1';
+const CACHE = 'organista-v2';
 const SHELL = [
   'index.html', 'display.html', 'receiver.html', 'manifest.webmanifest', 'icon.svg',
   'css/app.css', 'css/display.css',
   'js/app.js', 'js/bus.js', 'js/cast.js', 'js/display-core.js',
-  'js/import.js', 'js/songs.js', 'js/store.js', 'js/xmlparse.js',
+  'js/editor.js', 'js/import.js', 'js/songs.js', 'js/store.js', 'js/xmlparse.js',
 ];
 
 self.addEventListener('install', (event) => {

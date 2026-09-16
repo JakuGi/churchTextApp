@@ -1,9 +1,9 @@
 # Organista – texty piesní na televízor
 
 Aplikácia pre organistu. Na **tablete** máš ovládanie s veľkými tlačidlami,
-na **televízore v kostole** sa veriacim premieta text piesne. Piesne sa načítajú
-zo súborov `.xml`, triedia sa do zbierok podľa priečinkov a pieseň sa dá vyvolať
-aj jednoduchým zadaním čísla z JKS alebo LS.
+na **televízore v kostole** sa veriacim premieta text piesne. Piesne si buď
+napíšeš priamo v aplikácii, alebo načítaš zo súborov `.xml`; triedia sa do zbierok
+a pieseň sa dá vyvolať aj jednoduchým zadaním čísla z JKS alebo LS.
 
 Tento návod je písaný pre organistu, nie pre programátora. Postupuj krok za krokom
 a všetko sa dá zvládnuť za jedno popoludnie.
@@ -23,10 +23,11 @@ a všetko sa dá zvládnuť za jedno popoludnie.
 4. [Čo robiť na televízore (Android TV, Chromecast, PC)](#4-čo-robiť-na-televízore-android-tv-chromecast-pc)
 5. [Každá omša: tri kroky](#5-každá-omša-tri-kroky)
 6. [Ovládanie počas premietania](#6-ovládanie-počas-premietania)
-7. [Piesne a súbory XML](#7-piesne-a-súbory-xml)
-8. [Keď niečo nefunguje](#8-keď-niečo-nefunguje)
-9. [Verzia bez poplatku (náhradné riešenie)](#9-verzia-bez-poplatku-náhradné-riešenie)
-10. [Pre technicky zdatných](#10-pre-technicky-zdatných)
+7. [Písanie a úprava piesní v aplikácii](#7-písanie-a-úprava-piesní-v-aplikácii)
+8. [Piesne zo súborov XML](#8-piesne-zo-súborov-xml)
+9. [Keď niečo nefunguje](#9-keď-niečo-nefunguje)
+10. [Verzia bez poplatku (náhradné riešenie)](#10-verzia-bez-poplatku-náhradné-riešenie)
+11. [Pre technicky zdatných](#11-pre-technicky-zdatných)
 
 ---
 
@@ -317,7 +318,7 @@ piesne/
 Podpriečinok sa v aplikácii stane **zbierkou**. Priečinok pomenovaný `JKS`
 automaticky dostane číslovanie JKS, priečinok `LS` číslovanie LS.
 
-Ako majú súbory vyzerať, je popísané v časti [7](#7-piesne-a-súbory-xml).
+Ako majú súbory vyzerať, je popísané v časti [8](#8-piesne-zo-súborov-xml).
 
 **E2. Prenes priečinok do tabletu**
 
@@ -334,6 +335,9 @@ ako ti to vyhovuje. Ulož ho napríklad do priečinka *Stiahnuté súbory*.
 
 > Chceš si to najprv len vyskúšať? V *Nastaveniach* je tlačidlo
 > **Načítať ukážkové piesne**, ktoré pridá niekoľko vzorových piesní.
+>
+> Piesne nemusíš mať pripravené v súboroch – napísať ich vieš priamo v tablete,
+> pozri časť [7](#7-písanie-a-úprava-piesní-v-aplikácii).
 
 **✅ Kontrola:** v knižnici vidíš zoznam piesní a vľavo zbierky (JKS, LS…).
 Do políčka hľadania napíš `342` – ak máš pieseň s týmto číslom, hneď sa zobrazí.
@@ -372,7 +376,7 @@ na tablete a na počítači.
 3. Toto okno presuň na televízor a daj ho na celú obrazovku (tlačidlo ⛶
    alebo kláves `F`).
 4. Piesne ovládaj **v tom istom počítači** v pôvodnom okne. Tablet vtedy
-   netreba. Podrobnosti sú v časti [9](#9-verzia-bez-poplatku-náhradné-riešenie).
+   netreba. Podrobnosti sú v časti [10](#10-verzia-bez-poplatku-náhradné-riešenie).
 
 **Čo uvidíš na televízore, keď to funguje:**
 
@@ -442,7 +446,67 @@ Keď je všetko raz nastavené, pred každou omšou stačí:
 
 ---
 
-## 7. Piesne a súbory XML
+## 7. Písanie a úprava piesní v aplikácii
+
+Piesne nemusíš pripravovať v počítači – napísať a opraviť ich vieš priamo v tablete
+a **žiadne XML pritom nevidíš**. Každá uložená pieseň sa hneď objaví v knižnici,
+dá sa vyhľadať podľa čísla aj názvu a funguje aj bez internetu.
+
+### Napísať novú pieseň
+
+1. V **Knižnici** ťukni vľavo dole na **✎ Nová pieseň**.
+2. Vyplň **názov** piesne (jediný povinný údaj).
+3. Vyber **zbierku** (napr. `JKS`, `Vlastné`, alebo si cez *+ nová zbierka…*
+   vytvor ďalšiu).
+4. Ak má pieseň číslo v spevníku, vyber **spevník** (JKS alebo LS) a napíš **číslo**.
+   Vďaka tomu ju potom počas omše vyvoláš len zadaním čísla.
+5. Píš text – **každý spievaný riadok na samostatný riadok**. Ako to bude vyzerať
+   na televízore, vidíš okamžite v **náhľade vpravo**.
+6. Ďalšie časti pridáš tlačidlami **+ Pridať slohu** a **+ Pridať refrén**.
+7. Ťukni na **Uložiť pieseň**. Hotovo – pieseň je v knižnici.
+
+### Vložiť celý text naraz (najrýchlejší spôsob)
+
+Ak máš text piesne skopírovaný odinakiaľ, nemusíš ho rozdeľovať ručne:
+
+1. Ťukni na **Vložiť celý text naraz**.
+2. Vlož celý text piesne.
+3. Ťukni na **Nahradiť všetky slohy** (alebo *Pridať k slohám*).
+
+Aplikácia text sama rozdelí podľa týchto pravidiel:
+
+| V texte | Výsledok |
+|---|---|
+| **prázdny riadok** medzi časťami | rozdelí text na jednotlivé slohy |
+| riadok začínajúci `R:` alebo `Refrén:` | označí časť ako refrén |
+| `1.`, `2)` na začiatku slohy | použije sa ako číslo slohy a z textu sa odstráni |
+
+### Upraviť alebo zmazať pieseň
+
+- V knižnici ťukni pri piesni na **✎**, alebo si pieseň otvor a zvoľ **✎ Upraviť**.
+- Funguje to aj pri piesňach načítaných zo súborov – oprava preklepu je otázka
+  niekoľkých sekúnd.
+- Slohy vieš presúvať (**▲ ▼**), duplikovať (**⧉**) a mazať (**✕**).
+- **Zmazať** odstráni celú pieseň z knižnice (appka sa najprv spýta).
+
+### Na čo si dať pozor
+
+- **Rozpísaná pieseň sa nestratí.** Keď appku zavrieš bez uloženia, pri ďalšom
+  otvorení editora ponúkne *Obnoviť*. Pri odchode z editora sa navyše vždy spýta,
+  či naozaj chceš odísť bez uloženia.
+- Ak zadáš **číslo, ktoré už iná pieseň má**, aplikácia ťa upozorní – uložiť to
+  však dovolí (napr. pri dvoch verziách tej istej piesne).
+- **Stiahnuť XML** uloží pieseň ako súbor do tabletu. Hodí sa na zálohu alebo
+  na prenos do iného zariadenia. Knižnica je uložená v tablete, takže pri väčšom
+  množstve vlastných piesní sa oplatí občas si ich takto odložiť.
+
+---
+
+## 8. Piesne zo súborov XML
+
+Súbory XML sú užitočné, keď máš piesne už niekde pripravené alebo ich chceš
+hromadne preniesť. Ak chceš pieseň len napísať alebo opraviť, jednoduchšia je
+cesta cez [editor v aplikácii](#7-písanie-a-úprava-piesní-v-aplikácii).
 
 Najjednoduchší súbor piesne vyzerá takto (otvor si Poznámkový blok, napíš to
 a ulož ako `342-O_Boze_nas.xml`, pričom v možnosti *Kódovanie* zvoľ **UTF-8**):
@@ -482,7 +546,7 @@ Ukážkové súbory nájdeš v priečinku [songs/](songs).
 
 ---
 
-## 8. Keď niečo nefunguje
+## 9. Keď niečo nefunguje
 
 | Problém | Čo s tým |
 |---|---|
@@ -499,7 +563,7 @@ Ukážkové súbory nájdeš v priečinku [songs/](songs).
 
 ---
 
-## 9. Verzia bez poplatku (náhradné riešenie)
+## 10. Verzia bez poplatku (náhradné riešenie)
 
 Ak nechceš platiť 5 USD alebo zatiaľ čakáš na registráciu, text sa dá na televízor
 dostať aj takto – bez Chromecastu a bez registrácie:
@@ -526,7 +590,7 @@ premietacie okno, takže tablet v tomto prípade nevyužiješ.
 
 ---
 
-## 10. Pre technicky zdatných
+## 11. Pre technicky zdatných
 
 ```bash
 npm start     # spustí aplikáciu na http://localhost:8080
@@ -544,6 +608,7 @@ js/xmlparse.js    minimálny XML parser bez závislostí
 js/songs.js       rozpoznanie formátov, čísla JKS/LS, vyhľadávanie
 js/store.js       IndexedDB (piesne, zbierky, sety) + nastavenia
 js/import.js      načítanie priečinka so súbormi
+js/editor.js      editor piesní (formulár, rozdelenie textu, export XML)
 js/bus.js         prenos stavu na obrazovky
 js/display-core.js vykreslenie textu + automatická veľkosť písma
 js/cast.js        Google Cast (odosielanie)
