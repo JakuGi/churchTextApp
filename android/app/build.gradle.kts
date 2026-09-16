@@ -9,7 +9,7 @@ val webSource = rootProject.projectDir.parentFile
 val copyWebApp = tasks.register<Copy>("copyWebApp") {
     duplicatesStrategy = DuplicatesStrategy.INCLUDE
     from(webSource) {
-        include("index.html", "display.html")
+        include("index.html", "display.html", "icon.svg", "manifest.webmanifest")
         include("css/**", "js/**", "songs/**")
     }
     into(layout.buildDirectory.dir("generated/web/www"))
