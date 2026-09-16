@@ -74,7 +74,8 @@ const SECTION_HEADING = [
   /^modlitba/, /^na prijimanie/, /^na obetovanie/, /^vstupny spev/, /^kolekta/,
   /^liturgicke citania/, /^homilia/, /^prosby/,
 ];
-const REFRAIN = /^R\s*\.?\s*(?:\([^)]*\))?\s*[:.]?\s*(.*)$/;
+// Riadok s refrénom: „R.: text“, „R. text“, „R: text“ aj s odkazom v zátvorke.
+const REFRAIN_MARKER = /^R\s*\.?\s*(?:\([^)]*\))?\s*:?\s*(?=\S)/;
 const REFERENCE = /^(Ž|Ž\.|Žalm|Ž ?\d)/;
 
 const isSectionHeading = (line) => {
@@ -98,11 +99,28 @@ export function parsePsalmPage(html, options = {}) {
     const key = normalize(lines[index]);
     if (!PSALM_HEADING.test(key)) continue;
 
-    // Niekedy je nadpis a odkaz na jednom riadku: „Responzóriový žalm Ž 118, 1-2“.
-    const inlineReference = /(Ž[^,]{0,6},?[^A-Za-zÀ-ž]*\d[^\n]*)$/.exec(lines[index]);
+    // Odkaz na žalm býva na tom istom riadku: „Responzóriový žalm Ž 111, 7-8“.
+    const inlineReference = /(Ž\s*\d.*)$/.exec(lines[index]);
     let reference = inlineReference ? inlineReference[1].trim() : '';
-    const body = [];
 
+    // Refrén je na stránke NAD nadpisom, uvedený značkou „R.:“:
+    //     R.: Veľké sú diela Pánove.
+    //     Responzóriový žalm   Ž 111, 7-8. 9. 10
+    //     <text žalmu>
+    let refrain = '';
+    for (let back = index - 1; back >= 0 && back >= index - 8; back -= 1) {
+      const line = lines[back];
+      if (!line.trim()) continue;
+      const lineKey = normalize(line);
+      if (PSALM_HEADING.test(lineKey) || isSectionHeading(line)) break;
+      if (REFRAIN_MARKER.test(line)) {
+        refrain = line.trim();
+        break;
+      }
+    }
+
+    // Náhradné hľadanie pod nadpisom, keby stránka vyzerala inak.
+    const body = [];
     for (let cursor = index + 1; cursor < lines.length; cursor += 1) {
       const line = lines[cursor];
       const lineKey = normalize(line);
@@ -114,28 +132,24 @@ export function parsePsalmPage(html, options = {}) {
       body.push(line);
     }
 
-    // Refrén je prvý riadok označený „R.“; ak je značka samostatne,
-    // text je na nasledujúcom riadku.
-    let refrain = '';
-    for (let position = 0; position < body.length; position += 1) {
-      const match = REFRAIN.exec(body[position]);
-      if (!match) continue;
-      refrain = match[1].trim();
-      if (!refrain) {
-        const next = body.slice(position + 1).find((line) => line.trim() !== '');
-        refrain = (next || '').trim();
-      }
-      break;
-    }
     if (!refrain) {
-      // Bez značky R. vezmeme prvý zmysluplný riadok.
-      refrain = (body.find((line) => line.trim() !== '' && !REFERENCE.test(line)) || '').trim();
+      for (let position = 0; position < body.length; position += 1) {
+        if (!REFRAIN_MARKER.test(body[position])) continue;
+        const rest = body[position].replace(REFRAIN_MARKER, '').trim();
+        if (rest) {
+          refrain = body[position].trim();
+        } else {
+          const next = body.slice(position + 1).find((line) => line.trim() !== '');
+          refrain = next ? `R.: ${next.trim()}` : '';
+        }
+        break;
+      }
     }
     if (!refrain) continue;
 
-    refrain = refrain.replace(/^R\s*\.?\s*[:.]?\s*/i, '').trim();
+    refrain = refrain.replace(/\s+/g, ' ').trim();
     if (!psalms.some((item) => normalize(item.refrain) === normalize(refrain))) {
-      psalms.push({ refrain, reference, lines: refrain.split(/\s*\/\s*|\n/).map((part) => part.trim()).filter(Boolean) });
+      psalms.push({ refrain, reference, lines: [refrain] });
     }
   }
 

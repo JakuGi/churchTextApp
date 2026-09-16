@@ -10,6 +10,8 @@ použije ako popis vydania na GitHube.
 - Nové tlačidlo **📖 Žalm na dnes** v knižnici stiahne responzóriový žalm
   z liturgického kalendára KBS (`lc.kbs.sk`) a pripraví ho na premietanie.
 - Deň sa vyberá tlačidlami **Dnes / Zajtra / Najbližšia nedeľa** alebo dátumom.
+- Premieta sa **refrén označený `R.:`**, ktorý je na stránke nad nadpisom
+  *Responzóriový žalm*; do textu sa berie aj samotná značka `R.:`.
 - Žalm sa dá buď **premietať jednorázovo** (nikam sa neukladá), alebo
   **uložiť do novej zbierky Žalmy** s názvom podľa dátumu a sviatku.
 - Ak má deň viac formulárov, všetky nájdené žalmy sa uložia ako jedna pieseň
