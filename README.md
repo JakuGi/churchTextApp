@@ -1,435 +1,110 @@
-# Organista – texty piesní na televízor
+# Organista – texty piesní na televízor (aplikácia pre Android)
 
 Aplikácia pre organistu. Na **tablete** máš ovládanie s veľkými tlačidlami,
-na **televízore v kostole** sa veriacim premieta text piesne. Piesne si buď
-napíšeš priamo v aplikácii, alebo načítaš zo súborov `.xml`; triedia sa do zbierok
-a pieseň sa dá vyvolať aj jednoduchým zadaním čísla z JKS alebo LS.
+na **televízore** sa veriacim premietajú texty piesní.
 
-Tento návod je písaný pre organistu, nie pre programátora. Postupuj krok za krokom
-a všetko sa dá zvládnuť za jedno popoludnie.
+Táto vetva je **natívna aplikácia pre Android** – stiahneš jeden súbor `.apk`,
+nainštaluješ do tabletu a funguje. **Žiadna registrácia, žiadny poplatok, žiadny
+hosting, žiadny internet.**
 
 ---
 
 ## Obsah
 
-1. [Ako to celé funguje](#1-ako-to-celé-funguje)
-2. [Čo potrebuješ](#2-čo-potrebuješ)
-3. [Nastavenie krok za krokom (raz za život)](#3-nastavenie-krok-za-krokom-raz-za-život)
-   - [A. Aplikácia na internete zadarmo (GitHub Pages)](#a-aplikácia-na-internete-zadarmo-github-pages)
-   - [B. Jednorazový poplatok 5 USD a registrácia prijímača](#b-jednorazový-poplatok-5-usd-a-registrácia-prijímača)
-   - [C. Registrácia Chromecastu](#c-registrácia-chromecastu)
-   - [D. Nastavenie tabletu](#d-nastavenie-tabletu)
-   - [E. Načítanie piesní](#e-načítanie-piesní)
-4. [Čo robiť na televízore (Android TV, Chromecast, PC)](#4-čo-robiť-na-televízore-android-tv-chromecast-pc)
-5. [Každá omša: tri kroky](#5-každá-omša-tri-kroky)
-6. [Ovládanie počas premietania](#6-ovládanie-počas-premietania)
-7. [Písanie a úprava piesní v aplikácii](#7-písanie-a-úprava-piesní-v-aplikácii)
-8. [Piesne zo súborov XML](#8-piesne-zo-súborov-xml)
+1. [Inštalácia do tabletu](#1-inštalácia-do-tabletu)
+2. [Pripojenie televízora](#2-pripojenie-televízora)
+3. [Prvé spustenie: piesne](#3-prvé-spustenie-piesne)
+4. [Každá omša: tri kroky](#4-každá-omša-tri-kroky)
+5. [Ovládanie počas premietania](#5-ovládanie-počas-premietania)
+6. [Písanie a úprava piesní](#6-písanie-a-úprava-piesní)
+7. [Súbory XML](#7-súbory-xml)
+8. [Kde sú uložené dáta a ako ich zálohovať](#8-kde-sú-uložené-dáta-a-ako-ich-zálohovať)
 9. [Keď niečo nefunguje](#9-keď-niečo-nefunguje)
-10. [Bez Chromecastu: obrazovka cez sieť](#10-bez-chromecastu-obrazovka-cez-sieť)
-11. [Pre technicky zdatných](#11-pre-technicky-zdatných)
+10. [Pre technicky zdatných](#10-pre-technicky-zdatných)
 
 ---
 
-## 1. Ako to celé funguje
+## 1. Inštalácia do tabletu
 
-Chromecast je malá krabička (alebo funkcia zabudovaná v televízore), ktorá sa
-pripojí na Wi-Fi a vie si **sama stiahnuť webovú stránku z internetu a zobraziť ju
-na televízore**. Tablet jej len posiela pokyny typu „teraz ukáž druhú slohu“.
+1. V tablete otvor stránku projektu na GitHube → vpravo **Releases** →
+   vydanie **Organista pre Android (posledná verzia)**.
+2. Stiahni súbor `organista-1.0.0.apk`.
+3. Ťukni na stiahnutý súbor. Android sa spýta na povolenie inštalovať aplikácie
+   z tohto zdroja – potvrď **Nastavenia → Povoliť z tohto zdroja** a vráť sa späť.
+4. Ťukni **Inštalovať**. Na ploche pribudne ikona **Organista**.
 
-```
-    TABLET (ovládanie)                    TELEVÍZOR (text pre veriacich)
- ┌────────────────────────┐            ┌────────────────────────────────┐
- │  Knižnica piesní       │            │                                │
- │  Set na omšu           │   Wi-Fi    │   Ó, Bože náš, k Tebe voláme,  │
- │  ◀ SLOHA   SLOHA ▶     │ ─────────► │   v Tvojom dome dnes stojíme.  │
- │  ČIERNA OBRAZOVKA      │            │                                │
- └────────────────────────┘            └────────────────────────────────┘
-        index.html                       Chromecast si stiahne
-     (ovládacia stránka)                 stránku receiver.html
-```
+Aplikácia nepotrebuje žiadne povolenia ani internet. Nepýta si prístup ku
+kontaktom, polohe ani fotkám – k súborom sa dostane len vtedy, keď jej ty sám
+vyberieš priečinok s piesňami.
 
-Aby si Chromecast vedel stiahnuť práve *našu* stránku, musia byť splnené dve veci:
-
-1. **Stránka musí byť niekde na internete** na adrese, ktorá začína `https://`.
-   Použijeme na to **GitHub Pages**, ktorý je zadarmo.
-2. **Google musí vedieť, že táto stránka smie bežať na Chromecaste.** Preto sa
-   stránka zaregistruje v Google Cast konzole a Google si za to účtuje
-   **jednorazový poplatok 5 USD** (asi 5 €). Platí sa raz a navždy, žiadne mesačné
-   poplatky.
-
-Po registrácii dostaneš **Application ID** – krátky kód (napr. `A1B2C3D4`), ktorý
-raz zadáš do aplikácie v tablete. Tým je celé prepojenie hotové.
-
-Ak nechceš platiť ani registrovať, existuje druhá cesta: **obrazovka cez sieť**.
-Televízor (alebo počítač pri ňom) vtedy otvorí obyčajnú webovú stránku a text mu
-posiela počítač v kostole, na ktorom beží priložený server. Popísaná je v časti
-[10](#10-bez-chromecastu-obrazovka-cez-sieť).
-
-Dôležité: piesne sú uložené **v tablete**, nie na internete. Na internete je len
-samotná aplikácia (jej „program“). Nikto cudzí sa k tvojim piesňam ani k setom
-nedostane.
+> **Aktualizácia na novšiu verziu:** stiahni nové APK a nainštaluj cez staré.
+> Piesne ani sety sa nestratia. Ak Android inštaláciu odmietne s hláškou
+> o podpise, odinštaluj najprv starú verziu – **predtým si však sprav zálohu**
+> (časť 8).
 
 ---
 
-## 2. Čo potrebuješ
+## 2. Pripojenie televízora
 
-**Na premietanie (v kostole, každú nedeľu):**
+Aplikácia funguje ako OpenSong: **akonáhle zistí, že je pripojená druhá
+obrazovka, sama na nej spustí premietanie.** Na tablete zostane ovládanie,
+na televízore je len text piesne. Nič sa neprepína ručne.
 
-| Vec | Poznámka |
+Druhú obrazovku pripojíš jedným z týchto spôsobov:
+
+| Spôsob | Ako na to |
 |---|---|
-| Tablet s Androidom a prehliadačom **Chrome** | slúži ako ovládanie |
-| **Chromecast** pripojený do televízora | stačí lacný základný model |
-| **alebo televízor s Android TV / Google TV** | tie majú Chromecast zabudovaný, nič sa nekupuje |
-| **Wi-Fi v kostole** | tablet aj Chromecast musia byť na **rovnakej** sieti |
-| Nabíjačka k tabletu | premietanie trvá dlho |
+| **Zrkadlenie na Chromecast** | V nastaveniach tabletu (alebo v aplikácii Google Home) zvoľ **Prenášať obrazovku** a vyber Chromecast. |
+| **Bezdrôtový displej (Miracast)** | Nastavenia tabletu → *Pripojené zariadenia* → *Prenášať* / *Smart View*. |
+| **HDMI kábel** | Tablet s výstupom HDMI (alebo redukciou USB-C → HDMI) prepoj s televízorom. |
 
-**Na jednorazové nastavenie (doma, pri počítači):**
+V aplikácii to vidíš takto:
 
-| Vec | Poznámka |
-|---|---|
-| Počítač s internetom | na tablete by sa to robilo veľmi ťažko |
-| **Google účet** (gmail) | ten istý, aký máš v tablete a v Google Home |
-| **GitHub účet** | vytvoríš zadarmo, netreba nič vedieť o programovaní |
-| **Platobná karta** | jednorazovo 5 USD pre Google |
-| Asi **45 minút času** | plus čakanie 15 minút v kroku C |
+- Hore v lište je **Druhá obrazovka: nepripojená** (oranžová) alebo
+  **Druhá obrazovka: názov televízora** (zelená).
+- Tlačidlom **📺 Pripojiť obrazovku** otvoríš rovno systémové nastavenia zrkadlenia.
+- Po pripojení sa na televízore objaví čierna obrazovka a po spustení piesne text.
 
----
-
-## 3. Nastavenie krok za krokom (raz za život)
-
-> Rady na úvod: rob to v pokoji doma, nie 10 minút pred omšou. Ak si niekde nie si
-> istý, pokračuj ďalej – na konci každej časti je kontrola, podľa ktorej zistíš,
-> či to ide dobre.
-
-### A. Aplikácia na internete zadarmo (GitHub Pages)
-
-Cieľom tejto časti je dostať súbory aplikácie na internetovú adresu, napríklad
-`https://tvojemeno.github.io/churchTextApp/`.
-
-**A1. Vytvor si GitHub účet** (ak ho ešte nemáš)
-
-1. Na počítači otvor [github.com](https://github.com) a klikni na **Sign up**.
-2. Zadaj e-mail, heslo a používateľské meno (napr. `jankohudobnik`). Toto meno
-   bude v adrese aplikácie, tak nech je jednoduché, bez diakritiky a medzier.
-3. Potvrď e-mail, ktorý ti príde.
-
-**A2. Nahraj projekt na svoj GitHub**
-
-Ak už tento projekt na GitHube máš (napr. `JakuGi/churchTextApp`), preskoč na A3.
-
-1. Otvor stránku projektu na GitHube a vpravo hore klikni na **Fork** →
-   **Create fork**. Tým vznikne tvoja vlastná kópia.
-2. Ak máš súbory len v počítači (stiahnuté ako ZIP), urob to takto:
-   klikni vpravo hore na **+** → **New repository** → názov napíš
-   `churchTextApp` → zvoľ **Public** → **Create repository** →
-   na ďalšej stránke klikni **uploading an existing file** → presuň tam
-   **rozbalený obsah** priečinka (všetky súbory a podpriečinky) → dole klikni
-   **Commit changes**.
-
-> ⚠️ Repozitár musí byť **Public** (verejný). Na bezplatnom GitHub účte
-> nefunguje zverejnenie stránky zo súkromného repozitára. Nie je to problém –
-> zverejnený je len program, nie tvoje piesne.
-
-**A3. Zapni GitHub Pages**
-
-1. V svojom repozitári klikni hore na **Settings** (ozubené koliesko).
-2. V ľavom stĺpci klikni na **Pages**.
-3. Pri položke *Source* zvoľ **Deploy from a branch**.
-4. Pri položke *Branch* zvoľ **main** (alebo `master`, podľa toho, čo tam je),
-   vedľa nechaj **/ (root)** a klikni **Save**.
-5. Počkaj 1–3 minúty a stránku obnov (F5). Hore sa objaví zelený rámček s adresou,
-   napríklad:
-
-   ```
-   https://tvojemeno.github.io/churchTextApp/
-   ```
-
-6. **Túto adresu si zapíš** – budeš ju potrebovať dvakrát.
-
-> **Pre tento repozitár (`JakuGi/churchTextApp`) je časť A už hotová.**
-> GitHub Pages je zapnutý a nasadenie prebehlo úspešne, publikuje sa z vetvy
-> `claude/cool-feynman-88sk88-chromecast`. Tvoje adresy sú:
->
-> - aplikácia (otvor na tablete): `https://jakugi.github.io/churchTextApp/`
-> - prijímač (vložíš do Cast konzoly v časti B3): `https://jakugi.github.io/churchTextApp/receiver.html`
->
-> Vetvu, z ktorej sa publikuje, vieš kedykoľvek zmeniť v *Settings → Pages*.
-> Pokračuj časťou B.
-
-**✅ Kontrola:** otvor v počítači adresu z bodu 5. Musí sa zobraziť aplikácia
-s tmavým pozadím a nápisom *Organista*. Ak sa zobrazí chyba „404“, počkaj ešte
-pár minút a skús znova.
-
-Tiež si over, že funguje aj adresa premietacej stránky – k adrese pridaj
-`receiver.html`:
-
-```
-https://tvojemeno.github.io/churchTextApp/receiver.html
-```
-
-Musí sa zobraziť **čierna prázdna stránka**. To je správne! Je to obrazovka,
-ktorá čaká na text z tabletu.
+> Prečo to nepotrebuje Chromecast appku ani registráciu: Android sám ohlási
+> aplikácii, že existuje druhý displej, a dovolí jej naň kresliť niečo iné,
+> než je na tablete. Pri zrkadlení obrazovky sa teda **na televízor dostane len
+> text**, nie ovládanie.
 
 ---
 
-### B. Jednorazový poplatok 5 USD a registrácia prijímača
+## 3. Prvé spustenie: piesne
 
-**B1. Prihlás sa do Google Cast konzoly**
+Aplikácia je na začiatku prázdna. Piesne do nej dostaneš dvomi spôsobmi:
 
-1. Na počítači otvor [cast.google.com/publish](https://cast.google.com/publish).
-2. Prihlás sa **tým istým Google účtom**, aký máš v tablete a v aplikácii
-   Google Home. (Je to dôležité, aby si potom vedel zaregistrovať Chromecast.)
+**a) Načítať priečinok so súbormi `.xml`**
 
-**B2. Zaplať jednorazový poplatok**
+1. Priečinok s piesňami prekopíruj do tabletu (káblom, cez Google Drive, na USB kľúči).
+2. V aplikácii: **Knižnica → Načítať priečinok** → vyber priečinok a potvrď.
+3. Podpriečinky sa stanú zbierkami: priečinok `JKS` dostane číslovanie JKS,
+   priečinok `LS` číslovanie LS.
 
-1. Stránka ťa vyzve na registráciu vývojárskeho účtu a na zaplatenie
-   **jednorazového poplatku 5 USD**.
-2. Odsúhlas podmienky (*Terms of Service*) a klikni na tlačidlo na zaplatenie
-   (býva označené ako *Sign up* alebo *Pay registration fee*).
-3. Zadaj údaje platobnej karty cez Google Pay a plaťbu potvrď.
-4. Po zaplatení sa vráť na [cast.google.com/publish](https://cast.google.com/publish).
-   Poplatok sa platí **raz**, nič sa neobnovuje a nič sa neúčtuje mesačne.
+**b) Napísať pieseň priamo v aplikácii**
 
-**✅ Kontrola:** v konzole sa ti zobrazí prázdny zoznam aplikácií a tlačidlo na
-pridanie novej aplikácie.
-
-**B3. Zaregistruj premietaciu stránku**
-
-1. Klikni na **Add new application** (Pridať novú aplikáciu).
-2. Z ponuky typov zvoľ **Custom Receiver** (vlastný prijímač).
-3. Vyplň:
-   - **Name** (názov): napríklad `Organista`
-   - **Receiver Application URL**: sem vlož adresu premietacej stránky z časti A:
-
-     ```
-     https://tvojemeno.github.io/churchTextApp/receiver.html
-     ```
-
-     (Musí začínať `https://` a končiť `receiver.html`.)
-   - Ostatné políčka (Google Cast for Audio, DRM a podobne) nechaj nezaškrtnuté.
-4. Klikni **Save** (Uložiť).
-
-**B4. Opíš si Application ID**
-
-V zozname aplikácií sa teraz objaví riadok s tvojou aplikáciou a pri ňom
-**Application ID** – osem znakov, napríklad `A1B2C3D4`.
-
-**Toto si zapíš alebo pošli e-mailom sebe.** Bez neho sa tablet k televízoru
-nespojí. Stav aplikácie bude *Unpublished* (nezverejnená) – to je v poriadku,
-na vlastné použitie to stačí. Práve preto ale treba spraviť ešte časť C.
+**Knižnica → ✎ Nová pieseň** – podrobne v časti [6](#6-písanie-a-úprava-piesní).
 
 ---
 
-### C. Registrácia Chromecastu
+## 4. Každá omša: tri kroky
 
-Nezverejnená aplikácia sa spustí len na Chromecastoch, ktoré vopred nahlásiš.
-Preto treba Google povedať, ktorá krabička to je.
+1. **Zapni televízor a zrkadlenie** (časť 2). V lište musí svietiť zelená
+   *Druhá obrazovka*.
+2. **Priprav set**: *Set* → do políčka napíš číslo piesne (napr. `342`) a potvrď.
+   Poradie vieš meniť šípkami, set sa dá uložiť pod názvom (napr. `Nedeľa 10:30`).
+3. **Ťukni na ▶ Spustiť premietanie** a ovládaj veľkými tlačidlami.
 
-**C1. Zisti sériové číslo Chromecastu**
-
-Máš dve možnosti:
-
-- **Na samotnom zariadení**: sériové číslo (*Serial Number*, začína zvyčajne
-  písmenami a číslicami) býva vytlačené drobným písmom priamo na Chromecaste
-  alebo na jeho krabici.
-- **V aplikácii Google Home** na tablete: ťukni na svoj Chromecast → ozubené
-  koliesko (*Nastavenia*) → úplne dole *Informácie o zariadení* / *Technické
-  informácie*. Nájdeš tam **sériové číslo**.
-
-**C2. Zapíš ho do konzoly**
-
-1. Na [cast.google.com/publish](https://cast.google.com/publish) prejdi do sekcie
-   **Cast Receiver Devices** (Zariadenia) – býva v ľavom menu alebo pod záložkou
-   *Devices*.
-2. Klikni **Add new device**.
-3. Vlož **sériové číslo** a napíš si k nemu poznámku (napr. `Chromecast kostol`).
-4. Ulož.
-
-**C3. Počkaj a reštartuj Chromecast**
-
-1. Počkaj **aspoň 15 minút**. Google potrebuje čas, kým sa registrácia prejaví.
-2. Potom **vytiahni Chromecast z napájania**, počkaj 10 sekúnd a znovu ho zapoj.
-
-> Ak máte v kostole dva televízory s dvoma Chromecastmi, takto zaregistruj oba.
-
-**✅ Kontrola:** táto časť sa dá overiť až v časti D. Ak sa tam televízor neozve,
-najčastejšie ešte neuplynulo 15 minút alebo Chromecast nebol reštartovaný.
+Pieseň, ktorá už v sete je, má namiesto *+ Do setu* zelenú **✓ V sete**, takže
+ju nepridáš dvakrát.
 
 ---
 
-### D. Nastavenie tabletu
+## 5. Ovládanie počas premietania
 
-**D1. Otvor aplikáciu v tablete**
-
-1. Na tablete otvor prehliadač **Chrome** (nie iný prehliadač – Cast funguje
-   v Chrome).
-2. Do adresného riadka napíš adresu z časti A:
-
-   ```
-   https://tvojemeno.github.io/churchTextApp/
-   ```
-
-**D2. Vytvor si ikonu na ploche**
-
-1. V Chrome ťukni vpravo hore na **⋮** (tri bodky).
-2. Zvoľ **Pridať na plochu** (alebo *Nainštalovať aplikáciu*).
-3. Potvrď. Na ploche tabletu pribudne ikona **Organista** a aplikácia sa bude
-   otvárať na celú obrazovku ako bežná aplikácia. Odteraz spúšťaj appku touto
-   ikonou.
-
-**D3. Vlož Application ID**
-
-1. V aplikácii ťukni hore na **Nastavenia**.
-2. V časti **Chromecast** je políčko *Application ID prijímača*.
-3. Napíš doň kód z časti B4 (napr. `A1B2C3D4`) a ťukni mimo políčka.
-   Objaví sa potvrdenie *Cast Application ID uložené*.
-
-> Pred zadaním kódu je hore v lište napísané *Chromecast: nenastavený* a tlačidlo
-> sa volá **Nastaviť Cast**. Po zadaní kódu sa z neho stane
-> **Pripojiť Chromecast** – podľa toho hneď vidíš, že sa kód uložil.
-
-**D4. Prvé pripojenie k televízoru**
-
-1. Zapni televízor a prepni ho na vstup, kde je Chromecast (tlačidlo *Source* /
-   *Input* na diaľkovom ovládači → *HDMI 1*, *HDMI 2*…). Na obrazovke by mala byť
-   uvítacia obrazovka Chromecastu s názvom zariadenia.
-2. V aplikácii na tablete ťukni hore na **Pripojiť Chromecast**.
-3. Zobrazí sa zoznam zariadení – vyber svoj Chromecast.
-4. Televízor prepne na čiernu obrazovku a v aplikácii sa vedľa tlačidla zobrazí
-   zelené **Chromecast: (názov zariadenia)**.
-
-**✅ Kontrola:** televízor je čierny a v tablete svieti zelený nápis. Hotovo –
-prepojenie funguje. Text sa objaví hneď, ako spustíš premietanie piesne (časť 5).
-
----
-
-### E. Načítanie piesní
-
-Aplikácia číta súbory `.xml`. Jeden súbor = jedna pieseň (alebo aj viac piesní).
-
-**E1. Priprav si priečinok s piesňami**
-
-Na počítači si vytvor priečinok, napríklad `piesne`, a v ňom podpriečinky podľa
-zbierok:
-
-```
-piesne/
-├── JKS/          ← sem daj piesne z Jednotného katolíckeho spevníka
-├── LS/           ← sem piesne z Liturgického spevníka
-└── Vlastne/      ← ostatné piesne bez čísla
-```
-
-Podpriečinok sa v aplikácii stane **zbierkou**. Priečinok pomenovaný `JKS`
-automaticky dostane číslovanie JKS, priečinok `LS` číslovanie LS.
-
-Ako majú súbory vyzerať, je popísané v časti [8](#8-piesne-zo-súborov-xml).
-
-**E2. Prenes priečinok do tabletu**
-
-Káblom z počítača do tabletu, cez Google Drive, cez e-mail alebo na USB kľúči –
-ako ti to vyhovuje. Ulož ho napríklad do priečinka *Stiahnuté súbory*.
-
-**E3. Načítaj piesne do aplikácie**
-
-1. V aplikácii ťukni na **Knižnica**.
-2. Vľavo dole ťukni na **Načítať priečinok** a vyber priečinok `piesne`.
-3. Potvrď prípadnú otázku prehliadača o prístupe k súborom.
-4. Piesne sa objavia v zozname a **zostanú uložené v tablete** – pri ďalšom
-   spustení ich už netreba načítavať znova. Aj bez internetu.
-
-> Chceš si to najprv len vyskúšať? V *Nastaveniach* je tlačidlo
-> **Načítať ukážkové piesne**, ktoré pridá niekoľko vzorových piesní.
->
-> Piesne nemusíš mať pripravené v súboroch – napísať ich vieš priamo v tablete,
-> pozri časť [7](#7-písanie-a-úprava-piesní-v-aplikácii).
-
-**✅ Kontrola:** v knižnici vidíš zoznam piesní a vľavo zbierky (JKS, LS…).
-Do políčka hľadania napíš `342` – ak máš pieseň s týmto číslom, hneď sa zobrazí.
-
----
-
-## 4. Čo robiť na televízore (Android TV, Chromecast, PC)
-
-Toto je najčastejšia otázka, preto krátko a jasne:
-
-### Na televízore sa **nič neinštaluje a nič nenastavuje**.
-
-Televízor len zobrazuje to, čo mu pošle Chromecast. Celé nastavenie sa robí
-na tablete a na počítači.
-
-**Ak máš Chromecast (krabičku v HDMI):**
-
-1. Zapoj Chromecast do HDMI a do napájania (USB alebo zásuvka).
-2. Raz ho nastav v aplikácii **Google Home** v tablete (pripojenie na Wi-Fi) –
-   ak už funguje na púšťanie videí, máš hotovo.
-3. Pred omšou len zapni televízor a prepni ho na správny HDMI vstup.
-
-**Ak máš televízor s Android TV / Google TV (alebo Chromecast built-in):**
-
-1. Nič sa nekupuje ani neinštaluje – Chromecast je v televízore zabudovaný.
-2. Televízor musí byť na **rovnakej Wi-Fi** ako tablet.
-3. Pred omšou nechaj televízor na domovskej obrazovke. Keď sa tablet pripojí,
-   televízor sa sám prepne na text piesne.
-4. **Neinštaluj na televízor žiadny prehliadač** – nie je potrebný.
-
-**Ak nemáš Chromecast, ale pri televízore je počítač:**
-
-1. Počítač pripoj k televízoru **HDMI káblom**.
-2. Na počítači otvor rovnakú adresu aplikácie a ťukni na **Okno na TV**.
-   Otvorí sa čierne okno len s textom.
-3. Toto okno presuň na televízor a daj ho na celú obrazovku (tlačidlo ⛶
-   alebo kláves `F`).
-4. Piesne ovládaj **v tom istom počítači** v pôvodnom okne. Tablet vtedy
-   netreba. Podrobnosti sú v časti [10](#10-bez-chromecastu-obrazovka-cez-sieť).
-
-**Čo uvidíš na televízore, keď to funguje:**
-
-- Po pripojení: **čierna obrazovka** (to je správne – text ešte nebeží).
-- Po spustení piesne: veľký biely text na čiernom pozadí, hore vľavo číslo
-  a názov piesne, dole vpravo číslo slohy.
-- Po stlačení **ČIERNA OBRAZOVKA**: úplne čierny televízor, ale vybraná sloha
-  sa nestratí – po opätovnom stlačení sa vráti presne tá istá.
-
----
-
-## 5. Každá omša: tri kroky
-
-Keď je všetko raz nastavené, pred každou omšou stačí:
-
-**1. Zapni televízor a pripoj sa (asi 20 sekúnd)**
-
-- Zapni televízor, prepni na vstup s Chromecastom.
-- Na tablete otvor ikonu **Organista** → ťukni **Pripojiť Chromecast** → vyber
-  zariadenie. Televízor sčernie, v tablete svieti zelený nápis.
-
-**2. Priprav si set piesní**
-
-- Ťukni na **Set**.
-- Do políčka *Rýchle pridanie podľa čísla JKS/LS alebo názvu* napíš číslo piesne
-  (napr. `342`) a stlač Enter. Pieseň pribudne do zoznamu. Takto pridaj všetky
-  piesne na omšu.
-- Šípkami ▲▼ vieš poradie zmeniť, krížikom pieseň odobrať.
-- Pieseň, ktorá už v sete je, má v knižnici namiesto *+ Do setu* zelenú
-  **✓ V sete** – tú istú pieseň teda nepridáš omylom dvakrát.
-- Hore napíš názov (napr. `Nedeľa 10:30`) a ťukni **Uložiť set** – nabudúce ho
-  otvoríš jedným ťuknutím.
-
-**3. Premietaj**
-
-- Ťukni na **▶ Spustiť premietanie**.
-- Text prvej slohy sa objaví na televízore a ty ovládaš všetko veľkými
-  tlačidlami (pozri ďalšiu časť).
-
-> Ak kňaz ohlási pieseň, ktorú nemáš v sete: ťukni na **Rýchly výber čísla**,
-> na veľkej číselnej klávesnici zadaj číslo a ťukni na nájdenú pieseň. Vloží sa
-> hneď za práve hranú a po jej skončení sa pokračuje podľa setu.
-
----
-
-## 6. Ovládanie počas premietania
-
-| Čo chceš urobiť | Tlačidlo na tablete | Klávesa (bluetooth pedál) |
+| Čo chceš urobiť | Tlačidlo | Klávesa (bluetooth pedál) |
 |---|---|---|
 | Ďalšia sloha | veľké **ĎALŠIA SLOHA** vpravo dole | `→`, medzerník |
 | Predošlá sloha | veľké **PREDOŠLÁ SLOHA** vľavo dole | `←` |
@@ -437,86 +112,34 @@ Keď je všetko raz nastavené, pred každou omšou stačí:
 | Zhasnúť text na TV | veľké **ČIERNA OBRAZOVKA** v strede | `B` |
 | Ďalšia / predošlá pieseň | tlačidlá pod náhľadom | `↓` / `↑` |
 | Pieseň mimo setu | **Rýchly výber čísla** hore | – |
-| Skončiť premietanie | **← Späť** hore vľavo | – |
 
-Ďalšie užitočné veci:
-
-- **Náhľad**: v ľavej časti obrazovky stále vidíš presne to, čo je v danej chvíli
-  na televízore. Nemusíš sa otáčať.
-- **Čierna obrazovka nezruší výber slohy.** Hodí sa medzi slohami, počas kázne
-  alebo pri premenení – po vypnutí pokračuješ presne tam, kde si skončil.
-- **Refrén** má na tlačidle písmeno `R`.
-- Na konci poslednej slohy ťa tlačidlo *ĎALŠIA SLOHA* automaticky prenesie
-  na ďalšiu pieseň v sete.
-- V *Nastaveniach* si vieš zmeniť veľkosť písma, riadkovanie, farebnú tému
-  (biely text na čiernom / opačne) a vypnúť zobrazovanie názvu piesne.
+- **Náhľad vľavo** ukazuje presne to, čo je v danej chvíli na televízore.
+- **Čierna obrazovka nezruší výber slohy** – po vypnutí pokračuješ tam, kde si skončil.
+- Tablet počas premietania nezhasína.
 
 ---
 
-## 7. Písanie a úprava piesní v aplikácii
+## 6. Písanie a úprava piesní
 
-Piesne nemusíš pripravovať v počítači – napísať a opraviť ich vieš priamo v tablete
-a **žiadne XML pritom nevidíš**. Každá uložená pieseň sa hneď objaví v knižnici,
-dá sa vyhľadať podľa čísla aj názvu a funguje aj bez internetu.
+**Knižnica → ✎ Nová pieseň.** Vyplň názov, zbierku, prípadne spevník a číslo,
+a píš text – **každý spievaný riadok na samostatný riadok**. Vpravo vidíš živý
+náhľad toho, ako to bude vyzerať na televízore.
 
-### Napísať novú pieseň
-
-1. V **Knižnici** ťukni vľavo dole na **✎ Nová pieseň**.
-2. Vyplň **názov** piesne (jediný povinný údaj).
-3. Vyber **zbierku** (napr. `JKS`, `Vlastné`, alebo si cez *+ nová zbierka…*
-   vytvor ďalšiu).
-4. Ak má pieseň číslo v spevníku, vyber **spevník** (JKS alebo LS) a napíš **číslo**.
-   Vďaka tomu ju potom počas omše vyvoláš len zadaním čísla.
-5. Píš text – **každý spievaný riadok na samostatný riadok**. Ako to bude vyzerať
-   na televízore, vidíš okamžite v **náhľade vpravo**.
-6. Ďalšie časti pridáš tlačidlami **+ Pridať slohu** a **+ Pridať refrén**.
-7. Ťukni na **Uložiť pieseň**. Hotovo – pieseň je v knižnici.
-
-### Vložiť celý text naraz (najrýchlejší spôsob)
-
-Ak máš text piesne skopírovaný odinakiaľ, nemusíš ho rozdeľovať ručne:
-
-1. Ťukni na **Vložiť celý text naraz**.
-2. Vlož celý text piesne.
-3. Ťukni na **Nahradiť všetky slohy** (alebo *Pridať k slohám*).
-
-Aplikácia text sama rozdelí podľa týchto pravidiel:
-
-| V texte | Výsledok |
-|---|---|
-| **prázdny riadok** medzi časťami | rozdelí text na jednotlivé slohy |
-| riadok začínajúci `R:` alebo `Refrén:` | označí časť ako refrén |
-| `1.`, `2)` na začiatku slohy | použije sa ako číslo slohy a z textu sa odstráni |
-
-### Upraviť alebo zmazať pieseň
-
-- V knižnici ťukni pri piesni na **✎**, alebo si pieseň otvor a zvoľ **✎ Upraviť**.
-- Funguje to aj pri piesňach načítaných zo súborov – oprava preklepu je otázka
-  niekoľkých sekúnd.
-- Slohy vieš presúvať (**▲ ▼**), duplikovať (**⧉**) a mazať (**✕**).
-- **Zmazať** odstráni celú pieseň z knižnice (appka sa najprv spýta).
-
-### Na čo si dať pozor
-
-- **Rozpísaná pieseň sa nestratí.** Keď appku zavrieš bez uloženia, pri ďalšom
-  otvorení editora ponúkne *Obnoviť*. Pri odchode z editora sa navyše vždy spýta,
-  či naozaj chceš odísť bez uloženia.
-- Ak zadáš **číslo, ktoré už iná pieseň má**, aplikácia ťa upozorní – uložiť to
-  však dovolí (napr. pri dvoch verziách tej istej piesne).
-- **Stiahnuť XML** uloží pieseň ako súbor do tabletu. Hodí sa na zálohu alebo
-  na prenos do iného zariadenia. Knižnica je uložená v tablete, takže pri väčšom
-  množstve vlastných piesní sa oplatí občas si ich takto odložiť.
+- **+ Pridať slohu** / **+ Pridať refrén** pridá ďalšiu časť.
+- **Vložiť celý text naraz**: vlož skopírovaný text piesne a aplikácia ho sama
+  rozdelí – slohy oddelené **prázdnym riadkom**, refrén označený `R:` alebo
+  `Refrén:`, čísla slôh (`1.`, `2)`) sa použijú ako popisky.
+- Slohy vieš presúvať (▲▼), duplikovať (⧉) a mazať (✕).
+- Existujúcu pieseň upravíš tlačidlom **✎** pri piesni v knižnici.
+- Rozpísaná pieseň sa nestratí – pri ďalšom otvorení editora ju appka ponúkne obnoviť.
+- **Stiahnuť XML** uloží pieseň do priečinka *Stiahnuté/Organista*.
 
 ---
 
-## 8. Piesne zo súborov XML
+## 7. Súbory XML
 
-Súbory XML sú užitočné, keď máš piesne už niekde pripravené alebo ich chceš
-hromadne preniesť. Ak chceš pieseň len napísať alebo opraviť, jednoduchšia je
-cesta cez [editor v aplikácii](#7-písanie-a-úprava-piesní-v-aplikácii).
-
-Najjednoduchší súbor piesne vyzerá takto (otvor si Poznámkový blok, napíš to
-a ulož ako `342-O_Boze_nas.xml`, pričom v možnosti *Kódovanie* zvoľ **UTF-8**):
+Aplikácia číta vlastný formát aj formáty **OpenSong** a **OpenLyrics / OpenLP**.
+Najjednoduchší súbor:
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -528,28 +151,28 @@ a ulož ako `342-O_Boze_nas.xml`, pričom v možnosti *Kódovanie* zvoľ **UTF-8
 v Tvojom dome dnes spolu stojíme.</sloha>
     <refren>Sláva Tebe, Otec náš,
 sláva Tebe naveky.</refren>
-    <sloha cislo="2">Keď deň sa končí a tichne chrám,
-zostávaš s nami, Pane, tu sám.</sloha>
   </slohy>
 </piesen>
 ```
 
-Pravidlá, ktoré sa oplatí poznať:
+Podrobný popis: [docs/format-xml.md](docs/format-xml.md). Ukážky: [songs/](songs).
 
-- **Každý riadok textu = jeden riadok na televízore.** Rozdeľ text tak, ako sa
-  spieva, nie do jedného dlhého odseku.
-- `<cislo typ="JKS">342</cislo>` – vďaka tomu vieš pieseň vyvolať zadaním `342`.
-  Namiesto `JKS` môže byť `LS`.
-- Ak číslo v súbore nie je, aplikácia ho skúsi prečítať z názvu súboru
-  (`342 - Nazov.xml`, `JKS_342.xml`).
-- Diakritika funguje, len súbor musí byť uložený v kódovaní **UTF-8**.
-- Znaky `&`, `<` a `>` sa v texte píšu ako `&amp;`, `&lt;`, `&gt;`.
+---
 
-Aplikácia prečíta aj súbory z programov **OpenSong** a **OpenLP/OpenLyrics**, takže
-ak už máš piesne v niektorom z nich, stačí ich nakopírovať.
+## 8. Kde sú uložené dáta a ako ich zálohovať
 
-Podrobný popis všetkých možností je v [docs/format-xml.md](docs/format-xml.md).
-Ukážkové súbory nájdeš v priečinku [songs/](songs).
+- Piesne, zbierky a sety sú v **súkromnom priečinku aplikácie** v tablete.
+  Žiadna iná aplikácia sa k nim nedostane a nikam sa neodosielajú.
+- Zápis je **dvojfázový**: najprv sa zapíše dočasný súbor, potom sa premenuje,
+  a predchádzajúca verzia zostáva ako záloha. Výpadok batérie uprostred
+  ukladania teda knižnicu nezničí.
+- Priečinok je zahrnutý v **zálohovaní Androidu**, takže pri prenose na nový
+  tablet sa piesne prenesú spolu s aplikáciou.
+- **Vlastná záloha:** *Nastavenia → Údržba → Zálohovať knižnicu do súboru*.
+  Uloží všetky piesne do jedného `.xml` súboru v *Stiahnuté/Organista*. Ten si
+  odlož mimo tabletu – pri výmene tabletu ho jednoducho načítaš späť.
+
+Odinštalovanie aplikácie zmaže aj dáta, preto si pred ňou vždy sprav zálohu.
 
 ---
 
@@ -557,143 +180,84 @@ Ukážkové súbory nájdeš v priečinku [songs/](songs).
 
 | Problém | Čo s tým |
 |---|---|
-| **Tlačidlo *Pripojiť Chromecast* nenájde žiadne zariadenie** | Sú tablet aj Chromecast na tej istej Wi-Fi? Používaš prehliadač **Chrome**? Skús v tablete zapnúť *Polohu* (Android ju niekedy vyžaduje na nájdenie zariadení v sieti) a zapnúť/vypnúť Wi-Fi. |
-| **Pripojím sa, ale televízor ostane na uvítacej obrazovke Chromecastu** | Najčastejšie ešte neprešlo 15 minút od registrácie zariadenia (časť C), alebo Chromecast nebol reštartovaný. Vytiahni ho z napájania na 10 sekúnd a skús znova. |
-| **Televízor je čierny a text sa neobjaví ani po spustení piesne** | Čierna obrazovka hneď po pripojení je správna. Ťukni na **▶ Spustiť premietanie** alebo skontroluj, či nie je zapnutá **ČIERNA OBRAZOVKA** (tlačidlo svieti načerveno). |
-| **Televízor píše chybu alebo ostane prázdny aj po spustení piesne** | Otvor v počítači adresu `https://…/receiver.html`. Musí sa zobraziť čierna stránka. Ak je chyba 404, GitHub Pages nie je správne zapnutý (časť A3) alebo je v konzole zle napísaná adresa (časť B3). |
-| **V konzole som sa pomýlil v adrese prijímača** | Na [cast.google.com/publish](https://cast.google.com/publish) otvor svoju aplikáciu, adresu oprav a ulož. Application ID ostáva rovnaké. Potom reštartuj Chromecast. |
-| **Zmenil som súbory na GitHube, ale televízor ukazuje staré** | Chromecast si stránku pamätá. Odpoj sa, vytiahni Chromecast z napájania na 10 sekúnd a pripoj sa znova. |
-| **Text je na televízore primalý / priveľký** | *Nastavenia → Vzhľad premietania → Veľkosť písma*. Aplikácia veľkosť dopočítava sama, týmto ju len doladíš. |
-| **Tablet počas omše zhasne** | *Nastavenia → Nezhasínať tablet počas premietania*. A maj tablet v nabíjačke. |
-| **Piesne zmizli** | Ak si v prehliadači zmazal údaje stránok, knižnica sa vymaže. Načítaj priečinok znova (časť E3). Preto si priečinok s piesňami odlož aj mimo tabletu. |
-| **Aplikácia sa v kostole nenačíta (slabý internet)** | Otvor ju aspoň raz doma cez ikonu na ploche – uloží sa do tabletu a funguje aj offline. Samotné pripojenie na Chromecast však internet v kostole potrebuje. |
+| **Android nedovolí inštaláciu APK** | Pri inštalácii potvrď *Povoliť z tohto zdroja*. Súbor musí byť stiahnutý celý (skús znova pri lepšej sieti). |
+| **V lište stále svieti „Druhá obrazovka: nepripojená“** | Zrkadlenie sa zapína v nastaveniach tabletu, nie v aplikácii. Tablet aj Chromecast musia byť na rovnakej Wi-Fi. Pomôže tlačidlo *📺 Pripojiť obrazovku*. |
+| **Na televízore je to isté, čo na tablete (aj s tlačidlami)** | Zrkadlenie beží, ale druhú obrazovku appka nedostala. Vypni a znova zapni zrkadlenie; niektoré staršie televízory a lacné adaptéry druhú obrazovku nepodporujú. |
+| **Televízor je čierny aj po spustení piesne** | Skontroluj, či nie je zapnutá **ČIERNA OBRAZOVKA** (tlačidlo svieti načerveno). |
+| **Text je primalý alebo priveľký** | *Nastavenia → Vzhľad premietania → Veľkosť písma*. |
+| **Načítanie priečinka nič nenašlo** | Priečinok musí obsahovať súbory `.xml`. Skontroluj, či si vybral správny priečinok (nie napr. *Stiahnuté* ako celok). |
+| **Piesne zmizli** | Načítaj poslednú zálohu (*Knižnica → Načítať priečinok* a vyber priečinok so zálohou). |
 
 ---
 
-## 10. Bez Chromecastu: obrazovka cez sieť
+## 10. Pre technicky zdatných
 
-Ak nechceš platiť 5 USD, nechceš nič registrovať, alebo Chromecast jednoducho
-nemáš, text sa dá na televízor dostať aj takto. Podmienka je jediná: v kostole
-musí byť **počítač na rovnakej Wi-Fi ako tablet** (stačí starší notebook).
+### Prečo natívny Android + WebView
 
-### Ako to funguje
+Rozhranie, parser XML, čísla JKS/LS, sety, živý režim aj editor sú hotové
+a otestované v JavaScripte. Jediné, čo sa vo webe spraviť **nedá**, je druhá
+obrazovka – Android ju ponúka cez `Presentation` API a to je natívne rozhranie.
 
-Na počítači sa spustí server, ktorý je súčasťou tejto aplikácie. Tablet mu posiela,
-ktorá sloha sa má práve zobraziť, a server to okamžite rozošle všetkým otvoreným
-obrazovkám. Televízor pritom nepotrebuje nič zvláštne – **stačí mu prehliadač**.
+Preto je aplikácia natívny projekt v Kotline, ktorý:
 
-```
-   TABLET  ──►  POČÍTAČ so serverom  ──►  TELEVÍZOR (prehliadač na celú obrazovku)
- (ovládanie)      (npm start)                 └─► prípadne aj ďalšie obrazovky
-```
+- hostí webovú časť vo `WebView` (načítanú z assets cez `WebViewAssetLoader`,
+  nie z internetu),
+- sleduje externé displeje cez `MediaRouter` aj `DisplayManager` a na nájdenom
+  displeji spustí `Presentation` s druhým `WebView`,
+- poskytuje webovej časti most `window.OrganistaNative` (úložisko, import
+  priečinka cez SAF, export súborov, nastavenia zrkadlenia).
 
-### Postup
+Capacitor ani Flutter by tú istú funkciu nepriniesli bez rovnakého natívneho
+kódu, len by pridali ďalšiu vrstvu a závislosti. Webová časť je **tá istá**, akú
+používa verzia pre prehliadač – pri zostavení sa skopíruje do `assets/www`,
+takže kód je len jeden.
 
-**Na počítači (raz):**
-
-1. Nainštaluj [Node.js](https://nodejs.org) (stiahnuť, dvakrát kliknúť, ďalej-ďalej).
-2. Stiahni si tento projekt a v jeho priečinku spusti:
-
-   ```bash
-   npm start
-   ```
-
-3. V okne sa vypíšu adresy, napríklad:
-
-   ```
-   Ovládanie (tablet):   http://192.168.1.10:8080
-   Obrazovka (TV/PC):    http://192.168.1.10:8080/display.html
-   ```
-
-   Počítač musí ostať zapnutý, kým premietaš.
-
-**Na tablete:**
-
-1. V prehliadači otvor adresu **Ovládanie**, napríklad `http://192.168.1.10:8080`.
-2. Hore v lište uvidíš **Obrazovka cez sieť: pripravená**. Presnú adresu pre
-   televízor nájdeš v *Nastavenia → Obrazovka cez sieť* aj s tlačidlom *Kopírovať*.
-
-**Na televízore alebo počítači pri ňom:**
-
-1. Otvor prehliadač a zadaj adresu **Obrazovka**, teda tú istú adresu zakončenú
-   `/display.html`.
-   - Televízor s **Android TV / Google TV**: použi prehliadač z obchodu Google Play.
-   - **Počítač pripojený k TV cez HDMI**: otvor adresu v Chrome a okno presuň na televízor.
-2. Objaví sa čierna stránka s hláškou *Pripojené k tabletu. Čakám na text piesne…*
-3. Daj ju na **celú obrazovku** – tlačidlom ⛶ v rohu alebo klávesom `F`.
-4. Hotovo. Všetko, čo urobíš na tablete, sa objaví na televízore okamžite,
-   vrátane čiernej obrazovky.
-
-### Dobré vedieť
-
-- Obrazoviek môže byť **viac naraz** (napr. televízor vpredu aj monitor pre zbor) –
-  všetky ukazujú to isté.
-- Obrazovka otvorená neskôr si hneď natiahne aktuálnu slohu, netreba nič prepínať.
-- Ak sa spojenie preruší (vypadne Wi-Fi), stránka sa sama znovu pripojí.
-- Aplikácii spustenej týmto spôsobom **netreba internet** – stačí, aby boli tablet,
-  počítač a televízor na rovnakej sieti.
-- V tomto režime nefunguje Chromecast (ten potrebuje adresu s `https://`).
-  Sú to dve alternatívy, nie doplnky.
-- Adresa sa môže po reštarte routera zmeniť. Ak prestane fungovať, pozri si
-  aktuálnu adresu v okne, kde beží server.
-
-### Ešte jednoduchšie: bez servera, ale s ovládaním na počítači
-
-Ak nechceš nič inštalovať, ovládanie a text môžu bežať na **jednom počítači**:
-
-1. Otvor aplikáciu a stlač **Okno na TV** – otvorí sa čierne okno len s textom.
-2. Okno presuň na televízor (HDMI kábel) a daj ho na celú obrazovku.
-3. Ovládaj v pôvodnom okne. Tablet sa v tomto prípade nepoužíva.
-
-Alebo, ak máš Chromecast bez registrácie: v Chrome na počítači zvoľ
-*⋮ → Prenášať… → Zdroje: Prenos karty* a vyber okno s textom.
-
-### Prečo to nejde úplne bez počítača
-
-Adresa na GitHub Pages (časť A) je **statický hosting** – vie len vydávať súbory,
-ale nevie si nič zapamätať ani nič medzi zariadeniami preposielať. Tablet by teda
-nemal kam text poslať a televízor nemal odkiaľ ho vziať. Preto v tomto režime musí
-niekde bežať malý server – buď ten priložený na počítači v kostole, alebo
-Chromecast, ktorý zohráva rovnakú úlohu (časti A–C).
-
-Teoreticky sa dá namiesto počítača použiť aj bezplatná internetová služba na
-prenos správ (napr. Firebase alebo Cloudflare Workers), ale znamená to ďalší účet,
-nastavovanie kľúčov a závislosť na cudzej službe počas omše. Preto to aplikácia
-zámerne nerobí.
-
----
-
-## 11. Pre technicky zdatných
+### Zostavenie APK
 
 ```bash
-npm start     # spustí aplikáciu na http://localhost:8080
-npm test      # testy parsera XML
+cd android
+./gradlew :app:assembleRelease      # výsledok: app/build/outputs/apk/release/
 ```
 
-Aplikácia je čisto statická (HTML + JavaScript, žiadny build). Dá sa nahrať na
-ľubovoľný hosting s HTTPS, nielen na GitHub Pages. Údaje sú v IndexedDB v tablete.
+Treba JDK 17 a Android SDK (platforma 35). Bez podpisovacích kľúčov sa APK
+podpíše ladiacim kľúčom, takže sa dá nainštalovať.
+
+APK zostavuje aj GitHub Actions ([.github/workflows/android.yml](.github/workflows/android.yml))
+pri každej zmene a zavesí ho na vydanie **android-latest**.
+
+### Vlastný podpisovací kľúč (odporúčané)
+
+Bez vlastného kľúča má každé zostavenie iný podpis a aktualizácia cez existujúcu
+inštaláciu zlyhá. Kľúč si vytvoríš raz:
+
+```bash
+keytool -genkey -v -keystore organista.jks -keyalg RSA -keysize 2048 \
+        -validity 10000 -alias organista
+base64 -w0 organista.jks > organista.jks.base64
+```
+
+Obsah `organista.jks.base64` a heslá vlož do *Settings → Secrets and variables →
+Actions* ako `ORGANISTA_KEYSTORE_BASE64`, `ORGANISTA_KEYSTORE_PASSWORD`,
+`ORGANISTA_KEY_ALIAS`, `ORGANISTA_KEY_PASSWORD`. Súbor `organista.jks` **nikdy
+nenahrávaj do repozitára** a odlož si ho – bez neho sa aplikácia nedá aktualizovať.
+
+### Testy
+
+```bash
+npm test     # parser XML, čísla JKS/LS, editor, import
+```
+
+### Štruktúra
 
 ```
-index.html        ovládanie (tablet)
-display.html      premietacie okno (HDMI / prenos karty)
-receiver.html     stránka, ktorú si stiahne Chromecast
-js/xmlparse.js    minimálny XML parser bez závislostí
-js/songs.js       rozpoznanie formátov, čísla JKS/LS, vyhľadávanie
-js/store.js       IndexedDB (piesne, zbierky, sety) + nastavenia
-js/import.js      načítanie priečinka so súbormi
-js/editor.js      editor piesní (formulár, rozdelenie textu, export XML)
-js/bus.js         prenos stavu na obrazovky
-js/display-core.js vykreslenie textu + automatická veľkosť písma
-js/cast.js        Google Cast (odosielanie)
-js/app.js         rozhranie a živý režim
+android/                        natívna aplikácia (Kotlin, Gradle)
+  app/src/main/java/sk/organista/texty/
+    MainActivity.kt             WebView, most do JS, import a export súborov
+    PresentationController.kt   sledovanie externých displejov
+    SongPresentation.kt         druhá obrazovka (televízor)
+    Storage.kt                  úložisko s atomickým zápisom
+    WebBridge.kt                rozhranie window.OrganistaNative
+index.html, js/, css/           webová časť (spoločná s verziou pre prehliadač)
+display.html                    obsah druhej obrazovky
+server.js                       len pre vývoj vo webovom prehliadači
 ```
-
-Priložený server okrem súborov obsluhuje aj prenos stavu medzi zariadeniami:
-`GET /api/status` (stav a adresy), `GET /api/stream` (Server-Sent Events pre
-obrazovky) a `POST /api/state` (ovládanie posiela aktuálnu slohu). Na statickom
-hostingu tieto adresy neexistujú a aplikácia túto možnosť sama vypne.
-
-Komunikácia s prijímačom ide cez vlastný Cast kanál
-`urn:x-cast:sk.organista.texty`; posiela sa JSON so slohou, názvom, číslom
-a nastaveniami vzhľadu. Prijímač (`receiver.html`) má vypnutý časový limit
-nečinnosti, aby počas omše nezhasol.
