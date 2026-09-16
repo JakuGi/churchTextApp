@@ -1,0 +1,15 @@
+{
+  "name": "Organista – texty piesní",
+  "short_name": "Organista",
+  "description": "Premietanie textov kostolných piesní na televízor cez Chromecast",
+  "start_url": "index.html",
+  "scope": ".",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#0f1216",
+  "theme_color": "#111418",
+  "lang": "sk",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

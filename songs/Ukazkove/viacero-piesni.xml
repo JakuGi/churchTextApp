@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Jeden súbor môže obsahovať viac piesní. -->
+<piesne>
+  <piesen>
+    <nazov>Ranná ukážková</nazov>
+    <cislo typ="LS">12</cislo>
+    <slohy>
+      <sloha>Ráno svitá nad krajinou,
+Pane, vďaka za nový deň.</sloha>
+      <sloha>Daj nám silu, daj nám pokoj,
+nech je dnešok požehnaný.</sloha>
+    </slohy>
+  </piesen>
+  <piesen>
+    <nazov>Večerná ukážková</nazov>
+    <cislo typ="LS">44</cislo>
+    <slohy>
+      <sloha>Slnko zapadá za vežou,
+zvony k tichu pozývajú.</sloha>
+      <sloha>Stráž nás, Pane, cez noc tmavú,
+do rána nás dochovaj.</sloha>
+    </slohy>
+  </piesen>
+</piesne>

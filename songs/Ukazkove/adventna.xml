@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Ukážka formátu OpenSong – aplikácia ho číta tiež. -->
+<song>
+  <title>Adventná ukážková</title>
+  <author>ukážkový text</author>
+  <lyrics>[V1]
+ Príď už, príď už, očakávaný,
+ svetlo naše v tmavé ráno.
+[C]
+ Príď, Pane, príď,
+ srdcia naše otvor.
+[V2]
+ Sviece štyri tichu horia,
+ nádej v srdciach ľudí tvoria.
+</lyrics>
+</song>

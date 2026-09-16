@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Ukážková pieseň v natívnom formáte aplikácie. Text je demonštračný. -->
+<piesen>
+  <nazov>Ó, Bože náš, k Tebe voláme</nazov>
+  <cislo typ="JKS">342</cislo>
+  <autor>ukážkový text</autor>
+  <melodia>ľudová</melodia>
+  <slohy>
+    <sloha cislo="1">Ó, Bože náš, k Tebe voláme,
+v Tvojom dome dnes spolu stojíme.
+Prijmi, Pane, našu tichú pieseň,
+ktorú Ti dnes z srdca spievame.</sloha>
+    <refren>Sláva Tebe, Otec náš,
+sláva Tebe naveky.</refren>
+    <sloha cislo="2">Keď deň sa končí a tichne chrám,
+zostávaš s nami, Pane, tu sám.
+Veď naše kroky cestou pokoja,
+nech Tvoja vôľa v nás sa napĺňa.</sloha>
+    <sloha cislo="3">Za dar života vďaku vzdávame,
+za chlieb i prácu Teba chválime.
+Zostaň s nami až do rána bieleho,
+Bože náš, Pane neba celého.</sloha>
+  </slohy>
+</piesen>

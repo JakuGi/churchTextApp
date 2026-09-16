@@ -1,0 +1,11 @@
+{
+  "name": "organista-texty",
+  "version": "1.0.0",
+  "description": "Aplikácia pre organistu na premietanie textov piesní na TV cez Chromecast",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "start": "node server.js"
+  }
+}

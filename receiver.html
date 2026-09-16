@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Organista – Chromecast prijímač</title>
+<link rel="stylesheet" href="css/display.css">
+<script src="https://www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
+</head>
+<body class="display">
+<div id="root" class="display__root"></div>
+<script type="module">
+  import { createDisplay } from './js/display-core.js';
+  import { CAST_NAMESPACE } from './js/bus.js';
+
+  const display = createDisplay(document.getElementById('root'));
+  const context = cast.framework.CastReceiverContext.getInstance();
+
+  context.addCustomMessageListener(CAST_NAMESPACE, (event) => {
+    if (event.data && event.data.v === 1) display.render(event.data);
+  });
+
+  const options = new cast.framework.CastReceiverOptions();
+  options.disableIdleTimeout = true;       // prijímač nesmie zhasnúť počas omše
+  options.maxInactivity = 3600;
+  context.start(options);
+</script>
+</body>
+</html>

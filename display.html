@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Texty piesní – obrazovka</title>
+<link rel="stylesheet" href="css/display.css">
+</head>
+<body class="display">
+<div id="root" class="display__root"></div>
+<button id="fs" class="fsbtn" title="Na celú obrazovku">⛶</button>
+<script type="module">
+  import { createDisplay } from './js/display-core.js';
+  import { createLocalBus } from './js/bus.js';
+
+  const display = createDisplay(document.getElementById('root'));
+  createLocalBus().subscribe((state) => display.render(state));
+
+  const fsButton = document.getElementById('fs');
+  fsButton.onclick = () => {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen().catch(() => {});
+  };
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'f' || event.key === 'F') fsButton.click();
+  });
+  let timer;
+  const showCursor = () => {
+    document.body.classList.remove('is-idle');
+    clearTimeout(timer);
+    timer = setTimeout(() => document.body.classList.add('is-idle'), 3000);
+  };
+  document.addEventListener('mousemove', showCursor);
+  showCursor();
+</script>
+</body>
+</html>
