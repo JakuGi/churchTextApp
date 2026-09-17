@@ -3,6 +3,27 @@
 Popisy jednotlivých verzií aplikácie. Text pod nadpisom verzie sa automaticky
 použije ako popis vydania na GitHube.
 
+## 1.1.1
+
+**Opravy načítania žalmu**
+
+- **Refrén sa berie z úvodu stránky**, spomedzi súradníc s čítaniami – teda
+  z riadka označeného `R.:`. Predtým sa hľadal až pri texte žalmu a bral sa
+  nesprávny riadok.
+- **„alebo Aleluja“ za refrénom sa už nepremieta** – z textu sa odreže.
+- **Viac žalmov v jeden deň** (viac formulárov) sa načíta správne; každý je
+  samostatná sloha jednej piesne. Opakovanie refrénu v texte žalmu už
+  nevytvorí ďalšiu slohu.
+- **Názov uloženého žalmu** je teraz dátum a názov dňa so sviatkom, napríklad
+  *17. 9. 2026 – štvrtok 24. týždňa v Cezročnom období, Sv. Kornélia…*.
+  Meniny ani dátum slovom sa do názvu už nedávajú (dátum tam bol dvakrát).
+
+**Rozhranie**
+
+- V záložke **Set** sa uložené sety presunuli do vlastného okna
+  (tlačidlo **📂 Uložené sety**). Pri väčšom počte setov už neprekrývajú
+  zoznam piesní v pripravovanom sete a zoznam sa dá posúvať samostatne.
+
 ## 1.1.0
 
 **Responzóriový žalm z liturgického kalendára**
@@ -13,9 +34,12 @@ použije ako popis vydania na GitHube.
 - Premieta sa **refrén označený `R.:`**, ktorý je na stránke nad nadpisom
   *Responzóriový žalm*; do textu sa berie aj samotná značka `R.:`.
 - Žalm sa dá buď **premietať jednorázovo** (nikam sa neukladá), alebo
-  **uložiť do novej zbierky Žalmy** s názvom podľa dátumu a sviatku.
-- Ak má deň viac formulárov, všetky nájdené žalmy sa uložia ako jedna pieseň
-  a každý žalm je samostatná sloha.
+  **uložiť do novej zbierky Žalmy** ~~s názvom podľa dátumu a sviatku.~~
+  (zatiaľ zle parsuje názvy dní a sviatkov, iba dátumy sú správne,
+  oprava v novej verzii)
+- ~~Ak má deň viac formulárov, všetky nájdené žalmy sa uložia ako jedna pieseň
+  a každý žalm je samostatná sloha.~~ (zatiaľ nefunkčné, nenačíta žalm vôbec,
+  oprava v novej verzii)
 - Ak sa žalm nenájde, dá sa zobraziť načítaný text stránky na kontrolu.
 
 **Ostatné**

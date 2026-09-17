@@ -67,6 +67,7 @@
         <input class="input" id="setNameInput" placeholder="Názov setu (napr. Nedeľa 10:30)">
         <button class="btn" id="newSet">Nový</button>
         <button class="btn" id="saveSet">Uložiť set</button>
+        <button class="btn" id="openSavedSets">📂 Uložené sety <span class="pill" id="savedSetsCount">0</span></button>
         <button class="btn btn--primary btn--big" id="startSet">▶ Spustiť premietanie</button>
       </div>
 
@@ -77,10 +78,7 @@
         <div class="quickresults" id="quickAddResults"></div>
       </div>
 
-      <div class="list" id="setList"></div>
-
-      <h2 class="section-title">Uložené sety</h2>
-      <div id="savedSets" class="savedsets"></div>
+      <div class="list list--set" id="setList"></div>
     </div>
   </section>
 
@@ -342,6 +340,17 @@
   </div>
 </section>
 </main>
+
+<dialog id="savedSetsDialog" class="dialog">
+  <h3>Uložené sety</h3>
+  <p class="hint">Ťuknutím na set ho načítaš do prípravy. Aktuálny set sa tým nahradí.</p>
+  <div class="dialog__body">
+    <div id="savedSets" class="savedsets"></div>
+  </div>
+  <div class="dialog__actions">
+    <button class="btn" data-close-dialog>Zavrieť</button>
+  </div>
+</dialog>
 
 <dialog id="psalmDialog" class="dialog dialog--wide">
   <h3>Responzóriový žalm</h3>

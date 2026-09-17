@@ -499,6 +499,7 @@ function renderSetList() {
 
 function renderSavedSets() {
   const box = $('#savedSets');
+  $('#savedSetsCount').textContent = String(state.sets.length);
   box.innerHTML = '';
   if (!state.sets.length) {
     box.innerHTML = '<p class="hint">Zatiaľ nemáš uložený žiadny set.</p>';
@@ -516,6 +517,7 @@ function renderSavedSets() {
       state.set = { id: saved.id, name: saved.name, items: saved.items.slice() };
       renderSetList();
       renderSongList();
+      $('#savedSetsDialog').close();
       toast(`Načítaný set „${saved.name}“`, 'ok');
     };
     const remove = document.createElement('button');
@@ -1046,6 +1048,10 @@ function bindEvents() {
   // set
   $('#setNameInput').oninput = (event) => { state.set.name = event.target.value; };
   $('#saveSet').onclick = saveCurrentSet;
+  $('#openSavedSets').onclick = () => {
+    renderSavedSets();
+    $('#savedSetsDialog').showModal();
+  };
   $('#newSet').onclick = () => {
     if (state.set.items.length && !confirm('Vyprázdniť aktuálny set?')) return;
     state.set = { id: null, name: 'Nový set', items: [] };

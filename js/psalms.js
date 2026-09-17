@@ -76,6 +76,14 @@ const SECTION_HEADING = [
 ];
 // Riadok s refrénom: „R.: text“, „R. text“, „R: text“ aj s odkazom v zátvorke.
 const REFRAIN_MARKER = /^R\s*\.?\s*(?:\([^)]*\))?\s*:?\s*(?=\S)/;
+// Refrén je na stránke označený „R.:“ – s dvojbodkou. Samotné „R.“ medzi
+// slohami žalmu je len značka opakovania, tá sa neberie.
+const REFRAIN_COLON = /^R\s*\.?\s*:\s*(\S.*)$/;
+// Biblické súradnice: „1 Tim 4, 12-16“, „Ž 111, 7-8. 9. 10“, „Lk 7, 36-50“.
+const BIBLE_REFERENCE = /^\d?\s*[A-ZÁÄČĎÉÍĽĹŇÓÔŔŠŤÚÝŽ][\wáäčďéíĺľňóôŕšťúýž]*\.?\s+\d+\s*,\s*\d/;
+// „R.: Veľké sú diela Pánove. alebo Aleluja.“ – druhá možnosť sa nepremieta.
+const OR_ALLELUIA = /\s*alebo\s*:?\s*aleluj[aá]\b.*$/i;
+const NAME_DAY = /^meniny\s+ma/;
 const REFERENCE = /^(Ž|Ž\.|Žalm|Ž ?\d)/;
 
 const isSectionHeading = (line) => {
@@ -93,64 +101,28 @@ const isSectionHeading = (line) => {
 export function parsePsalmPage(html, options = {}) {
   const lines = Array.isArray(html) ? html : htmlToText(html);
   const headings = Array.isArray(html) ? [] : htmlHeadings(html);
+
   const psalms = [];
+  const seen = new Set();
 
+  // Refrén je vždy riadok označený „R.:“. Býva hneď v úvode pri súradniciach
+  // čítaní, kde sa dajú čítania prepínať; ďalej v texte žalmu sa opakuje.
+  // Berie sa každý odlišný refrén – pri viacerých formulároch ich je viac.
   for (let index = 0; index < lines.length; index += 1) {
-    const key = normalize(lines[index]);
-    if (!PSALM_HEADING.test(key)) continue;
+    const match = REFRAIN_COLON.exec(lines[index]);
+    if (!match) continue;
 
-    // Odkaz na žalm býva na tom istom riadku: „Responzóriový žalm Ž 111, 7-8“.
-    const inlineReference = /(Ž\s*\d.*)$/.exec(lines[index]);
-    let reference = inlineReference ? inlineReference[1].trim() : '';
-
-    // Refrén je na stránke NAD nadpisom, uvedený značkou „R.:“:
-    //     R.: Veľké sú diela Pánove.
-    //     Responzóriový žalm   Ž 111, 7-8. 9. 10
-    //     <text žalmu>
-    let refrain = '';
-    for (let back = index - 1; back >= 0 && back >= index - 8; back -= 1) {
-      const line = lines[back];
-      if (!line.trim()) continue;
-      const lineKey = normalize(line);
-      if (PSALM_HEADING.test(lineKey) || isSectionHeading(line)) break;
-      if (REFRAIN_MARKER.test(line)) {
-        refrain = line.trim();
-        break;
-      }
-    }
-
-    // Náhradné hľadanie pod nadpisom, keby stránka vyzerala inak.
-    const body = [];
-    for (let cursor = index + 1; cursor < lines.length; cursor += 1) {
-      const line = lines[cursor];
-      const lineKey = normalize(line);
-      if (PSALM_HEADING.test(lineKey) || isSectionHeading(line)) break;
-      if (!reference && REFERENCE.test(line) && /\d/.test(line)) {
-        reference = line.trim();
-        continue;
-      }
-      body.push(line);
-    }
-
-    if (!refrain) {
-      for (let position = 0; position < body.length; position += 1) {
-        if (!REFRAIN_MARKER.test(body[position])) continue;
-        const rest = body[position].replace(REFRAIN_MARKER, '').trim();
-        if (rest) {
-          refrain = body[position].trim();
-        } else {
-          const next = body.slice(position + 1).find((line) => line.trim() !== '');
-          refrain = next ? `R.: ${next.trim()}` : '';
-        }
-        break;
-      }
-    }
+    const refrain = cleanRefrain(match[1]);
     if (!refrain) continue;
+    const key = normalize(refrain);
+    if (seen.has(key)) continue;
+    seen.add(key);
 
-    refrain = refrain.replace(/\s+/g, ' ').trim();
-    if (!psalms.some((item) => normalize(item.refrain) === normalize(refrain))) {
-      psalms.push({ refrain, reference, lines: [refrain] });
-    }
+    psalms.push({
+      refrain: `R.: ${refrain}`,
+      reference: findReference(lines, index),
+      lines: [`R.: ${refrain}`],
+    });
   }
 
   const date = options.date || '';
@@ -163,27 +135,81 @@ export function parsePsalmPage(html, options = {}) {
   };
 }
 
-const NOT_FEAST = /^liturgicky kalendar|^kalendar|^dnes|^menu|^kbs|^liturgia|^domov|^copyright/;
+/** Odreže „alebo Aleluja“ a zvyšné zbytočnosti za refrénom. */
+export function cleanRefrain(text) {
+  return String(text || '')
+    .replace(OR_ALLELUIA, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/** Odkaz na žalm – najbližší riadok so „Ž“ nad refrénom. */
+function findReference(lines, index) {
+  for (let back = index - 1; back >= 0 && back >= index - 6; back -= 1) {
+    const line = (lines[back] || '').trim();
+    if (!line) continue;
+    if (/^Ž\s*\.?\s*\d/.test(line)) return line;
+    if (REFRAIN_COLON.test(line)) break;
+  }
+  for (let ahead = index + 1; ahead < lines.length && ahead <= index + 3; ahead += 1) {
+    const line = (lines[ahead] || '').trim();
+    if (/^Ž\s*\.?\s*\d/.test(line)) return line;
+  }
+  return '';
+}
+
+const NOT_FEAST = /^liturgicky kalendar|^kalendar|^dnes|^menu|^kbs|^liturgia|^domov|^copyright|^tyzden|^mesiac/;
 // „1. máj 2026“, „17. sep 2026“, „1. 5. 2026“ – to je dátum, nie názov sviatku.
 const LOOKS_LIKE_DATE = /^\d{1,2}\.\s*([a-z]+\.?|\d{1,2}\.)\s*\d{4}$/;
+const WEEKDAY = /^(pondelok|utorok|streda|stvrtok|piatok|sobota|nedela)/;
 
-/** Názov sviatku – z nadpisu stránky, inak z prvých riadkov obsahu. */
+/**
+ * Názov dňa a sviatku.
+ *
+ * Na stránke je poradie: dátum slovom, „Meniny má …“, potom deň a sviatok
+ * („štvrtok 24. týždňa v Cezročnom období“, prípadne ďalší riadok so
+ * spomienkou) a hneď za tým už začínajú súradnice čítaní. Berie sa práve
+ * ten blok medzi meninami a prvými súradnicami – bez menín a bez dátumu,
+ * ktorý je v názve už číselne.
+ */
 export function findFeast(headings, lines) {
+  const startIndex = feastStart(lines);
+  if (startIndex >= 0) {
+    const block = [];
+    for (let index = startIndex; index < lines.length && block.length < 4; index += 1) {
+      const line = (lines[index] || '').trim();
+      if (!line) continue;
+      const key = normalize(line);
+      if (BIBLE_REFERENCE.test(line) || REFRAIN_COLON.test(line)) break;
+      if (NAME_DAY.test(key) || NOT_FEAST.test(key) || LOOKS_LIKE_DATE.test(key)) continue;
+      if (line.length > 120) break;
+      block.push(line);
+    }
+    if (block.length) return block.join(', ').slice(0, 160);
+  }
+
+  // Náhradné riešenie: nadpis stránky, ktorý nie je dátumom ani navigáciou.
   for (const heading of headings) {
     const text = heading.text.replace(/^Liturgický kalendár\s*[-–]\s*/i, '').trim();
     const key = normalize(text);
-    if (!text || NOT_FEAST.test(key)) continue;
-    if (LOOKS_LIKE_DATE.test(normalize(text))) continue;
-    if (text.length > 90) continue;
+    if (!text || NOT_FEAST.test(key) || NAME_DAY.test(key)) continue;
+    if (LOOKS_LIKE_DATE.test(key) || text.length > 120) continue;
     return text;
   }
-  for (const line of lines.slice(0, 25)) {
-    const key = normalize(line);
-    if (!line || NOT_FEAST.test(key) || line.length > 90) continue;
-    if (/^\d/.test(line) || LOOKS_LIKE_DATE.test(key)) continue;
-    return line.trim();
-  }
   return '';
+}
+
+/** Kde začína blok so sviatkom: hneď za meninami, inak pri názve dňa. */
+function feastStart(lines) {
+  for (let index = 0; index < lines.length && index < 60; index += 1) {
+    if (NAME_DAY.test(normalize(lines[index] || ''))) return index + 1;
+  }
+  for (let index = 0; index < lines.length && index < 60; index += 1) {
+    const line = (lines[index] || '').trim();
+    if (!line || BIBLE_REFERENCE.test(line)) continue;
+    if (WEEKDAY.test(normalize(line))) return index;
+  }
+  return -1;
 }
 
 /**

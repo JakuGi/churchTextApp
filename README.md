@@ -30,7 +30,7 @@ hosting, žiadny internet.**
 
 1. V tablete otvor priamy odkaz na stiahnutie:
 
-   **https://github.com/JakuGi/churchTextApp/releases/download/android-latest/organista-1.1.0.apk**
+   **https://github.com/JakuGi/churchTextApp/releases/download/android-latest/organista-1.1.1.apk**
 
    (Alebo: stránka projektu na GitHube → vpravo **Releases** → vydanie
    **Organista pre Android (posledná verzia)**.)
@@ -363,7 +363,7 @@ správať s televízorom.
 3. V okne emulátora klikni na **⋯** (Extended controls) → **Displays** →
    **Add secondary display** → zvoľ rozlíšenie → *Apply changes*.
 4. Nainštaluj APK: stiahnutý súbor pretiahni myšou do okna emulátora, alebo
-   `adb install organista-1.1.0.apk`.
+   `adb install organista-1.1.1.apk`.
 5. Spusti aplikáciu a premietaj – text sa objaví na druhej obrazovke emulátora.
 
 Overiť, či Android naozaj hlási druhú obrazovku, sa dá aj z príkazového riadka:

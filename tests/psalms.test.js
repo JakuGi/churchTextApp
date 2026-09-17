@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
-  dateKey, lcUrl, humanDate, htmlToText, parsePsalmPage, psalmSong, findFeast,
+  dateKey, lcUrl, humanDate, htmlToText, parsePsalmPage, psalmSong, findFeast, cleanRefrain,
 } from '../js/psalms.js';
 
 const fixture = (name) => readFileSync(new URL(`./fixtures/${name}`, import.meta.url), 'utf8');
@@ -20,46 +20,53 @@ test('HTML sa prevedie na riadky textu', () => {
   assert.deepEqual(lines.filter(Boolean), ['Prvý', 'Druhý & tretí', 'štvrtý']);
 });
 
-test('refrén sa berie z riadka R.: NAD nadpisom a značka zostáva v texte', () => {
+test('refrén sa berie z úvodných súradníc podľa značky R.:', () => {
   const parsed = parsePsalmPage(fixture('lc-den.html'), { date: '20260917' });
   assert.equal(parsed.psalms.length, 1);
   assert.equal(parsed.psalms[0].refrain, 'R.: Veľké sú diela Pánove.');
   assert.equal(parsed.psalms[0].reference, 'Ž 111, 7-8. 9. 10');
-  assert.equal(parsed.dateLabel, '17. 9. 2026');
-  assert.equal(parsed.feast, 'Sv. Kornélia, pápeža, a Cypriána, biskupa, mučeníkov');
 });
 
-test('neberie text žalmu spod nadpisu', () => {
+test('„alebo Aleluja“ sa do refrénu nedáva', () => {
   const parsed = parsePsalmPage(fixture('lc-den.html'), { date: '20260917' });
-  const refrain = parsed.psalms[0].refrain;
-  assert.ok(!refrain.includes('Diela jeho rúk'), `nesprávny riadok: ${refrain}`);
-  assert.ok(!refrain.includes('Zoslal svojmu ľudu'), `nesprávny riadok: ${refrain}`);
+  assert.ok(!/aleluj/i.test(parsed.psalms[0].refrain), parsed.psalms[0].refrain);
+  assert.equal(cleanRefrain('Veľké sú diela Pánove. alebo Aleluja.'), 'Veľké sú diela Pánove.');
+  assert.equal(cleanRefrain('Naveky chcem ospevovať. alebo: Aleluja'), 'Naveky chcem ospevovať.');
+  assert.equal(cleanRefrain('Aleluja, aleluja, aleluja.'), 'Aleluja, aleluja, aleluja.');
 });
 
-test('viac žalmov – každý má svoj refrén spred nadpisu', () => {
+test('opakovanie refrénu v texte žalmu nevytvorí druhú slohu', () => {
+  const parsed = parsePsalmPage(fixture('lc-den.html'), { date: '20260917' });
+  assert.equal(parsed.psalms.length, 1, 'refrén sa v texte žalmu opakuje');
+});
+
+test('názov dňa a sviatku bez menín a bez zdvojeného dátumu', () => {
+  const parsed = parsePsalmPage(fixture('lc-den.html'), { date: '20260917' });
+  assert.equal(parsed.feast,
+    'štvrtok 24. týždňa v Cezročnom období, Sv. Kornélia, pápeža, a Cypriána, biskupa, mučeníkov (spomienka)');
+  assert.ok(!/Meniny/i.test(parsed.feast));
+  assert.ok(!/september/i.test(parsed.feast), 'dátum slovom sa do názvu nedáva');
+});
+
+test('viac formulárov v jeden deň dá viac žalmov', () => {
   const parsed = parsePsalmPage(fixture('lc-viac-zalmov.html'), { date: '20261208' });
   assert.equal(parsed.psalms.length, 2);
   assert.equal(parsed.psalms[0].refrain, 'R.: Spievajte Pánovi pieseň novú, lebo vykonal veci zázračné.');
   assert.equal(parsed.psalms[1].refrain, 'R.: Naveky chcem ospevovať Pánovo milosrdenstvo.');
   assert.equal(parsed.psalms[0].reference, 'Ž 98, 1. 2-3ab. 3c-4');
   assert.equal(parsed.psalms[1].reference, 'Ž 89, 2-3. 4-5');
-});
-
-test('náhradné hľadanie, keď je R. až pod nadpisom', () => {
-  const parsed = parsePsalmPage(fixture('lc-stara-podoba.html'), { date: '20270101' });
-  assert.equal(parsed.psalms.length, 1);
-  assert.equal(parsed.psalms[0].refrain, 'R. Bože, buď nám milostivý a žehnaj nás.');
-  assert.equal(parsed.psalms[0].reference, 'Ž 67, 2-3. 5. 6+8');
+  assert.equal(parsed.feast, 'Nepoškvrnené počatie Preblahoslavenej Panny Márie (slávnosť)');
 });
 
 test('z viacerých žalmov je jedna pieseň s viacerými slohami', () => {
   const parsed = parsePsalmPage(fixture('lc-viac-zalmov.html'), { date: '20261208' });
   const song = psalmSong(parsed);
   assert.equal(song.folder, 'Žalmy');
-  assert.equal(song.title, '8. 12. 2026 – Nepoškvrnené počatie Panny Márie');
+  assert.equal(song.title, '8. 12. 2026 – Nepoškvrnené počatie Preblahoslavenej Panny Márie (slávnosť)');
   assert.equal(song.verses.length, 2);
   assert.deepEqual(song.verses.map((verse) => verse.label), ['1', '2']);
   assert.equal(song.verses[0].lines[0], 'R.: Spievajte Pánovi pieseň novú, lebo vykonal veci zázračné.');
+  assert.equal(song.verses[1].lines[0], 'R.: Naveky chcem ospevovať Pánovo milosrdenstvo.');
   assert.equal(song.melody, 'Ž 98, 1. 2-3ab. 3c-4 · Ž 89, 2-3. 4-5');
   assert.equal(song.id, 'Žalmy/zalm-20261208.xml');
 });
@@ -78,4 +85,9 @@ test('stránka bez žalmu nespadne', () => {
 test('findFeast preskočí navigáciu a dátumy', () => {
   assert.equal(findFeast([{ text: 'Liturgický kalendár - 1. máj 2026' }, { text: 'Sv. Jozefa, robotníka' }], []),
     'Sv. Jozefa, robotníka');
+});
+
+test('sviatok sa nájde aj bez riadka s meninami', () => {
+  const lines = ['Liturgický kalendár', '1. máj 2026', 'piatok 3. veľkonočného týždňa', 'Sk 9, 1-20'];
+  assert.equal(findFeast([], lines), 'piatok 3. veľkonočného týždňa');
 });
