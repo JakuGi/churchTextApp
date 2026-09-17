@@ -39,6 +39,7 @@
       <h2>Zbierky</h2>
       <div id="folders" class="folders"></div>
       <div class="sidebar__import">
+        <hr class="sidebar__line">
         <button class="btn btn--block btn--big" id="psalmBtn">📖 Žalm na dnes</button>
         <button class="btn btn--primary btn--block btn--big" id="newSong">✎ Nová pieseň</button>
         <button class="btn btn--block" id="pickFolder">Načítať priečinok</button>
@@ -65,7 +66,7 @@
     <div class="content content--wide">
       <div class="setheader">
         <input class="input" id="setNameInput" placeholder="Názov setu (napr. Nedeľa 10:30)">
-        <button class="btn" id="newSet">Nový</button>
+        <button class="btn" id="clearSet">Vyprázdniť</button>
         <button class="btn" id="saveSet">Uložiť set</button>
         <button class="btn" id="openSavedSets">📂 Uložené sety <span class="pill" id="savedSetsCount">0</span></button>
         <button class="btn btn--primary btn--big" id="startSet">▶ Spustiť premietanie</button>
@@ -97,11 +98,17 @@
 
       <div class="live__body">
         <div class="live__left">
-          <div class="preview">
-            <div class="preview__label">Na televízore</div>
-            <div class="preview__screen" id="previewScreen"></div>
-            <div class="notice" id="blankNotice" hidden></div>
+          <div class="previews">
+            <div class="preview">
+              <div class="preview__label">Vybraná sloha</div>
+              <div class="preview__screen" id="previewSelected"></div>
+            </div>
+            <div class="preview">
+              <div class="preview__label preview__label--live">Na televízore</div>
+              <div class="preview__screen" id="previewScreen"></div>
+            </div>
           </div>
+          <div class="notice" id="blankNotice" hidden></div>
           <div class="songnav">
             <button class="btn btn--nav" id="prevSong">
               <span>◀ Predošlá pieseň</span><small id="prevSongLabel"></small>
@@ -241,6 +248,19 @@
       <h2 class="section-title">Zbierky piesní</h2>
       <div class="card" id="folderAdmin"></div>
 
+      <h2 class="section-title only-native">Aktualizácia aplikácie</h2>
+      <div class="card only-native">
+        <div class="row">
+          <button class="btn btn--big" id="checkUpdate">⬇ Skontrolovať novú verziu</button>
+          <span class="badge" id="updateStatus"></span>
+        </div>
+        <p class="hint" id="updateHint">
+          Porovná verziu v tablete s najnovšou na GitHube. Ak je nová, stiahne ju a otvorí
+          inštalátor – aplikácia sa aktualizuje bez straty piesní a setov. Pred inštaláciou
+          sa automaticky uloží záloha knižnice.
+        </p>
+      </div>
+
       <h2 class="section-title">Údržba</h2>
       <div class="card">
         <div class="row">
@@ -249,6 +269,7 @@
           <button class="btn btn--danger" id="clearLibrary">Zmazať celú knižnicu</button>
         </div>
         <p class="hint" id="storageInfo"></p>
+        <p class="hint only-native" id="autoBackupInfo"></p>
       </div>
 
       <h2 class="section-title">Klávesové skratky (aj pre pedál / bluetooth ovládač)</h2>

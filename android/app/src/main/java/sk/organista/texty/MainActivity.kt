@@ -1,6 +1,7 @@
 package sk.organista.texty
 
 import android.content.ActivityNotFoundException
+import android.content.ContentUris
 import android.content.ContentValues
 import android.content.Intent
 import android.graphics.Color
@@ -21,6 +22,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.FileProvider
 import androidx.documentfile.provider.DocumentFile
 import androidx.webkit.WebViewAssetLoader
 import org.json.JSONArray
@@ -290,27 +292,151 @@ class MainActivity : ComponentActivity() {
 
     // ---------------------------------------------------------------- export
 
-    /** @return popis miesta, kam sa súbor uložil (pre hlásenie v aplikácii) */
-    fun exportFile(fileName: String, content: String): String {
+    /**
+     * Uloží súbor do Stiahnuté/Organista, prípadne do podpriečinka.
+     * Súbor s rovnakým názvom sa prepíše – využíva to automatická záloha.
+     *
+     * @return popis miesta, kam sa súbor uložil (pre hlásenie v aplikácii)
+     */
+    fun exportFile(fileName: String, content: String, subFolder: String): String {
         val safeName = fileName.ifBlank { "piesen.xml" }
+        val folder = subFolder.filter { it.isLetterOrDigit() || it == '-' || it == '_' }
+        val relative = if (folder.isEmpty()) "Organista" else "Organista/$folder"
+
         return runCatching {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val path = "${Environment.DIRECTORY_DOWNLOADS}/$relative"
+                replaceInDownloads(safeName, path)
                 val values = ContentValues().apply {
                     put(MediaStore.Downloads.DISPLAY_NAME, safeName)
                     put(MediaStore.Downloads.MIME_TYPE, "application/xml")
-                    put(MediaStore.Downloads.RELATIVE_PATH, "${Environment.DIRECTORY_DOWNLOADS}/Organista")
+                    put(MediaStore.Downloads.RELATIVE_PATH, path)
                 }
                 val uri = contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
                     ?: return@runCatching ""
                 contentResolver.openOutputStream(uri)?.use { it.write(content.toByteArray()) }
-                "Stiahnuté/Organista/$safeName"
+                "Stiahnuté/$relative/$safeName"
             } else {
-                val dir = File(getExternalFilesDir(null), "Organista").apply { mkdirs() }
+                val dir = File(getExternalFilesDir(null), relative).apply { mkdirs() }
                 File(dir, safeName).writeText(content)
-                "Organista/$safeName"
+                "$relative/$safeName"
             }
         }.getOrDefault("")
     }
+
+    /** Zmaže predchádzajúci súbor rovnakého mena, aby záloha nepribúdala v kópiách. */
+    private fun replaceInDownloads(name: String, relativePath: String) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
+        runCatching {
+            contentResolver.query(
+                MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                arrayOf(MediaStore.Downloads._ID),
+                "${MediaStore.Downloads.DISPLAY_NAME} = ? AND ${MediaStore.Downloads.RELATIVE_PATH} LIKE ?",
+                arrayOf(name, "$relativePath%"),
+                null,
+            )?.use { cursor ->
+                val column = cursor.getColumnIndexOrThrow(MediaStore.Downloads._ID)
+                while (cursor.moveToNext()) {
+                    val uri = ContentUris.withAppendedId(
+                        MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                        cursor.getLong(column),
+                    )
+                    contentResolver.delete(uri, null, null)
+                }
+            }
+        }
+    }
+
+    // ------------------------------------------------------------ aktualizácia
+
+    /** Stiahne text z adresy na GitHube (kontrola novej verzie). */
+    fun fetchText(url: String, callback: String) {
+        if (!isAllowedUrl(url)) {
+            callJs(callback, JSONObject().put("ok", false).put("error", "Nepovolená adresa.").toString())
+            return
+        }
+        Thread {
+            val result = JSONObject()
+            try {
+                val connection = openConnection(url)
+                try {
+                    val code = connection.responseCode
+                    if (code in 200..299) {
+                        val text = connection.inputStream.bufferedReader().use { it.readText() }
+                        result.put("ok", true).put("text", text)
+                    } else {
+                        result.put("ok", false).put("error", "GitHub odpovedal $code.")
+                    }
+                } finally {
+                    connection.disconnect()
+                }
+            } catch (error: Exception) {
+                result.put("ok", false).put("error", "Spojenie s GitHubom zlyhalo.")
+            }
+            callJs(callback, result.toString())
+        }.start()
+    }
+
+    /**
+     * Stiahne APK novej verzie a otvorí inštalátor. Údaje aplikácie zostávajú
+     * zachované – Android pri aktualizácii dáta nemaže.
+     */
+    fun installUpdate(url: String, version: String) {
+        if (!isAllowedUrl(url)) {
+            callJs("window.organistaUpdateState", JSONObject()
+                .put("stage", "error").put("error", "Nepovolená adresa.").toString())
+            return
+        }
+        Thread {
+            val state = JSONObject().put("version", version)
+            try {
+                val dir = File(filesDir, "updates").apply { mkdirs() }
+                dir.listFiles()?.forEach { it.delete() }
+                val target = File(dir, "organista-$version.apk")
+
+                val connection = openConnection(url)
+                try {
+                    if (connection.responseCode !in 200..299) {
+                        throw IllegalStateException("odpoveď ${connection.responseCode}")
+                    }
+                    connection.inputStream.use { input ->
+                        target.outputStream().use { output -> input.copyTo(output) }
+                    }
+                } finally {
+                    connection.disconnect()
+                }
+
+                val uri = FileProvider.getUriForFile(this, "$packageName.files", target)
+                val intent = Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(uri, "application/vnd.android.package-archive")
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                runOnUiThread { startActivity(intent) }
+                callJs("window.organistaUpdateState", state.put("stage", "installer").toString())
+            } catch (error: Exception) {
+                callJs("window.organistaUpdateState", state
+                    .put("stage", "error")
+                    .put("error", "Aktualizáciu sa nepodarilo stiahnuť.").toString())
+            }
+        }.start()
+    }
+
+    private fun openConnection(url: String): HttpURLConnection =
+        (URL(url).openConnection() as HttpURLConnection).apply {
+            connectTimeout = 15000
+            readTimeout = 30000
+            instanceFollowRedirects = true
+            setRequestProperty("User-Agent", "Organista/${BuildConfigCompat.versionName} (Android)")
+            setRequestProperty("Accept", "application/vnd.github+json, application/octet-stream, */*")
+        }
+
+    /** Sťahovať sa dá len z GitHubu tohto projektu. */
+    private fun isAllowedUrl(url: String): Boolean = runCatching {
+        val parsed = URL(url)
+        parsed.protocol == "https" && parsed.host in setOf(
+            "api.github.com", "github.com", "objects.githubusercontent.com", "codeload.github.com",
+        )
+    }.getOrDefault(false)
 
     private fun toast(message: String) {
         Toast.makeText(this, message, Toast.LENGTH_LONG).show()

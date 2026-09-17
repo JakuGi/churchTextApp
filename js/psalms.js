@@ -83,7 +83,9 @@ const REFRAIN_COLON = /^R\s*\.?\s*:\s*(\S.*)$/;
 const BIBLE_REFERENCE = /^\d?\s*[A-ZÁÄČĎÉÍĽĹŇÓÔŔŠŤÚÝŽ][\wáäčďéíĺľňóôŕšťúýž]*\.?\s+\d+\s*,\s*\d/;
 // „R.: Veľké sú diela Pánove. alebo Aleluja.“ – druhá možnosť sa nepremieta.
 const OR_ALLELUIA = /\s*alebo\s*:?\s*aleluj[aá]\b.*$/i;
-const NAME_DAY = /^meniny\s+ma/;
+// Riadok s meninami má viacero podôb: „Meniny má Olympia“ aj
+// „17. september 2026 - štvrtok, meniny: Olympia“. Do názvu nepatrí ani jedna.
+const NAME_DAY = /meniny/;
 const REFERENCE = /^(Ž|Ž\.|Žalm|Ž ?\d)/;
 
 const isSectionHeading = (line) => {
@@ -199,11 +201,13 @@ export function findFeast(headings, lines) {
   return '';
 }
 
-/** Kde začína blok so sviatkom: hneď za meninami, inak pri názve dňa. */
+/** Kde začína blok so sviatkom: hneď za posledným riadkom s meninami. */
 function feastStart(lines) {
+  let afterNameDay = -1;
   for (let index = 0; index < lines.length && index < 60; index += 1) {
-    if (NAME_DAY.test(normalize(lines[index] || ''))) return index + 1;
+    if (NAME_DAY.test(normalize(lines[index] || ''))) afterNameDay = index + 1;
   }
+  if (afterNameDay >= 0) return afterNameDay;
   for (let index = 0; index < lines.length && index < 60; index += 1) {
     const line = (lines[index] || '').trim();
     if (!line || BIBLE_REFERENCE.test(line)) continue;

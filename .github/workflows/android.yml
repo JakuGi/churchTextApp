@@ -119,6 +119,7 @@ jobs:
           APK: ${{ steps.apk.outputs.path }}
           VERSION: ${{ steps.apk.outputs.version }}
           CHANGES: ${{ steps.notes.outputs.body }}
+          KEYSTORE: ${{ steps.signing.outputs.keystore }}
         run: |
           TAG=android-latest
           {
@@ -128,6 +129,12 @@ jobs:
             printf -- '---\n\n## Čo je nové vo verzii %s\n\n' "$VERSION"
             printf '%s\n\n' "$CHANGES"
             printf -- '---\n\nStaršie verzie zostávajú dostupné vo vydaniach `v1.x.y`.\n'
+            if [ -z "$KEYSTORE" ]; then
+              printf '\n> ⚠️ Táto verzia je podpísaná dočasným kľúčom, ktorý je pri každom zostavení iný.\n'
+              printf '> Aktualizácia cez existujúcu inštaláciu preto zlyhá a starú verziu treba najprv\n'
+              printf '> odinštalovať. Trvale to vyrieši vlastný podpisovací kľúč – postup je v README\n'
+              printf '> v časti *Vlastný podpisovací kľúč*.\n'
+            fi
           } > notes-latest.md
 
           if gh release view "$TAG" >/dev/null 2>&1; then

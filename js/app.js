@@ -31,6 +31,7 @@ const net = createNetBus({ onStatus: (status) => renderNetStatus(status) });
 const nativeBus = createNativeBus();
 let editor = null;
 let preview = null;
+let previewSelected = null;
 let displayWindow = null;
 let wakeLock = null;
 
@@ -239,6 +240,143 @@ function openSongPreview(song) {
     startLive([song.id], 0);
   };
   dialog.showModal();
+}
+
+// ------------------------------------------- záloha a aktualizácia (Android)
+
+const AUTO_BACKUP_FILE = 'organista-zaloha-auto.xml';
+const AUTO_BACKUP_MINUTES = 20;
+const RELEASE_API = 'https://api.github.com/repos/JakuGi/churchTextApp/releases';
+
+/** Celá knižnica ako jeden .xml súbor. */
+function libraryXml() {
+  const body = state.songs
+    .filter((song) => !song.temporary)
+    .map((song) => songToXml(song).replace(/<\?xml[^>]*\?>\s*/, '').trim())
+    .join('\n');
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<piesne>\n${body}\n</piesne>\n`;
+}
+
+/**
+ * Automatická záloha do priečinka Stiahnuté/Organista/autosave.
+ * Robí sa po spustení aplikácie a potom každých 20 minút; vždy prepíše
+ * predchádzajúci súbor, takže zaberá stále rovnaké miesto.
+ */
+function autoBackup() {
+  if (!isNative || !state.songs.some((song) => !song.temporary)) return;
+  const where = call('exportFileTo', 'autosave', AUTO_BACKUP_FILE, libraryXml());
+  const info = $('#autoBackupInfo');
+  if (info) {
+    const time = new Date().toLocaleTimeString('sk-SK', { hour: '2-digit', minute: '2-digit' });
+    info.textContent = where
+      ? `Automatická záloha: ${where} (naposledy ${time}, obnovuje sa každých ${AUTO_BACKUP_MINUTES} minút).`
+      : 'Automatickú zálohu sa nepodarilo uložiť.';
+  }
+}
+
+function startAutoBackup() {
+  if (!isNative) return;
+  autoBackup();
+  setInterval(autoBackup, AUTO_BACKUP_MINUTES * 60 * 1000);
+}
+
+// --------------------------------------------------------------- aktualizácia
+
+const update = { waiting: null, latest: null };
+
+window.organistaFetched = (result) => {
+  const pending = update.waiting;
+  update.waiting = null;
+  if (!pending) return;
+  if (result && result.ok) pending.resolve(result.text);
+  else pending.reject(new Error((result && result.error) || 'Sťahovanie zlyhalo.'));
+};
+
+window.organistaUpdateState = (info) => {
+  const badge = $('#updateStatus');
+  if (!badge || !info) return;
+  if (info.stage === 'installer') {
+    badge.textContent = 'Spúšťam inštalátor…';
+    badge.className = 'badge badge--ok';
+  } else {
+    badge.textContent = info.error || 'Aktualizácia zlyhala.';
+    badge.className = 'badge badge--warn';
+  }
+};
+
+function fetchNative(url) {
+  return new Promise((resolve, reject) => {
+    update.waiting = { resolve, reject };
+    call('fetchText', url, 'window.organistaFetched');
+    setTimeout(() => {
+      if (update.waiting) {
+        update.waiting = null;
+        reject(new Error('GitHub neodpovedal včas.'));
+      }
+    }, 30000);
+  });
+}
+
+/** Porovná verzie v tvare 1.2.3. */
+function isNewer(candidate, current) {
+  const parse = (value) => String(value || '').split('.').map((part) => parseInt(part, 10) || 0);
+  const [a, b] = [parse(candidate), parse(current)];
+  for (let index = 0; index < Math.max(a.length, b.length); index += 1) {
+    if ((a[index] || 0) !== (b[index] || 0)) return (a[index] || 0) > (b[index] || 0);
+  }
+  return false;
+}
+
+/** Z vydaní na GitHube vyberie najnovšiu verziu a odkaz na jej APK. */
+function newestRelease(releases) {
+  let best = null;
+  for (const release of releases || []) {
+    const version = String(release.tag_name || '').replace(/^v/, '');
+    if (!/^\d+\.\d+/.test(version)) continue;
+    const asset = (release.assets || []).find((item) => /\.apk$/i.test(item.name || ''));
+    if (!asset) continue;
+    if (!best || isNewer(version, best.version)) {
+      best = { version, url: asset.browser_download_url, name: asset.name };
+    }
+  }
+  return best;
+}
+
+async function checkUpdate() {
+  const button = $('#checkUpdate');
+  const badge = $('#updateStatus');
+  const current = call('version') || '0.0.0';
+  button.disabled = true;
+  badge.textContent = 'Zisťujem…';
+  badge.className = 'badge';
+
+  try {
+    const releases = JSON.parse(await fetchNative(RELEASE_API));
+    const latest = newestRelease(releases);
+    if (!latest) throw new Error('Na GitHube sa nenašlo žiadne vydanie s aplikáciou.');
+    update.latest = latest;
+
+    if (!isNewer(latest.version, current)) {
+      badge.textContent = `Máš najnovšiu verziu (${current}).`;
+      badge.className = 'badge badge--ok';
+      return;
+    }
+    badge.textContent = `Je dostupná verzia ${latest.version}.`;
+    badge.className = 'badge badge--warn';
+
+    if (!confirm(`Je dostupná verzia ${latest.version} (máš ${current}).\n\n`
+      + 'Stiahnuť a nainštalovať? Piesne a sety zostanú zachované a pred inštaláciou '
+      + 'sa uloží záloha knižnice.')) return;
+
+    autoBackup();
+    badge.textContent = 'Sťahujem aktualizáciu…';
+    call('installUpdate', latest.url, latest.version);
+  } catch (error) {
+    badge.textContent = error.message;
+    badge.className = 'badge badge--warn';
+  } finally {
+    button.disabled = false;
+  }
 }
 
 // ------------------------------------------------- responzóriový žalm
@@ -538,9 +676,15 @@ async function saveCurrentSet() {
     toast('Set je prázdny.', 'warn');
     return;
   }
+  const name = $('#setNameInput').value.trim() || 'Set bez názvu';
+  const existing = state.sets.find((item) => normalize(item.name) === normalize(name));
+
+  // Rovnaký názov prepíše pôvodný set (po potvrdení), iný názov uloží nový.
+  if (existing && !confirm(`Set s názvom „${existing.name}“ už existuje.\n\nChceš ho prepísať?`)) return;
+
   const set = {
-    id: state.set.id || `set-${Date.now()}`,
-    name: $('#setNameInput').value.trim() || 'Set bez názvu',
+    id: existing ? existing.id : `set-${Date.now()}`,
+    name,
     items: state.set.items.slice(),
     updatedAt: Date.now(),
   };
@@ -548,7 +692,7 @@ async function saveCurrentSet() {
   state.set.id = set.id;
   state.set.name = set.name;
   await reloadLibrary();
-  toast(`Set „${set.name}“ uložený.`, 'ok');
+  toast(existing ? `Set „${set.name}“ prepísaný.` : `Set „${set.name}“ uložený.`, 'ok');
 }
 
 // -------------------------------------------------------- rýchly výber čísla
@@ -747,6 +891,8 @@ function publish() {
   nativeBus.send(payload);
   cast.send(payload);
   if (preview) preview.render(payload);
+  // Ľavý náhľad ukazuje vybranú slohu aj vtedy, keď je na televízore čierno.
+  if (previewSelected) previewSelected.render({ ...payload, blank: state.view !== 'live' });
 }
 
 function renderDisplayStatus({ connected, name }) {
@@ -1052,8 +1198,8 @@ function bindEvents() {
     renderSavedSets();
     $('#savedSetsDialog').showModal();
   };
-  $('#newSet').onclick = () => {
-    if (state.set.items.length && !confirm('Vyprázdniť aktuálny set?')) return;
+  $('#clearSet').onclick = () => {
+    if (state.set.items.length && !confirm('Vyprázdniť aktuálny set? Uložené sety zostanú zachované.')) return;
     state.set = { id: null, name: 'Nový set', items: [] };
     renderSetList();
     renderSongList();
@@ -1152,6 +1298,7 @@ function bindEvents() {
     toast('Knižnica vymazaná.', 'ok');
   };
   $('#loadSamples').onclick = loadSampleSongs;
+  if ($('#checkUpdate')) $('#checkUpdate').onclick = checkUpdate;
   $('#exportLibrary').onclick = exportLibrary;
 
   $$('[data-close-dialog]').forEach((node) => {
@@ -1189,10 +1336,7 @@ function exportLibrary() {
     toast('Knižnica je prázdna.', 'warn');
     return;
   }
-  const body = state.songs
-    .map((song) => songToXml(song).replace(/<\?xml[^>]*\?>\s*/, '').trim())
-    .join('\n');
-  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<piesne>\n${body}\n</piesne>\n`;
+  const xml = libraryXml();
   const fileName = `organista-zaloha-${new Date().toISOString().slice(0, 10)}.xml`;
 
   if (isNative) {
@@ -1300,6 +1444,7 @@ async function loadSampleSongs() {
 
 async function main() {
   preview = createDisplay($('#previewScreen'));
+  previewSelected = createDisplay($('#previewSelected'));
   setupEditor();
   bindEvents();
   renderSettings();
@@ -1317,6 +1462,8 @@ async function main() {
   await reloadLibrary();
   setView('library');
   publish();
+
+  startAutoBackup();
 
   const kind = await storageKind();
   $('#storageInfo').textContent = kind === 'android'

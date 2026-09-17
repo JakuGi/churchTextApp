@@ -105,8 +105,10 @@ select.input { appearance: none; }
 input[type="range"] { width: 100%; height: 44px; accent-color: var(--accent); }
 
 /* --------------------------------------------------------------- pohľady */
-main { flex: 1; min-height: 0; display: flex; }
-.view { display: none; flex: 1; min-height: 0; }
+main { flex: 1; min-height: 0; display: flex; overflow-x: hidden; }
+/* min-width: 0 je nutné, inak sa pohľad nezmestí do šírky tabletu
+   a aplikácia sa dá posúvať do strán. */
+.view { display: none; flex: 1; min-width: 0; min-height: 0; }
 .view.is-active { display: flex; }
 
 .sidebar {
@@ -129,7 +131,7 @@ main { flex: 1; min-height: 0; display: flex; }
 .folder__meta { color: var(--muted); font-size: 14px; display: flex; gap: 6px; }
 .folder__meta em { color: var(--accent); font-style: normal; font-weight: 700; }
 
-.content { flex: 1; min-width: 0; display: flex; flex-direction: column; padding: 16px; gap: 14px; overflow-y: auto; }
+.content { flex: 1; min-width: 0; display: flex; flex-direction: column; padding: 16px; gap: 14px; overflow-y: auto; overflow-x: hidden; }
 .content--wide { max-width: 1100px; margin: 0 auto; width: 100%; }
 
 .searchbar { display: flex; gap: 10px; align-items: center; }
@@ -192,7 +194,7 @@ main { flex: 1; min-height: 0; display: flex; }
 
 /* --------------------------------------------------------------- naživo */
 .view--live { background: var(--bg); }
-.live { flex: 1; display: flex; flex-direction: column; min-height: 0; padding: 12px; gap: 12px;
+.live { flex: 1; display: flex; flex-direction: column; min-width: 0; min-height: 0; padding: 12px; gap: 12px;
   padding-top: max(12px, env(safe-area-inset-top)); }
 
 .live__top { display: flex; align-items: center; gap: 14px; }
@@ -319,7 +321,7 @@ body.is-live .toast.is-visible { transform: translate(-50%, 0); }
 /* --------------------------------------------------------- editor piesní */
 
 .view--editor { background: var(--bg); }
-.editor { flex: 1; display: flex; flex-direction: column; min-height: 0; padding: 14px; gap: 12px; }
+.editor { flex: 1; display: flex; flex-direction: column; min-width: 0; min-height: 0; padding: 14px; gap: 12px; }
 
 .editor__top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .editor__top h1 { font-size: 22px; flex: 1; min-width: 160px; }
@@ -429,3 +431,13 @@ body:not(.is-native) .only-native { display: none !important; }
 .list--set { overflow-y: auto; min-height: 120px; }
 .savedsets { gap: 10px; }
 .savedset { cursor: pointer; }
+
+/* Oddelenie zbierok od tlačidiel v bočnom paneli */
+.sidebar__line { border: none; border-top: 1px solid var(--line); margin: 4px 0 12px; width: 100%; }
+
+/* Dva náhľady vedľa seba: vybraná sloha a skutočný obraz na televízore.
+   Oba majú pomer strán ako televízor, aby náhľad zodpovedal skutočnosti. */
+.previews { flex: 1; min-height: 0; display: flex; gap: 12px; align-items: flex-start; }
+.previews .preview { flex: 1; min-width: 0; }
+.previews .preview__screen { flex: 0 0 auto; aspect-ratio: 16 / 9; }
+.preview__label--live { color: var(--accent); }

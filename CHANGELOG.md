@@ -14,15 +14,36 @@ použije ako popis vydania na GitHube.
 - **Viac žalmov v jeden deň** (viac formulárov) sa načíta správne; každý je
   samostatná sloha jednej piesne. Opakovanie refrénu v texte žalmu už
   nevytvorí ďalšiu slohu.
-- **Názov uloženého žalmu** je teraz dátum a názov dňa so sviatkom, napríklad
+- **Názov uloženého žalmu** je dátum a názov dňa so sviatkom, napríklad
   *17. 9. 2026 – štvrtok 24. týždňa v Cezročnom období, Sv. Kornélia…*.
-  Meniny ani dátum slovom sa do názvu už nedávajú (dátum tam bol dvakrát).
+  Meniny sa do názvu nedostanú ani vtedy, keď sú na tom istom riadku ako deň
+  (*„17. september 2026 - štvrtok, meniny: …“*), a dátum tam už nie je dvakrát.
 
 **Rozhranie**
 
-- V záložke **Set** sa uložené sety presunuli do vlastného okna
-  (tlačidlo **📂 Uložené sety**). Pri väčšom počte setov už neprekrývajú
-  zoznam piesní v pripravovanom sete a zoznam sa dá posúvať samostatne.
+- **Dva náhľady v premietaní**: vľavo *Vybraná sloha* (text vidíš aj počas
+  čiernej obrazovky), vpravo *Na televízore* (skutočný obraz). Oba majú pomer
+  strán ako televízor.
+- **Aplikácia sa už neposúva do strán** – knižnica aj set sa zmestia na šírku
+  tabletu.
+- Uložené sety majú **vlastné okno** (tlačidlo **📂 Uložené sety**), takže pri
+  väčšom počte neprekrývajú zoznam piesní v pripravovanom sete.
+- **Ukladanie setu**: rovnaký názov sa najprv spýta, či pôvodný set prepísať;
+  zmenený názov uloží nový set a pôvodný nechá na pokoji. Tlačidlo *Nový* sa
+  premenovalo na **Vyprázdniť** – maže len rozpracovaný set.
+- Bočný panel má **oddeľovaciu čiaru** medzi zbierkami a tlačidlami.
+
+**Zálohovanie a aktualizácia**
+
+- **Automatická záloha** knižnice do `Stiahnuté/Organista/autosave/` – pri
+  každom spustení aplikácie a potom každých 20 minút. Vždy prepíše
+  predchádzajúcu, takže nezaberá viac miesta.
+- **Kontrola novej verzie** priamo v aplikácii: *Nastavenia → Aktualizácia
+  aplikácie → Skontrolovať novú verziu*. Porovná verziu s vydaniami na GitHube,
+  stiahne novú a otvorí inštalátor. Pred inštaláciou sa uloží záloha knižnice.
+  Aktualizácia nemaže piesne ani sety.
+- Aby sa dala aplikácia aktualizovať bez odinštalovania, musí byť podpísaná
+  stále rovnakým kľúčom – postup je v README v časti *Vlastný podpisovací kľúč*.
 
 ## 1.1.0
 

@@ -64,10 +64,29 @@ class WebBridge(private val activity: MainActivity) {
         activity.fetchLiturgy(dayKey)
     }
 
-    /** Uloží súbor do priečinka Stiahnuté/Organista. */
+    /**
+     * Uloží súbor do priečinka Stiahnuté/Organista.
+     * @param subFolder podpriečinok, napríklad „autosave“ (môže byť prázdny)
+     */
     @JavascriptInterface
     fun exportFile(fileName: String, content: String): String =
-        activity.exportFile(fileName, content)
+        activity.exportFile(fileName, content, "")
+
+    @JavascriptInterface
+    fun exportFileTo(subFolder: String, fileName: String, content: String): String =
+        activity.exportFile(fileName, content, subFolder)
+
+    /** Stiahne text z povolenej adresy (GitHub) – kontrola novej verzie. */
+    @JavascriptInterface
+    fun fetchText(url: String, callback: String) {
+        activity.fetchText(url, callback)
+    }
+
+    /** Stiahne APK novej verzie a otvorí inštalátor Androidu. */
+    @JavascriptInterface
+    fun installUpdate(url: String, version: String) {
+        activity.installUpdate(url, version)
+    }
 }
 
 /** Verzia aplikácie bez potreby generovaného BuildConfig. */

@@ -49,10 +49,17 @@ povolenie, ktoré má, je **internet**, a používa ho výhradne na stiahnutie
 responzóriového žalmu z `lc.kbs.sk` (časť 6b). Piesne a sety zostávajú v tablete
 a nikam sa neodosielajú.
 
-> **Aktualizácia na novšiu verziu:** stiahni nové APK a nainštaluj cez staré.
-> Piesne ani sety sa nestratia. Ak Android inštaláciu odmietne s hláškou
-> o podpise, odinštaluj najprv starú verziu – **predtým si však sprav zálohu**
-> (časť 8).
+> **Aktualizácia na novšiu verziu:** v aplikácii choď do
+> *Nastavenia → Aktualizácia aplikácie → **⬇ Skontrolovať novú verziu***.
+> Aplikácia sa pozrie na GitHub, novú verziu stiahne a otvorí inštalátor.
+> Piesne ani sety sa nestratia a pred inštaláciou sa uloží záloha.
+> Rovnako funguje aj ručne stiahnuté APK – stačí ho otvoriť.
+>
+> ⚠️ Aby to fungovalo bez odinštalovania starej verzie, musia byť všetky
+> zostavenia podpísané **rovnakým kľúčom**. Ak ho ešte nemáš nastavený,
+> Android inštaláciu odmietne s hláškou o podpise. Nastavíš to raz podľa časti
+> [11](#11-pre-technicky-zdatných) – *Vlastný podpisovací kľúč*. Dovtedy treba
+> starú verziu odinštalovať a **predtým si spraviť zálohu** (časť 8).
 
 ---
 
@@ -289,6 +296,21 @@ z počítača **vidíš**, takže si zálohu vieš hneď odložiť. Záloha je j
 súbor so všetkými piesňami a načítaš ju späť rovnako ako ktorýkoľvek priečinok
 s piesňami.
 
+### Automatická záloha
+
+Aplikácia si knižnicu zálohuje aj sama – **pri každom spustení a potom každých
+20 minút**, kým beží:
+
+```
+Interné úložisko/Download/Organista/autosave/organista-zaloha-auto.xml
+```
+
+Záloha sa vždy prepíše, takže zaberá stále rovnaké miesto. Súbor je bežné `.xml`
+so všetkými piesňami, takže sa dá načítať späť rovnako ako ktorýkoľvek priečinok
+s piesňami. Aktuálny stav zálohy vidíš v *Nastavenia → Údržba*.
+
+Záloha sa navyše uloží aj **tesne pred inštaláciou aktualizácie**.
+
 Odinštalovanie aplikácie zmaže aj jej dáta, preto si pred ním vždy sprav zálohu.
 
 ### Verzia pre prehliadač
@@ -429,10 +451,12 @@ verzie stačí pridať naň nadpis `## <verzia>` a pod neho zoznam zmien. Starš
 vydania sa dajú doplniť spustením workflow ručne so zaškrtnutou voľbou
 *Doplniť popisy zmien ku všetkým existujúcim vydaniam*.
 
-### Vlastný podpisovací kľúč (odporúčané)
+### Vlastný podpisovací kľúč (nutné pre aktualizácie bez odinštalovania)
 
-Bez vlastného kľúča má každé zostavenie iný podpis a aktualizácia cez existujúcu
-inštaláciu zlyhá. Kľúč si vytvoríš raz:
+Android dovolí aktualizovať aplikáciu len vtedy, keď je nové APK podpísané
+**tým istým kľúčom** ako to nainštalované. Bez vlastného kľúča vytvorí GitHub
+pri každom zostavení nový dočasný, takže aktualizácia zlyhá a starú verziu treba
+odinštalovať (aj s dátami). Kľúč si vytvoríš raz a potom to funguje navždy:
 
 ```bash
 keytool -genkey -v -keystore organista.jks -keyalg RSA -keysize 2048 \

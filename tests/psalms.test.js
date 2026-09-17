@@ -48,6 +48,23 @@ test('názov dňa a sviatku bez menín a bez zdvojeného dátumu', () => {
   assert.ok(!/september/i.test(parsed.feast), 'dátum slovom sa do názvu nedáva');
 });
 
+test('meniny na tom istom riadku ako deň sa do názvu nedostanú', () => {
+  const parsed = parsePsalmPage(fixture('lc-meniny-v-riadku.html'), { date: '20260917' });
+  assert.equal(parsed.feast,
+    'štvrtok 24. týždňa v Cezročnom období, Sv. Kornélia, pápeža, a Cypriána, biskupa, mučeníkov (spomienka)');
+  assert.ok(!/meniny/i.test(parsed.feast), parsed.feast);
+  assert.ok(!/september/i.test(parsed.feast), parsed.feast);
+  assert.equal(psalmSong(parsed).title,
+    '17. 9. 2026 – štvrtok 24. týždňa v Cezročnom období, Sv. Kornélia, pápeža, a Cypriána, biskupa, mučeníkov (spomienka)');
+});
+
+test('názov nepoužije nadpis s meninami ani keď blok so sviatkom chýba', () => {
+  const html = '<html><head><title>Liturgický kalendár - 1. jan 2027</title></head><body>'
+    + '<h2>1. január 2027 - piatok, meniny: Nový rok</h2><p>Ž 8, 2</p></body></html>';
+  const parsed = parsePsalmPage(html, { date: '20270101' });
+  assert.ok(!/meniny/i.test(parsed.feast), parsed.feast);
+});
+
 test('viac formulárov v jeden deň dá viac žalmov', () => {
   const parsed = parsePsalmPage(fixture('lc-viac-zalmov.html'), { date: '20261208' });
   assert.equal(parsed.psalms.length, 2);
