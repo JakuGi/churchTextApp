@@ -2,7 +2,7 @@ name: Android APK
 
 on:
   push:
-    branches: [claude/organista-android]
+    branches: [main, claude/organista-android]
     paths-ignore: ['**.md']
   workflow_dispatch:
     inputs:
