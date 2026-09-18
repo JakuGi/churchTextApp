@@ -10,6 +10,26 @@ spoľahlivo). Pôvodné čísla `1.0.0` – `1.1.1` sa premenovali takto:
 Číslo `1.0.0` dostane až prvá verzia, ktorá bude na bežné používanie v kostole
 overená.
 
+## a0.1.2
+
+**Premietanie na televízore už nezaostáva**
+
+- **Sloha aj čierna obrazovka sa na televízore zmenia hneď.** Predtým sa obraz
+  menil až pri ďalšom stlačení, takže televízor ukazoval stále o krok staršiu
+  slohu než tablet – a čierna obrazovka naskočila až vtedy, keď si ju už chcel
+  vypnúť.
+- Prelínanie zostalo zachované, ale nový text sa najprv vypíše a až potom
+  rozsvieti. Premietanie sa tak neoneskorí ani pri rýchlom prepínaní slôh.
+- Na obrazovku sa už nedostane staršia správa, ktorá dorazí neskoro:
+  každá nesie čas odoslania a zastarané sa zahodia.
+- V aplikácii pre Android ide stav na druhú obrazovku už len natívne, bez
+  druhej, pomalšej cesty, ktorá obraz vracala späť.
+
+**Set**
+
+- **Zelené tlačidlo „✓ V sete“ pieseň zo setu odoberie.** Predtým sa nedalo
+  stlačiť. Rovnako sa správa aj tlačidlo v okne s náhľadom piesne.
+
 ## a0.1.1
 
 **Opravy načítania žalmu**
@@ -61,6 +81,13 @@ overená.
 - Táto jedna verzia sa musí do tabletu stiahnuť ručne; kontrola novej verzie
   v aplikácii totiž v staršej inštalácii porovnáva ešte staré číslo. Ďalšie
   aktualizácie už tlačidlo v nastaveniach nájde samo.
+
+**Známa chyba (opravená vo verzii a0.1.2)**
+
+- Premietanie na televízore bolo **o krok pozadu**: po prepnutí slohy zostal na
+  televízore text predchádzajúcej slohy a nová sa objavila až pri ďalšom
+  stlačení. To isté platilo pre čiernu obrazovku – zapla sa až o krok neskôr.
+  Na tablete bol pritom náhľad vždy správny.
 
 ## a0.1.0
 

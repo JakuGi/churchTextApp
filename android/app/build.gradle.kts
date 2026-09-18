@@ -23,8 +23,8 @@ android {
         applicationId = "sk.organista.texty"
         minSdk = 24
         targetSdk = 35
-        versionCode = 5
-        versionName = "a0.1.1"
+        versionCode = 6
+        versionName = "a0.1.2"
     }
 
     // Podpisovanie: ak sú v prostredí kľúče (GitHub secrets), použijú sa.

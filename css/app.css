@@ -383,12 +383,12 @@ body.is-live .toast.is-visible { transform: translate(-50%, 0); }
   .editor__preview .preview__screen { max-height: 30vh; }
 }
 
-/* Pieseň, ktorá už je v sete */
+/* Pieseň, ktorá už je v sete – kliknutím sa zo setu odoberie */
 .btn--inset {
   background: transparent; color: var(--ok);
   border-color: rgba(46,204,113,.55); opacity: 1;
 }
-.btn--inset:disabled { opacity: 1; }
+.btn--inset:hover { background: rgba(46,204,113,.14); }
 .quickhit__in { color: var(--ok); font-size: 14px; font-weight: 700; white-space: nowrap; }
 
 /* Adresy pre obrazovku cez sieť */

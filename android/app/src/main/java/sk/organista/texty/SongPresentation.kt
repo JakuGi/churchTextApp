@@ -67,6 +67,9 @@ class SongPresentation(
             return
         }
         view.evaluateJavascript("window.organistaRender($stateJson);", null)
+        // Okno na televízore si samo nevyžiada prekreslenie, keď sa obsah
+        // zmení bez dotyku – bez tohto by text zaostával o jeden krok.
+        view.postInvalidateOnAnimation()
     }
 
     fun destroy() {

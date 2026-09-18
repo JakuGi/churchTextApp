@@ -170,15 +170,16 @@ function songRow(song, { action, actionLabel, subtitle }) {
     openEditor(song);
   };
 
+  // Zelené tlačidlo „✓ V sete“ pieseň zo setu zase odoberie.
   const inSet = isInSet(song.id);
   const button = document.createElement('button');
   button.className = `btn btn--add${inSet ? ' btn--inset' : ''}`;
   button.textContent = inSet ? '✓ V sete' : actionLabel;
-  button.disabled = inSet;
-  button.title = inSet ? 'Pieseň už je v sete' : 'Pridať pieseň do setu';
+  button.title = inSet ? 'Kliknutím pieseň odoberieš zo setu' : 'Pridať pieseň do setu';
   button.onclick = (event) => {
     event.stopPropagation();
-    action(song);
+    if (isInSet(song.id)) removeSongFromSet(song.id);
+    else action(song);
   };
   row.append(edit, button);
   row.onclick = () => openSongPreview(song);
@@ -228,11 +229,12 @@ function openSongPreview(song) {
   };
   const addButton = $('#dialogAdd');
   const alreadyIn = isInSet(song.id);
-  addButton.textContent = alreadyIn ? '✓ Už je v sete' : '+ Do setu';
-  addButton.disabled = alreadyIn;
+  addButton.textContent = alreadyIn ? '✓ V sete – odobrať' : '+ Do setu';
+  addButton.title = alreadyIn ? 'Kliknutím pieseň odoberieš zo setu' : 'Pridať pieseň do setu';
   addButton.classList.toggle('btn--inset', alreadyIn);
   addButton.onclick = () => {
-    addToSet(song.id);
+    if (isInSet(song.id)) removeSongFromSet(song.id);
+    else addToSet(song.id);
     dialog.close();
   };
   $('#dialogPlay').onclick = () => {
@@ -596,6 +598,16 @@ function removeFromSet(index) {
   renderSongList();
 }
 
+/** Odoberie pieseň zo setu podľa jej id (tlačidlo „✓ V sete“ v knižnici). */
+function removeSongFromSet(songId) {
+  const index = state.set.items.indexOf(songId);
+  if (index < 0) return false;
+  const song = songById(songId);
+  removeFromSet(index);
+  toast(`Odobraté zo setu: ${song ? song.title : 'pieseň'}`, 'ok');
+  return true;
+}
+
 function moveInSet(index, delta) {
   const target = index + delta;
   if (target < 0 || target >= state.set.items.length) return;
@@ -894,7 +906,9 @@ function publish() {
     settings: state.settings,
     position: state.live.songs.length > 1 ? `${state.live.songIndex + 1}/${state.live.songs.length}` : '',
   });
-  bus.send(payload);
+  // V aplikácii pre Android chodí stav na druhú obrazovku natívne; miestny
+  // prenos cez localStorage by ten istý stav doručil ešte raz a s oneskorením.
+  if (!isNative) bus.send(payload);
   net.send(payload);
   nativeBus.send(payload);
   cast.send(payload);

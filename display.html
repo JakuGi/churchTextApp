@@ -33,16 +33,17 @@
     statusBox.hidden = false;
   };
 
-  createLocalBus().subscribe(show);
+  // V aplikácii pre Android posiela stav natívna časť. Miestny prenos
+  // (BroadcastChannel/localStorage) sa tam nepoužíva – jeho správy chodia
+  // s oneskorením a prepísali by čerstvý stav tým predchádzajúcim.
+  const native = !!window.OrganistaNative;
+  if (!native) createLocalBus().subscribe(show);
 
   // Aplikácia pre Android posiela stav priamo sem, na druhú obrazovku.
   window.organistaRender = (state) => {
     if (state) show(state);
   };
-  if (window.OrganistaNative) setStatus('Pripojené k tabletu. Čakám na text piesne…', true);
-
-  // V aplikácii pre Android posiela stav natívna časť, server tu nie je.
-  const native = !!window.OrganistaNative;
+  if (native) setStatus('Pripojené k tabletu. Čakám na text piesne…', true);
   const net = native ? null : subscribeNet(show, {
     onOpen: () => setStatus('Pripojené k tabletu. Čakám na text piesne…', true),
     onError: () => setStatus('Server nedostupný – skontroluj Wi-Fi a adresu.', false),

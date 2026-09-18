@@ -21,7 +21,7 @@ export function createDisplay(root) {
   const metaTitle = root.querySelector('#metaTitle');
   const metaVerse = root.querySelector('#metaVerse');
   let current = null;
-  let fadeTimer = null;
+  let lastTs = 0;
 
   // Najväčšie písmo, pri ktorom sa text ešte zmestí na plochu.
   // Prvá voľba: každý riadok piesne zostane na jednom riadku obrazovky.
@@ -125,6 +125,12 @@ export function createDisplay(root) {
   }
 
   function render(state) {
+    // Správa, ktorá dorazí neskoro (pomalší prenos), by prepísala obrazovku
+    // predchádzajúcou slohou – preto sa staršie stavy zahadzujú.
+    const ts = Number(state && state.ts) || 0;
+    if (ts && ts < lastTs) return;
+    if (ts) lastTs = ts;
+
     const previousKey = contentKey(current);
     current = state;
 
@@ -138,19 +144,17 @@ export function createDisplay(root) {
     const fade = Math.max(0, Math.min(1500, Number(state.fade) || 0));
     screen.style.setProperty('--fade', `${fade}ms`);
 
-    clearTimeout(fadeTimer);
-    if (!fade || previousKey === contentKey(state) || !previousKey) {
-      screen.classList.remove('is-fading');
-      paint(state);
-      return;
-    }
+    // Obsah sa vymení okamžite. Prelínanie je len rozsvietenie nového textu,
+    // takže na televízore nikdy nevidno predchádzajúcu slohu – aj keby sa
+    // časovače v okne druhej obrazovky oneskorili.
+    const changed = previousKey !== contentKey(state);
+    paint(state);
+    screen.classList.remove('is-swapping');
+    if (!fade || !changed || !previousKey) return;
 
-    // Text sa najprv stmaví, potom sa vymení a znovu rozsvieti.
-    screen.classList.add('is-fading');
-    fadeTimer = setTimeout(() => {
-      paint(state);
-      screen.classList.remove('is-fading');
-    }, fade);
+    screen.classList.add('is-swapping');
+    void screen.offsetWidth;   // vynúti prepočet štýlu, aby prechod nabehol
+    screen.classList.remove('is-swapping');
   }
 
   window.addEventListener('resize', fit);

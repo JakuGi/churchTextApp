@@ -33,12 +33,14 @@
 .line { white-space: inherit; }
 
 /* Prelínanie pri zmene slohy alebo pri čiernej obrazovke.
-   Dĺžku nastavuje aplikácia cez premennú --fade (0ms = vypnuté). */
+   Nový text sa vypíše hneď a potom sa rozsvieti, takže sa premietanie
+   nikdy neoneskorí. Dĺžku nastavuje aplikácia cez --fade (0ms = vypnuté). */
 .screen .lines,
 .screen .meta {
   transition: opacity var(--fade, 0ms) ease-in-out;
 }
-.screen.is-fading .lines,
-.screen.is-fading .meta {
+.screen.is-swapping .lines,
+.screen.is-swapping .meta {
   opacity: 0;
+  transition: none;
 }

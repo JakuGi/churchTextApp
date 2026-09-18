@@ -34,9 +34,10 @@ v kostole. Ovládanie je na tablete, text ide na druhú obrazovku.
 > `claude/cool-feynman-88sk88`. Prepnúť na `main` vie iba vlastník repozitára
 > (*Settings → General → Default branch*); Claude na to nemá nástroj.
 
-**Číslovanie verzií:** všetko je zatiaľ **alfa** – `a0.x.y`. Pôvodné čísla sa
-premenovali: `1.0.0 → a0.0.0`, `1.0.1 → a0.0.1`, `1.1.0 → a0.1.0`,
-`1.1.1 → a0.1.1`. Číslo `1.0.0` je vyhradené pre prvú odskúšanú verziu.
+**Číslovanie verzií:** všetko je zatiaľ **alfa** – `a0.x.y`, teraz `a0.1.2`.
+Pôvodné čísla sa premenovali: `1.0.0 → a0.0.0`, `1.0.1 → a0.0.1`,
+`1.1.0 → a0.1.0`, `1.1.1 → a0.1.1`. Číslo `1.0.0` je vyhradené pre prvú
+odskúšanú verziu.
 Verzia sa zapisuje na troch miestach a musia sedieť:
 
 - `android/app/build.gradle.kts` – `versionName` (+ zvýš `versionCode`),
@@ -123,6 +124,11 @@ testov). Testy žalmu používajú uložené stránky v `tests/fixtures/`.
   v Node bez akejkoľvek závislosti.
 - **Ukladanie setu:** rovnaký názov sa spýta na prepísanie, iný názov uloží
   nový set. Tlačidlo *Vyprázdniť* maže len rozpracovaný set.
+- **Stav na obrazovku ide okamžite** (`display-core.js`): obsah sa vypíše hneď
+  a prelínanie je len rozsvietenie nového textu. Žiadny `setTimeout` medzi
+  prijatím stavu a jeho vykreslením – v okne na druhej obrazovke sa časovače
+  môžu oneskoriť a obraz potom zaostával o krok. Každá správa nesie `ts`
+  a staršie sa zahadzujú; v Androide ide stav len natívnou cestou.
 
 ## 6. Na čo si dať pozor (naučené po tvrdom)
 
