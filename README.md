@@ -35,7 +35,7 @@ hosting, žiadny internet.**
    (Alebo: stránka projektu na GitHube → vpravo **Releases** → vydanie
    **Organista pre Android (posledná verzia)**.)
 
-   Staršie verzie sa nemažú – každá má vlastné vydanie `a0.0.0`, `a0.0.1`, …
+   Staršie verzie sa nemažú – každá má vlastné vydanie `a0.0.1`, `a0.1.0`, …
    aj s popisom svojich zmien, takže sa vieš kedykoľvek vrátiť späť.
    Prehľad všetkých zmien je v súbore [CHANGELOG.md](CHANGELOG.md).
 
