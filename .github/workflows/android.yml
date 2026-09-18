@@ -223,6 +223,12 @@ jobs:
               --notes-file notes-latest.md \
               --target "$GITHUB_SHA"
             gh release upload "$TAG" "$APK" --clobber
+            # Vo vydaní s najnovšou verziou má zostať jediný súbor, aby nebolo
+            # jasné, ktorý stiahnuť; staršie verzie majú vlastné vydania.
+            for stale in $(gh release view "$TAG" --json assets --jq '.assets[].name' | grep -v -x "$APK" || true); do
+              gh release delete-asset "$TAG" "$stale" --yes
+              echo "Zo starého vydania odstránené: $stale"
+            done
           else
             gh release create "$TAG" "$APK" \
               --title "Organista pre Android (posledná verzia)" \
