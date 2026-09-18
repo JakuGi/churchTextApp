@@ -37,34 +37,28 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           set -u
-          # staré → nové; poradie od najstaršej verzie
+          # Vydanie sa nevytvára nanovo (to GitHub tokenu workflowu nedovolí),
+          # ale sa premenuje na mieste: zmení sa značka, názov aj popis.
+          # Súbor .apk zostáva pôvodný, aj s pôvodným názvom.
           MAP="v1.0.0=a0.0.0 v1.0.1=a0.0.1 v1.1.0=a0.1.0 v1.1.1=a0.1.1"
           for pair in $MAP; do
             old="${pair%%=*}"
             new="${pair#*=}"
-            if ! gh release view "$old" >/dev/null 2>&1; then
+            id=$(gh api "repos/$REPO/releases/tags/$old" --jq '.id' 2>/dev/null || true)
+            if [ -z "$id" ]; then
               echo "$old: vydanie neexistuje, preskakujem."
               continue
             fi
+
             if gh release view "$new" >/dev/null 2>&1; then
-              # Novú verziu už zverejnilo zostavenie – staré vydanie je
-              # len duplikát toho istého, takže ho zmažeme aj so značkou.
+              # Novú verziu už zverejnilo zostavenie, staré vydanie je duplikát.
               gh release delete "$old" --yes --cleanup-tag
               echo "$new už existuje; staré vydanie $old zmazané."
               continue
             fi
 
-            sha=$(gh api "repos/$REPO/git/ref/tags/$old" --jq '.object.sha' 2>/dev/null || true)
-            if [ -z "$sha" ]; then
-              sha=$(gh release view "$old" --json targetCommitish --jq '.targetCommitish')
-            fi
-
-            rm -rf rename-assets && mkdir rename-assets
-            gh release download "$old" --dir rename-assets --pattern '*.apk' || true
-            for file in rename-assets/*.apk; do
-              [ -e "$file" ] || continue
-              mv "$file" "rename-assets/organista-$new.apk"
-            done
+            apk=$(gh api "repos/$REPO/releases/$id" --jq '.assets[] | select(.name | endswith(".apk")) | .name' | head -1)
+            [ -n "$apk" ] || apk="organista-${old#v}.apk"
 
             body=$(awk -v v="## $new" '
               $0 == v { found = 1; next }
@@ -74,26 +68,26 @@ jobs:
             if [ -z "$(echo "$body" | tr -d '[:space:]')" ]; then
               body="Táto verzia nemá zapísané zmeny v CHANGELOG.md."
             fi
-            export BODY="$body" NEW="$new" OLD="$old"
+
             {
-              printf 'Organista pre Android **%s** (pôvodne označená ako %s).\n\n' "$NEW" "${OLD#v}"
+              printf 'Organista pre Android **%s** (pôvodne označená ako %s).\n\n' "$new" "${old#v}"
               printf 'Alfa verzia – aplikácia je ešte v skúšobnej prevádzke.\n'
-              printf 'Súbor `organista-%s.apk` stiahni do tabletu a otvor ho.\n\n' "$NEW"
+              printf 'Súbor `%s` stiahni do tabletu a otvor ho.\n\n' "$apk"
               printf -- '---\n\n## Zmeny v tejto verzii\n\n'
-              printf '%s\n' "$BODY"
+              printf '%s\n' "$body"
             } > notes-rename.md
 
-            if ls rename-assets/*.apk >/dev/null 2>&1; then
-              gh release create "$new" rename-assets/*.apk \
-                --title "Organista $new" --notes-file notes-rename.md \
-                --target "$sha" --prerelease
+            jq -n --arg tag "$new" --arg name "Organista $new" \
+              --rawfile body notes-rename.md \
+              '{tag_name: $tag, name: $name, body: $body, prerelease: true}' \
+              | gh api -X PATCH "repos/$REPO/releases/$id" --input - --silent
+
+            if gh api "repos/$REPO/git/ref/tags/$new" >/dev/null 2>&1; then
+              gh api -X DELETE "repos/$REPO/git/refs/tags/$old" >/dev/null 2>&1 || true
+              echo "$old premenované na $new."
             else
-              gh release create "$new" \
-                --title "Organista $new" --notes-file notes-rename.md \
-                --target "$sha" --prerelease
+              echo "$old: značka $new nevznikla, pôvodnú značku nechávam."
             fi
-            gh release delete "$old" --yes --cleanup-tag
-            echo "$old premenované na $new."
           done
 
   build:
