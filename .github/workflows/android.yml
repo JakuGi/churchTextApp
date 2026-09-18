@@ -44,11 +44,15 @@ jobs:
           for pair in $MAP; do
             old="${pair%%=*}"
             new="${pair#*=}"
-            id=$(gh api "repos/$REPO/releases/tags/$old" --jq '.id' 2>/dev/null || true)
-            if [ -z "$id" ]; then
-              echo "$old: vydanie neexistuje, preskakujem."
-              continue
-            fi
+            # Pri neexistujúcom vydaní vypíše gh chybovú odpoveď na výstup,
+            # preto sa kontroluje aj návratový kód aj tvar čísla.
+            id=$(gh api "repos/$REPO/releases/tags/$old" --jq '.id' 2>/dev/null) || id=""
+            case "$id" in
+              ''|*[!0-9]*)
+                echo "$old: vydanie neexistuje, preskakujem."
+                continue
+                ;;
+            esac
 
             if gh release view "$new" >/dev/null 2>&1; then
               # Novú verziu už zverejnilo zostavenie, staré vydanie je duplikát.
