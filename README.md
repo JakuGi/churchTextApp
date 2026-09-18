@@ -30,14 +30,19 @@ hosting, žiadny internet.**
 
 1. V tablete otvor priamy odkaz na stiahnutie:
 
-   **https://github.com/JakuGi/churchTextApp/releases/download/android-latest/organista-1.1.1.apk**
+   **https://github.com/JakuGi/churchTextApp/releases/download/android-latest/organista-a0.1.1.apk**
 
    (Alebo: stránka projektu na GitHube → vpravo **Releases** → vydanie
    **Organista pre Android (posledná verzia)**.)
 
-   Staršie verzie sa nemažú – každá má vlastné vydanie `v1.0.0`, `v1.0.1`, …
+   Staršie verzie sa nemažú – každá má vlastné vydanie `a0.0.0`, `a0.0.1`, …
    aj s popisom svojich zmien, takže sa vieš kedykoľvek vrátiť späť.
    Prehľad všetkých zmien je v súbore [CHANGELOG.md](CHANGELOG.md).
+
+   > **Čo znamená `a0` v čísle verzie?** Aplikácia je zatiaľ *alfa verzia* –
+   > skúšobná, ešte nie všetko v nej funguje spoľahlivo. Preto majú vydania
+   > čísla `a0.0.0`, `a0.0.1`, `a0.1.0`, `a0.1.1`. Verziu `1.0.0` dostane až
+   > prvá poriadne odskúšaná verzia.
 2. Počkaj, kým sa súbor stiahne celý.
 3. Ťukni na stiahnutý súbor. Android sa spýta na povolenie inštalovať aplikácie
    z tohto zdroja – potvrď **Nastavenia → Povoliť z tohto zdroja** a vráť sa späť.
@@ -385,7 +390,7 @@ správať s televízorom.
 3. V okne emulátora klikni na **⋯** (Extended controls) → **Displays** →
    **Add secondary display** → zvoľ rozlíšenie → *Apply changes*.
 4. Nainštaluj APK: stiahnutý súbor pretiahni myšou do okna emulátora, alebo
-   `adb install organista-1.1.1.apk`.
+   `adb install organista-a0.1.1.apk`.
 5. Spusti aplikáciu a premietaj – text sa objaví na druhej obrazovke emulátora.
 
 Overiť, či Android naozaj hlási druhú obrazovku, sa dá aj z príkazového riadka:
@@ -443,7 +448,7 @@ APK zostavuje aj GitHub Actions ([.github/workflows/android.yml](.github/workflo
 pri každej zmene. Výsledok zverejní na dvoch miestach:
 
 - **android-latest** – nemenná adresa na stiahnutie vždy najnovšej verzie,
-- **v1.1.0**, **v1.0.1**, … – vlastné vydanie pre každú verziu, ktoré sa už
+- **a0.1.1**, **a0.1.0**, … – vlastné vydanie pre každú verziu, ktoré sa už
   neprepisuje, takže staršie verzie zostávajú natrvalo dostupné.
 
 Popis zmien si vydania berú zo súboru [CHANGELOG.md](CHANGELOG.md) – pri zvýšení

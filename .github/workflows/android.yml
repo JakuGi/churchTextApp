@@ -10,6 +10,10 @@ on:
         description: 'Doplniť popisy zmien ku všetkým existujúcim vydaniam'
         type: boolean
         default: false
+      rename_releases:
+        description: 'Premenovať staré vydania v1.x.y na alfa verzie a0.x.y'
+        type: boolean
+        default: false
   release:
     types: [published]
 
@@ -17,9 +21,84 @@ permissions:
   contents: write
 
 jobs:
+  # Jednorazové premenovanie starých vydaní v1.x.y na alfa značky a0.x.y.
+  # Beží len pri ručnom spustení so zaškrtnutou voľbou a musí skončiť skôr,
+  # než zostavenie vytvorí vydanie s novou značkou.
+  rename:
+    name: Premenovať staré vydania
+    runs-on: ubuntu-latest
+    if: inputs.rename_releases
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Premenovať vydania
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -u
+          # staré → nové; poradie od najstaršej verzie
+          MAP="v1.0.0=a0.0.0 v1.0.1=a0.0.1 v1.1.0=a0.1.0 v1.1.1=a0.1.1"
+          for pair in $MAP; do
+            old="${pair%%=*}"
+            new="${pair#*=}"
+            if ! gh release view "$old" >/dev/null 2>&1; then
+              echo "$old: vydanie neexistuje, preskakujem."
+              continue
+            fi
+            if gh release view "$new" >/dev/null 2>&1; then
+              echo "$new: už existuje, $old nechávam tak."
+              continue
+            fi
+
+            sha=$(gh api "repos/$REPO/git/ref/tags/$old" --jq '.object.sha' 2>/dev/null || true)
+            if [ -z "$sha" ]; then
+              sha=$(gh release view "$old" --json targetCommitish --jq '.targetCommitish')
+            fi
+
+            rm -rf rename-assets && mkdir rename-assets
+            gh release download "$old" --dir rename-assets --pattern '*.apk' || true
+            for file in rename-assets/*.apk; do
+              [ -e "$file" ] || continue
+              mv "$file" "rename-assets/organista-$new.apk"
+            done
+
+            body=$(awk -v v="## $new" '
+              $0 == v { found = 1; next }
+              found && /^## / { exit }
+              found { print }
+            ' CHANGELOG.md)
+            if [ -z "$(echo "$body" | tr -d '[:space:]')" ]; then
+              body="Táto verzia nemá zapísané zmeny v CHANGELOG.md."
+            fi
+            export BODY="$body" NEW="$new" OLD="$old"
+            {
+              printf 'Organista pre Android **%s** (pôvodne označená ako %s).\n\n' "$NEW" "${OLD#v}"
+              printf 'Alfa verzia – aplikácia je ešte v skúšobnej prevádzke.\n'
+              printf 'Súbor `organista-%s.apk` stiahni do tabletu a otvor ho.\n\n' "$NEW"
+              printf -- '---\n\n## Zmeny v tejto verzii\n\n'
+              printf '%s\n' "$BODY"
+            } > notes-rename.md
+
+            if ls rename-assets/*.apk >/dev/null 2>&1; then
+              gh release create "$new" rename-assets/*.apk \
+                --title "Organista $new" --notes-file notes-rename.md \
+                --target "$sha" --prerelease
+            else
+              gh release create "$new" \
+                --title "Organista $new" --notes-file notes-rename.md \
+                --target "$sha" --prerelease
+            fi
+            gh release delete "$old" --yes --cleanup-tag
+            echo "$old premenované na $new."
+          done
+
   build:
     name: Zostaviť APK
     runs-on: ubuntu-latest
+    needs: [rename]
+    # rename sa väčšinou preskočí; zostavenie musí bežať aj vtedy.
+    if: always() && needs.rename.result != 'failure' && needs.rename.result != 'cancelled'
 
     steps:
       - uses: actions/checkout@v4
@@ -128,7 +207,7 @@ jobs:
             printf 'inštalácie z neznámych zdrojov – potvrď ho. Návod je v súbore README.md.\n\n'
             printf -- '---\n\n## Čo je nové vo verzii %s\n\n' "$VERSION"
             printf '%s\n\n' "$CHANGES"
-            printf -- '---\n\nStaršie verzie zostávajú dostupné vo vydaniach `v1.x.y`.\n'
+            printf -- '---\n\nStaršie verzie zostávajú dostupné vo vydaniach `a0.x.y`.\n'
             if [ -z "$KEYSTORE" ]; then
               printf '\n> ⚠️ Táto verzia je podpísaná dočasným kľúčom, ktorý je pri každom zostavení iný.\n'
               printf '> Aktualizácia cez existujúcu inštaláciu preto zlyhá a starú verziu treba najprv\n'
@@ -161,7 +240,11 @@ jobs:
           VERSION: ${{ steps.apk.outputs.version }}
           CHANGES: ${{ steps.notes.outputs.body }}
         run: |
-          VTAG="v$VERSION"
+          # Alfa verzie (a0.x.y) sú značkou samy o sebe, číselné verzie dostanú „v“.
+          case "$VERSION" in
+            [0-9]*) VTAG="v$VERSION" ;;
+            *) VTAG="$VERSION" ;;
+          esac
           {
             printf 'Organista pre Android **%s** (commit %s).\n\n' "$VERSION" "${GITHUB_SHA::7}"
             printf 'Súbor `%s` stiahni do tabletu a otvor ho.\n' "$APK"
@@ -175,10 +258,12 @@ jobs:
             gh release edit "$VTAG" --notes-file notes-version.md
             echo "Vydanie $VTAG aktualizované."
           else
+            PRERELEASE=""
+            case "$VERSION" in a*) PRERELEASE="--prerelease" ;; esac
             gh release create "$VTAG" "$APK" \
               --title "Organista $VERSION" \
               --notes-file notes-version.md \
-              --target "$GITHUB_SHA"
+              --target "$GITHUB_SHA" $PRERELEASE
             echo "Vydanie $VTAG vytvorené."
           fi
 
@@ -188,7 +273,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          for tag in $(gh release list --limit 50 --json tagName --jq '.[].tagName' | grep -E '^v[0-9]' || true); do
+          for tag in $(gh release list --limit 50 --json tagName --jq '.[].tagName' | grep -E '^(v[0-9]|a[0-9])' || true); do
             version="${tag#v}"
             body=$(awk -v v="## $version" '
               $0 == v { found = 1; next }

@@ -317,9 +317,17 @@ function fetchNative(url) {
   });
 }
 
-/** Porovná verzie v tvare 1.2.3. */
+/**
+ * Číslo verzie bez značiek: „v1.2.3“ aj „a0.1.1“ → „1.2.3“ / „0.1.1“.
+ * Alfa verzie majú hlavné číslo 0, takže sú vždy staršie ako budúca 1.0.0.
+ */
+function versionNumbers(value) {
+  return String(value || '').replace(/^v/i, '').replace(/^a/i, '');
+}
+
+/** Porovná verzie v tvare a0.1.1 aj 1.2.3. */
 function isNewer(candidate, current) {
-  const parse = (value) => String(value || '').split('.').map((part) => parseInt(part, 10) || 0);
+  const parse = (value) => versionNumbers(value).split('.').map((part) => parseInt(part, 10) || 0);
   const [a, b] = [parse(candidate), parse(current)];
   for (let index = 0; index < Math.max(a.length, b.length); index += 1) {
     if ((a[index] || 0) !== (b[index] || 0)) return (a[index] || 0) > (b[index] || 0);
@@ -331,8 +339,8 @@ function isNewer(candidate, current) {
 function newestRelease(releases) {
   let best = null;
   for (const release of releases || []) {
-    const version = String(release.tag_name || '').replace(/^v/, '');
-    if (!/^\d+\.\d+/.test(version)) continue;
+    const version = String(release.tag_name || '').replace(/^v(?=\d)/, '');
+    if (!/^a?\d+\.\d+/.test(version)) continue;
     const asset = (release.assets || []).find((item) => /\.apk$/i.test(item.name || ''));
     if (!asset) continue;
     if (!best || isNewer(version, best.version)) {

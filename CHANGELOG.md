@@ -3,7 +3,14 @@
 Popisy jednotlivých verzií aplikácie. Text pod nadpisom verzie sa automaticky
 použije ako popis vydania na GitHube.
 
-## 1.1.1
+Aplikácia je zatiaľ v **alfa verzii**, preto majú všetky vydania číslo
+`a0.x.y` – písmeno `a` znamená *alfa* (skúšobná verzia, nie všetko funguje
+spoľahlivo). Pôvodné čísla `1.0.0` – `1.1.1` sa premenovali takto:
+`1.0.0 → a0.0.0`, `1.0.1 → a0.0.1`, `1.1.0 → a0.1.0`, `1.1.1 → a0.1.1`.
+Číslo `1.0.0` dostane až prvá verzia, ktorá bude na bežné používanie v kostole
+overená.
+
+## a0.1.1
 
 **Opravy načítania žalmu**
 
@@ -45,7 +52,17 @@ použije ako popis vydania na GitHube.
 - Aby sa dala aplikácia aktualizovať bez odinštalovania, musí byť podpísaná
   stále rovnakým kľúčom – postup je v README v časti *Vlastný podpisovací kľúč*.
 
-## 1.1.0
+**Číslovanie verzií**
+
+- Všetky doterajšie verzie sa premenovali na **alfa verzie** `a0.x.y`, pretože
+  aplikácia ešte nie je odskúšaná natoľko, aby sa dala označiť za hotovú.
+  Táto verzia je teda `a0.1.1` (predtým `1.1.1`).
+- Vydania na GitHube majú po novom značku `a0.x.y` (predtým `v1.x.y`).
+- Táto jedna verzia sa musí do tabletu stiahnuť ručne; kontrola novej verzie
+  v aplikácii totiž v staršej inštalácii porovnáva ešte staré číslo. Ďalšie
+  aktualizácie už tlačidlo v nastaveniach nájde samo.
+
+## a0.1.0
 
 **Responzóriový žalm z liturgického kalendára**
 
@@ -70,7 +87,7 @@ použije ako popis vydania na GitHube.
 - Vo vydaniach na GitHube zostávajú všetky staršie verzie: každá má vlastné
   vydanie `v1.x.y`, ktoré sa už neprepisuje.
 
-## 1.0.1
+## a0.0.1
 
 **Vzhľad premietania**
 
@@ -93,7 +110,7 @@ použije ako popis vydania na GitHube.
 - Presné cesty k dátam v tablete a postup, ako nahrať piesne z počítača.
 - Nová časť o testovaní druhej obrazovky bez televízora.
 
-## 1.0.0
+## a0.0.0
 
 **Prvá verzia aplikácie pre Android**
 
