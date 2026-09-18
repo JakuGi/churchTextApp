@@ -47,7 +47,10 @@ jobs:
               continue
             fi
             if gh release view "$new" >/dev/null 2>&1; then
-              echo "$new: už existuje, $old nechávam tak."
+              # Novú verziu už zverejnilo zostavenie – staré vydanie je
+              # len duplikát toho istého, takže ho zmažeme aj so značkou.
+              gh release delete "$old" --yes --cleanup-tag
+              echo "$new už existuje; staré vydanie $old zmazané."
               continue
             fi
 
