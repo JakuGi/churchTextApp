@@ -10,6 +10,40 @@ spoľahlivo). Pôvodné čísla `1.0.0` – `1.1.1` sa premenovali takto:
 Číslo `1.0.0` dostane až prvá verzia, ktorá bude na bežné používanie v kostole
 overená.
 
+## a0.1.6
+
+**Rozhranie premietania**
+
+- **Predošlá/Ďalšia pieseň** sa presunuli napravo, pod výber slohy číslami –
+  predtým boli naľavo pod obrazovkami slôh.
+- **Obrazovky slôh** majú takú výšku, aby ich pri scrollovaní bolo vidno
+  vždy **dve naraz**.
+- Odstránený popisok „Slohy piesne – ťuknutím premietneš“ nad obrazovkami –
+  zaberal miesto a bol zbytočný.
+- **Čierna obrazovka už nehlási**, ktorá sloha je vybraná – bola to zbytočná
+  správa navyše, výber slohy je aj tak vidieť na obrazovkách vľavo.
+- Namiesto polohy v sete („2/5“) je tam tlačidlo **Set**, ktoré otvorí celý
+  set: ťuknutím na pieseň naň preskočíš bez toho, aby sa premietanie
+  vypínalo, a vo vyhľadávaní vieš do bežiaceho setu **pridať ďalšiu pieseň**
+  (pribudne na koniec, aktuálna pieseň sa nezastaví).
+
+**Vrchný panel**
+
+- **Tlačidlo na pripojenie Chromecastu** je preč – premietanie na tomto
+  branchi rieši natívna druhá obrazovka, tlačidlo bolo nefunkčné.
+  Panel je vďaka tomu aj **užší**.
+- Nové tlačidlo **▶ Premietať** – spustí (alebo znovu otvorí, ak už beží)
+  premietanie priamo z knižnice, bez nutnosti prejsť cez záložku *Set*.
+
+**Opravy**
+
+- **Zelené notifikácie (napr. „Pridané do setu“) sa vedeli zaseknúť**
+  uprostred animácie pri rýchlom ťukaní za sebou. Teraz sa vždy ukáže hneď
+  posledná správa a prechod sa pri prerušení korektne reštartuje.
+- **Klik do poľa, kam sa píše, ho presunie navrch** jeho scrollovanej časti
+  (bočný panel, dialóg, editor) – aby ho na tablete nezakryla klávesnica
+  spolu s tým, čo sa pod ním hľadá alebo píše.
+
 ## a0.1.5
 
 **Priečinok s piesňami bez pýtania**
@@ -32,6 +66,14 @@ overená.
   hneď ju opravíš a uloží sa natrvalo. Po uložení sa vrátiš tam, kde si bol.
 - **Rýchly výber čísla už neuteká.** Nájdené piesne sú nad klávesnicou
   a majú stálu výšku, takže sa tlačidlá pri písaní nehýbu.
+
+**Známe chyby (opravené vo verzii a0.1.6)**
+
+- **Zelené notifikácie o pridaní do setu a podobné sa vedeli zaseknúť**
+  uprostred miznutia pri rýchlom ťukaní za sebou.
+- **Klik do poľa na písanie** (napríklad rýchly výber čísla alebo vyhľadávanie
+  v sete) **nezostal viditeľný** – pri menšej obrazovke ho vedela zakryť
+  klávesnica spolu s výsledkami vyhľadávania pod ním.
 
 ## a0.1.4
 

@@ -25,10 +25,9 @@
   <div class="topbar__cast">
     <span class="badge" id="displayStatus" hidden>Druhá obrazovka</span>
     <span class="badge only-web" id="netStatus" hidden>Obrazovka cez sieť</span>
-    <span class="badge" id="castStatus">Chromecast</span>
-    <button class="btn" id="castBtn">Pripojiť Chromecast</button>
     <button class="btn only-web" id="openDisplay" title="Otvorí okno s textom, ktoré prenesieš na TV">Okno na TV</button>
     <button class="btn btn--primary only-native" id="displayBtn" hidden>📺 Pripojiť obrazovku</button>
+    <button class="btn btn--primary" id="goLive" title="Spustiť premietanie aktuálneho setu">▶ Premietať</button>
   </div>
 </header>
 
@@ -97,16 +96,18 @@
           <span class="live__number" id="liveNumber"></span>
           <h1 id="liveTitle">Bez piesne</h1>
         </div>
-        <span class="pill pill--pos" id="livePosition"></span>
+        <button class="btn btn--pos" id="liveSetBtn" title="Otvoriť set a preskočiť na inú pieseň">Set</button>
         <button class="btn" id="liveEdit" title="Upraviť text piesne">✎ Upraviť</button>
         <button class="btn" id="jumpToggle">Rýchly výber čísla</button>
       </div>
 
       <div class="live__body">
         <div class="live__left">
-          <div class="preview__label">Slohy piesne – ťuknutím premietneš</div>
           <div class="versescreens" id="verseScreens"></div>
-          <div class="notice" id="blankNotice" hidden></div>
+        </div>
+
+        <div class="live__right">
+          <div class="versegrid" id="verseGrid"></div>
           <div class="songnav">
             <button class="btn btn--nav" id="prevSong">
               <span>◀ Predošlá pieseň</span><small id="prevSongLabel"></small>
@@ -115,10 +116,6 @@
               <span>Ďalšia pieseň ▶</span><small id="nextSongLabel"></small>
             </button>
           </div>
-        </div>
-
-        <div class="live__right">
-          <div class="versegrid" id="verseGrid"></div>
         </div>
       </div>
 
@@ -384,6 +381,23 @@
   </div>
 </section>
 </main>
+
+<dialog id="liveSetDialog" class="dialog dialog--wide">
+  <h3>Set počas premietania</h3>
+  <p class="hint">Ťuknutím na pieseň na ňu preskočíš. Premietanie beží ďalej.</p>
+  <div class="dialog__body">
+    <div id="liveSetList" class="list list--set"></div>
+    <label class="field">
+      <span>Pridať pieseň do setu (názov alebo číslo)</span>
+      <input class="input input--big" id="liveSetSearch" type="search" inputmode="search"
+             autocomplete="off" placeholder="napr. 342 alebo Vitaj svetlo">
+    </label>
+    <div class="quickresults" id="liveSetResults"></div>
+  </div>
+  <div class="dialog__actions">
+    <button class="btn" data-close-dialog>Zavrieť</button>
+  </div>
+</dialog>
 
 <dialog id="savedSetsDialog" class="dialog">
   <h3>Uložené sety</h3>

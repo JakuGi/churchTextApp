@@ -62,10 +62,18 @@ function songLabel(song) {
   return song.number ? `${song.system || ''} ${song.number}`.trim() : '';
 }
 
+// Vždy sa hneď ukáže posledná správa (rýchle opakované ťukanie napr. na
+// „✓ V sete“ teda nikdy nečaká na doznenie predošlej). Keď bol pásik práve
+// v polovici miznutia, vynúti sa prekreslenie pred návratom triedy
+// is-visible – inak vedel prechod „zamrznúť“ v polceste (rovnaký trik ako
+// pri prelínaní na televízore).
 function toast(message, kind = 'info') {
   const box = $('#toast');
+  const wasHidden = !box.classList.contains('is-visible');
   box.textContent = message;
-  box.className = `toast toast--${kind} is-visible`;
+  box.className = `toast toast--${kind}`;
+  if (wasHidden) void box.offsetWidth;
+  box.classList.add('is-visible');
   clearTimeout(box._timer);
   box._timer = setTimeout(() => box.classList.remove('is-visible'), 3200);
 }
@@ -965,15 +973,68 @@ function renderJump() {
   renderQuickResults('#jumpResults', query, jumpToSong);
 }
 
+// ------------------------------------- set počas premietania (bez prerušenia)
+
+/** Prepne na inú pieseň priamo v bežiacom sete – premietanie neprestane. */
+function jumpToLiveSong(index) {
+  if (index >= 0 && index < state.live.songs.length && index !== state.live.songIndex) {
+    state.live.songIndex = index;
+    state.live.verseIndex = 0;
+    renderLive();
+  }
+  $('#liveSetDialog').close();
+}
+
+/**
+ * Pridá nájdenú pieseň do bežiaceho setu bez toho, aby prerušila premietanie
+ * (na rozdiel od jumpToSong nepreskočí na ňu – len pribudne na koniec, aby sa
+ * nezastavila práve hraná pieseň).
+ */
+function addToLiveSet(song) {
+  if (state.live.songs.some((item) => item.id === song.id)) {
+    toast(`„${song.title}“ už v sete je.`, 'warn');
+    return;
+  }
+  state.live.songs.push(song);
+  toast(`Pridané do setu: ${song.title}`, 'ok');
+  $('#liveSetSearch').value = '';
+  $('#liveSetResults').innerHTML = '';
+  renderLiveSetList();
+  renderLive();
+}
+
+function renderLiveSetList() {
+  const box = $('#liveSetList');
+  if (!box) return;
+  box.innerHTML = '';
+  if (!state.live.songs.length) {
+    box.innerHTML = '<div class="empty"><h3>Set je prázdny</h3></div>';
+    return;
+  }
+  state.live.songs.forEach((song, index) => {
+    const row = document.createElement('div');
+    row.className = `setrow${index === state.live.songIndex ? ' is-active' : ''}`;
+    row.innerHTML = `
+      <div class="setrow__pos">${index + 1}</div>
+      <div class="setrow__body">
+        <div class="song__title">${song.title}</div>
+        <div class="song__sub">${[songLabel(song), pluralVerses(song.verses.length)].filter(Boolean).join(' · ')}</div>
+      </div>`;
+    row.onclick = () => jumpToLiveSong(index);
+    box.appendChild(row);
+  });
+}
+
 function renderLive() {
   const song = currentSong();
   const verse = currentVerse();
 
   $('#liveTitle').textContent = song ? song.title : 'Bez piesne';
   $('#liveNumber').textContent = song ? songLabel(song) : '';
-  $('#livePosition').textContent = state.live.songs.length > 1
-    ? `${state.live.songIndex + 1}/${state.live.songs.length}`
-    : '';
+  // Pozícia v sete sa ukazuje priamo na tlačidle, ktoré set aj otvára.
+  $('#liveSetBtn').textContent = state.live.songs.length > 1
+    ? `Set ${state.live.songIndex + 1}/${state.live.songs.length}`
+    : 'Set';
   $('#prevSong').disabled = state.live.songIndex === 0;
   $('#nextSong').disabled = state.live.songIndex >= state.live.songs.length - 1;
   $('#prevSongLabel').textContent = state.live.songIndex > 0
@@ -984,10 +1045,6 @@ function renderLive() {
   const blankButton = $('#blankBtn');
   blankButton.classList.toggle('is-on', state.live.blank);
   blankButton.querySelector('.bigbtn__label').textContent = state.live.blank ? 'ZOBRAZIŤ TEXT' : 'ČIERNA OBRAZOVKA';
-  $('#blankNotice').hidden = !state.live.blank;
-  if (state.live.blank && verse) {
-    $('#blankNotice').textContent = `Čierna obrazovka – vybraná ostáva ${verse.type === 'chorus' ? 'refrén' : `${verse.label}. sloha`}`;
-  }
 
   const grid = $('#verseGrid');
   grid.innerHTML = '';
@@ -1185,32 +1242,14 @@ function renderNetStatus(status) {
     : 'Zatiaľ nie je pripojená žiadna obrazovka.';
 }
 
+/**
+ * Tlačidlo na pripojenie Chromecastu sa z lišty odstránilo – premietanie sa
+ * na tomto branchi rieši natívnou druhou obrazovkou. Cast API sa napriek
+ * tomu môže pripojiť z nastavení (Application ID), preto stav aj naďalej
+ * posielame na obrazovku, len bez samostatnej lišty.
+ */
 function renderCastStatus(status) {
-  const badge = $('#castStatus');
-  const button = $('#castBtn');
-  if (!state.settings.castAppId) {
-    badge.hidden = true;                     // bez App ID nie je čo hlásiť
-    button.textContent = 'Nastaviť Cast';
-    button.onclick = () => {
-      setView('settings');
-      renderSettings();
-      net.probe();
-    };
-    return;
-  }
-  badge.hidden = false;
-  if (status.connected) {
-    badge.textContent = `Chromecast: ${status.deviceName || 'pripojený'}`;
-    badge.className = 'badge badge--ok';
-    button.textContent = 'Odpojiť';
-    button.onclick = () => cast.disconnect();
-    publish();
-    return;
-  }
-  badge.textContent = status.error || (status.available ? 'Chromecast: pripravený' : 'Chromecast: hľadám...');
-  badge.className = status.error ? 'badge badge--warn' : 'badge';
-  button.textContent = 'Pripojiť Chromecast';
-  button.onclick = () => cast.connect();
+  if (status.connected) publish();
 }
 
 function openDisplayWindow() {
@@ -1324,6 +1363,15 @@ function updateSettings(patch) {
 // ------------------------------------------------------------------- vstupy
 
 function bindEvents() {
+  // Klik/ťuknutie do poľa, kam sa píše, ho presunie navrch jeho scrollovanej
+  // časti (sidebar, dialóg, editor) – aby ho na tablete nezakryla klávesnica
+  // spolu s výsledkami vyhľadávania, ktoré sa zobrazujú pod ním.
+  document.addEventListener('focusin', (event) => {
+    const el = event.target;
+    if (!el.matches || !el.matches('input:not([type=checkbox]):not([type=radio]):not([type=range]), textarea')) return;
+    requestAnimationFrame(() => el.scrollIntoView({ block: 'start', behavior: 'smooth' }));
+  });
+
   $$('[data-goto]').forEach((node) => {
     node.onclick = () => {
       if (state.view === 'editor' && editor.isDirty()
@@ -1383,6 +1431,15 @@ function bindEvents() {
     else $('#folderInput').click();
   };
   $('#liveEdit').onclick = editCurrentSong;
+  $('#liveSetBtn').onclick = () => {
+    renderLiveSetList();
+    $('#liveSetSearch').value = '';
+    $('#liveSetResults').innerHTML = '';
+    $('#liveSetDialog').showModal();
+  };
+  $('#liveSetSearch').oninput = (event) => {
+    renderQuickResults('#liveSetResults', event.target.value, addToLiveSet);
+  };
   $('#pickFiles').onclick = () => $('#fileInput').click();
   const handleFiles = async (files, folderName) => {
     if (!files || !files.length) return;
@@ -1463,6 +1520,17 @@ function bindEvents() {
     publish();
   };
   $('#openDisplay').onclick = openDisplayWindow;
+  // Skratka z knižnice (aj set/nastavenia) rovno do premietania – bez
+  // toho, aby bolo treba prejsť cez záložku Set. Bežiace premietanie sa
+  // len znovu otvorí, nové sa spustí z aktuálneho setu.
+  $('#goLive').onclick = () => {
+    if (state.live.songs.length) {
+      setView('live');
+      renderLive();
+      return;
+    }
+    startLive(state.set.items, 0);
+  };
 
   // rýchly skok na pieseň podľa čísla počas hrania
   $('#jumpToggle').onclick = () => toggleJumpPanel();

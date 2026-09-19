@@ -34,7 +34,7 @@ v kostole. Ovládanie je na tablete, text ide na druhú obrazovku.
 > `claude/cool-feynman-88sk88`. Prepnúť na `main` vie iba vlastník repozitára
 > (*Settings → General → Default branch*); Claude na to nemá nástroj.
 
-**Číslovanie verzií:** všetko je zatiaľ **alfa** – `a0.x.y`, teraz `a0.1.5`.
+**Číslovanie verzií:** všetko je zatiaľ **alfa** – `a0.x.y`, teraz `a0.1.6`.
 Pôvodné čísla sa premenovali: `1.0.0 → a0.0.0`, `1.0.1 → a0.0.1`,
 `1.1.0 → a0.1.0`, `1.1.1 → a0.1.1`. Číslo `1.0.0` je vyhradené pre prvú
 odskúšanú verziu.
@@ -108,7 +108,7 @@ APK sa podpíše vlastným kľúčom. **Bez nich má každé zostavenie iný pod
 a aktualizácia bez odinštalovania nefunguje.** Kľúč sa nikdy nesmie dostať do
 repozitára. (Toto je stále otvorené – tajomstvá zatiaľ nie sú nastavené.)
 
-Testy: `npm test` (Node `--test`, súbory `tests/*.test.js`, momentálne 33
+Testy: `npm test` (Node `--test`, súbory `tests/*.test.js`, momentálne 35
 testov). Testy žalmu používajú uložené stránky v `tests/fixtures/`.
 
 ## 5. Dôležité rozhodnutia a prečo
@@ -150,8 +150,27 @@ testov). Testy žalmu používajú uložené stránky v `tests/fixtures/`.
   v `SharedPreferences`).
 - **Živý režim ukazuje slohy ako malé obrazovky pod sebou**
   (`renderVerseScreens`), ťuknutím sa premietnu, premietaná má červený rámik
-  (`.vscreen.is-live`). Dva pôvodné náhľady sú preč. Z premietania sa dá
-  pieseň rovno upraviť (`editCurrentSong`, návrat cez `editorReturn`).
+  (`.vscreen.is-live`). Dva pôvodné náhľady sú preč. Obrazovky majú výšku
+  `flex: 0 0 calc(50% - 5px)`, aby ich bolo pri scrollovaní vidno vždy dve.
+  Z premietania sa dá pieseň rovno upraviť (`editCurrentSong`, návrat cez
+  `editorReturn`).
+- **Tlačidlo „Set“ v premietaní** (`liveSetDialog`) nahradilo číselnú polohu
+  – ukáže celý bežiaci set (`state.live.songs`, nie `state.set.items`, ktoré
+  sa počas naživo môžu rozísť), ťuknutím na pieseň sa naň preskočí
+  (`jumpToLiveSong`) bez zastavenia premietania. Vyhľadávanie v tom istom
+  okne pridáva pieseň na koniec (`addToLiveSet`) – nepreskakuje na ňu, aby
+  nezastavilo práve hranú pieseň.
+- **Toast notifikácie** (`toast()` v `app.js`): vždy sa okamžite ukáže
+  posledná správa; keď bol pásik práve v polovici miznutia (`is-visible`
+  odstránené, CSS prechod ešte beží), vynúti sa `void box.offsetWidth`
+  pred návratom triedy – inak vedel prechod zamrznúť v polceste (rovnaký
+  trik ako pri prelínaní na TV). Front rady sa zámerne nepoužíva – spôsoboval
+  zobrazovanie zastaraných správ pri rýchlom opakovanom ťukaní.
+- **Klik do textového poľa ho posunie navrch** jeho scrollovaného kontajnera
+  (globálny `focusin` listener v `bindEvents()`, `input/textarea → scrollIntoView`).
+  Overené len na skutočný klik/ťuknutie – programové `.focus()` cez
+  Playwright/DevTools protokol niekedy `scrollIntoView({behavior:'smooth'})`
+  nevykoná (automatizačná zvláštnosť, reálny dotyk funguje).
 - **Veľkosť textu** (`display-core.js`): binárne hľadanie hľadá najväčšie
   písmo medzi `fontMin` a `fontMax` (% výšky plochy s textom). Riadkovanie zo
   súboru sa zachová, ak by zalomenie prinieslo menej než 10 % veľkosti navyše
