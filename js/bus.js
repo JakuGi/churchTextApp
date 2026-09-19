@@ -70,6 +70,8 @@ export function displayState({ song, verse, blank, settings, position }) {
     position: position || '',
     theme: settings.theme,
     fontScale: settings.fontScale,
+    fontMin: settings.fontMin,
+    fontMax: settings.fontMax,
     header: settings.header,
     showVerseLabel: settings.showVerseLabel,
     verseNumberInline: settings.verseNumberInline,

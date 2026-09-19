@@ -30,7 +30,7 @@ hosting, žiadny internet.**
 
 1. V tablete otvor priamy odkaz na stiahnutie:
 
-   **https://github.com/JakuGi/churchTextApp/releases/download/android-latest/organista-a0.1.3.apk**
+   **https://github.com/JakuGi/churchTextApp/releases/download/android-latest/organista-a0.1.4.apk**
 
    (Alebo: stránka projektu na GitHube → vpravo **Releases** → vydanie
    **Organista pre Android (posledná verzia)**.)
@@ -127,11 +127,16 @@ Stiahnuté/Organista/piesne
 4. Odpoj tablet, otvor Organistu a v časti **Knižnica** ťukni na
    **⬇ Načítať piesne z tabletu**.
 5. **Len prvýkrát**: Android sa spýta na povolenie čítať tento priečinok –
-   ťukni na **Použiť tento priečinok** a potom **Povoliť**. Nabudúce už stačí
-   jedno ťuknutie na to isté tlačidlo.
+   ťukni na **Použiť tento priečinok** a potom **Povoliť**.
 
-> Keď neskôr pridáš ďalšie piesne, znovu ťukni na **⬇ Načítať piesne z tabletu**.
-> Súbory s rovnakým názvom sa prepíšu, nové pribudnú.
+> **Potom už netreba nič.** Aplikácia tento priečinok číta pri **každom
+> spustení** (ukáže pritom pásik s priebehom), takže stačí do neho nakopírovať
+> nové piesne a aplikáciu zapnúť. Ak si niečo pridal, kým aplikácia beží,
+> použi malé tlačidlo **↻ Znovu načítať priečinok**.
+
+> Priečinok je zároveň úložiskom: **pieseň napísaná v aplikácii sa doň uloží
+> sama** (do podpriečinka podľa zbierky) a **zmazaná pieseň sa z neho zmaže**.
+> Knižnica v tablete a priečinok tak ukazujú to isté.
 
 **a2) Iný priečinok alebo jednotlivé súbory**
 
@@ -313,7 +318,8 @@ preložený ako *Stiahnuté*).
 
 Postup je v časti [3](#3-prvé-spustenie-piesne): súbory `.xml` doň skopíruj
 a v aplikácii ťukni na **Knižnica → ⬇ Načítať piesne z tabletu**. Prvýkrát si
-Android vypýta potvrdenie priečinka, potom už stačí jedno ťuknutie.
+Android vypýta potvrdenie priečinka; potom sa priečinok načítava sám pri
+každom spustení aplikácie a nové piesne z aplikácie doň pribúdajú samy.
 
 > Ak by sa priečinok v počítači neukázal, stačí ho vytvoriť ručne s presne
 > takýmto názvom – aplikácia ho nájde rovnako.
@@ -422,7 +428,7 @@ správať s televízorom.
 3. V okne emulátora klikni na **⋯** (Extended controls) → **Displays** →
    **Add secondary display** → zvoľ rozlíšenie → *Apply changes*.
 4. Nainštaluj APK: stiahnutý súbor pretiahni myšou do okna emulátora, alebo
-   `adb install organista-a0.1.3.apk`.
+   `adb install organista-a0.1.4.apk`.
 5. Spusti aplikáciu a premietaj – text sa objaví na druhej obrazovke emulátora.
 
 Overiť, či Android naozaj hlási druhú obrazovku, sa dá aj z príkazového riadka:

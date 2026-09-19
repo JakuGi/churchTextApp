@@ -34,7 +34,7 @@ v kostole. Ovládanie je na tablete, text ide na druhú obrazovku.
 > `claude/cool-feynman-88sk88`. Prepnúť na `main` vie iba vlastník repozitára
 > (*Settings → General → Default branch*); Claude na to nemá nástroj.
 
-**Číslovanie verzií:** všetko je zatiaľ **alfa** – `a0.x.y`, teraz `a0.1.3`.
+**Číslovanie verzií:** všetko je zatiaľ **alfa** – `a0.x.y`, teraz `a0.1.4`.
 Pôvodné čísla sa premenovali: `1.0.0 → a0.0.0`, `1.0.1 → a0.0.1`,
 `1.1.0 → a0.1.0`, `1.1.1 → a0.1.1`. Číslo `1.0.0` je vyhradené pre prvú
 odskúšanú verziu.
@@ -65,7 +65,7 @@ moduly):
 | `js/songs.js` | model piesne, parsovanie a zápis XML (vlastný formát, OpenSong, OpenLyrics/OpenLP) |
 | `js/xmlparse.js` | vlastný XML parser bez závislostí (funguje v prehliadači aj v Node pri testoch) |
 | `js/store.js` | ukladanie – IndexedDB / localStorage / natívne súbory v Androide |
-| `js/import.js` | import priečinka s piesňami |
+| `js/import.js` | import priečinka s piesňami (zbierku berie z piesne) |
 | `js/editor.js` | editor piesní |
 | `js/psalms.js` | sťahovanie a parsovanie žalmu z `lc.kbs.sk` |
 | `js/bus.js` | prenos stavu medzi ovládaním a obrazovkou (BroadcastChannel + localStorage, SSE) |
@@ -138,6 +138,17 @@ testov). Testy žalmu používajú uložené stránky v `tests/fixtures/`.
 - **Záloha nesie zbierku aj názov súboru** (`<zbierka>`, `<subor>` v `songToXml`).
   Identifikátor piesne je `zbierka/súbor` (pri viacerých piesňach v súbore
   s `#poradím`), takže po obnove zo zálohy sedia aj uložené sety.
+- **Priečinok `Stiahnuté/Organista/piesne` je úložisko piesní.** Číta sa pri
+  každom spustení (`loadSongsFolderAtStart`), nové a upravené piesne sa doň
+  zapisujú (`writeSongFile`) a zmazané sa z neho mažú (`removeSongFile`) –
+  inak by sa pri ďalšom štarte vrátili. Prístup je cez SAF: strom si
+  používateľ potvrdí raz, uloží sa do `SharedPreferences` a berie sa naň
+  trvalé právo na čítanie aj zápis.
+- **Veľkosť textu** (`display-core.js`): binárne hľadanie hľadá najväčšie
+  písmo medzi `fontMin` a `fontMax` (% výšky plochy s textom). Riadkovanie zo
+  súboru sa zachová, ak by zalomenie prinieslo menej než 10 % veľkosti navyše
+  alebo ak by bolo písmo pod `fontMin`. Na záver `shrinkToFit` overí, že text
+  naozaj nepreteká.
 
 ## 6. Na čo si dať pozor (naučené po tvrdom)
 
@@ -161,6 +172,9 @@ testov). Testy žalmu používajú uložené stránky v `tests/fixtures/`.
 - **V okne druhej obrazovky nie je `window.OrganistaNative`** (most sa pridáva
   len hlavnému WebView). Režim televízora sa preto pozná podľa `?rezim=tv`
   v adrese.
+- **WebView na veľkej obrazovke sám zväčšuje písmo** („text autosizing“).
+  Bez `settings.layoutAlgorithm = NORMAL` (a `textZoom = 100`) text vytečie
+  a na televízore je vidieť menej riadkov než v náhľade.
 - Natívne testovanie sa dá obísť falošným mostom `window.OrganistaNative`
   cez Playwright `addInitScript` – takto sa dá overiť aj obnova zo zálohy.
 

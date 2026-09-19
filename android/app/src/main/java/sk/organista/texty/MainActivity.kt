@@ -17,6 +17,7 @@ import android.view.WindowManager
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Toast
@@ -48,7 +49,10 @@ class MainActivity : ComponentActivity() {
             return@registerForActivityResult
         }
         runCatching {
-            contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            contentResolver.takePersistableUriPermission(
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+            )
             // Priečinok si zapamätáme, aby sa nabudúce piesne načítali na jedno ťuknutie.
             prefs.edit().putString(KEY_SONGS_TREE, uri.toString()).apply()
         }
@@ -83,6 +87,7 @@ class MainActivity : ComponentActivity() {
             settings.allowFileAccess = false
             settings.allowContentAccess = false
             settings.textZoom = 100
+            settings.layoutAlgorithm = WebSettings.LayoutAlgorithm.NORMAL
             isVerticalScrollBarEnabled = true
             addJavascriptInterface(WebBridge(this@MainActivity), "OrganistaNative")
 
@@ -240,7 +245,8 @@ class MainActivity : ComponentActivity() {
         val saved = prefs.getString(KEY_SONGS_TREE, null) ?: return null
         val uri = runCatching { Uri.parse(saved) }.getOrNull() ?: return null
         val allowed = contentResolver.persistedUriPermissions.any { it.uri == uri && it.isReadPermission }
-        return if (allowed) uri else null
+        if (!allowed) return null
+        return uri
     }
 
     /** Adresa priečinka pre systémové okno výberu, aby sa otvorilo rovno v ňom. */
@@ -283,15 +289,10 @@ class MainActivity : ComponentActivity() {
                 callJs("window.organistaImportDone", "0")
                 return@Thread
             }
-            var total = 0
-            var batch = JSONArray()
 
-            fun flush() {
-                if (batch.length() == 0) return
-                callJs("window.organistaImportChunk", batch.toString())
-                batch = JSONArray()
-            }
-
+            // Najprv sa súbory len spočítajú, aby aplikácia vedela ukázať,
+            // koľko toho ešte zostáva.
+            val found = ArrayList<Pair<String, DocumentFile>>()
             fun walk(dir: DocumentFile, folderName: String) {
                 for (child in dir.listFiles()) {
                     val name = child.name ?: continue
@@ -299,25 +300,70 @@ class MainActivity : ComponentActivity() {
                         walk(child, name)
                         continue
                     }
-                    if (!name.endsWith(".xml", ignoreCase = true)) continue
-                    val text = runCatching {
-                        contentResolver.openInputStream(child.uri)?.bufferedReader()?.use { it.readText() }
-                    }.getOrNull() ?: continue
-                    batch.put(
-                        JSONObject()
-                            .put("folder", folderName)
-                            .put("name", name)
-                            .put("text", text),
-                    )
-                    total += 1
-                    if (batch.length() >= 25) flush()
+                    if (name.endsWith(".xml", ignoreCase = true)) found.add(folderName to child)
                 }
             }
+            // Súbory priamo v priečinku „piesne“ patria do zbierky Ostatné.
+            val rootName = tree.name.orEmpty()
+            walk(tree, if (rootName.isBlank() || rootName == SONGS_SUBFOLDER) "Ostatné" else rootName)
+            callJs("window.organistaImportStart", found.size.toString())
 
-            walk(tree, tree.name ?: "Piesne")
-            flush()
+            var total = 0
+            var batch = JSONArray()
+            for ((folderName, file) in found) {
+                val text = runCatching {
+                    contentResolver.openInputStream(file.uri)?.bufferedReader()?.use { it.readText() }
+                }.getOrNull() ?: continue
+                batch.put(
+                    JSONObject()
+                        .put("folder", folderName)
+                        .put("name", file.name.orEmpty())
+                        .put("text", text),
+                )
+                total += 1
+                if (batch.length() >= 25) {
+                    callJs("window.organistaImportChunk", batch.toString())
+                    batch = JSONArray()
+                }
+            }
+            if (batch.length() > 0) callJs("window.organistaImportChunk", batch.toString())
             callJs("window.organistaImportDone", total.toString())
         }.start()
+    }
+
+    /**
+     * Uloží pieseň ako .xml priamo do priečinka s piesňami, do podpriečinka
+     * podľa zbierky. Ak zbierka ešte nemá priečinok, vytvorí sa.
+     */
+    fun saveSongFile(folder: String, fileName: String, content: String): Boolean {
+        val tree = savedSongsTree() ?: return false
+        return runCatching {
+            val root = DocumentFile.fromTreeUri(this, tree) ?: return false
+            val dir = songDir(root, folder) ?: return false
+            val file = dir.findFile(fileName)?.takeIf { it.isFile }
+                ?: dir.createFile("text/xml", fileName)
+                ?: return false
+            contentResolver.openOutputStream(file.uri, "wt")?.use { it.write(content.toByteArray()) }
+            true
+        }.getOrDefault(false)
+    }
+
+    /** Zmaže súbor piesne, aby sa pri ďalšom spustení znovu nenačítala. */
+    fun deleteSongFile(folder: String, fileName: String): Boolean {
+        val tree = savedSongsTree() ?: return false
+        return runCatching {
+            val root = DocumentFile.fromTreeUri(this, tree) ?: return false
+            val dir = if (folder.isBlank() || folder == "Ostatné") root
+            else root.findFile(folder)?.takeIf { it.isDirectory } ?: return false
+            dir.findFile(fileName)?.takeIf { it.isFile }?.delete() ?: false
+        }.getOrDefault(false)
+    }
+
+    private fun songDir(root: DocumentFile, folder: String): DocumentFile? {
+        if (folder.isBlank() || folder == "Ostatné") return root
+        val existing = root.findFile(folder)
+        if (existing != null && existing.isDirectory) return existing
+        return root.createDirectory(folder)
     }
 
     // ----------------------------------------------- liturgický kalendár

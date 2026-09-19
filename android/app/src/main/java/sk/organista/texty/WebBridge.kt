@@ -72,6 +72,16 @@ class WebBridge(private val activity: MainActivity) {
     @JavascriptInterface
     fun hasSongsFolder(): Boolean = activity.hasSongsFolder()
 
+    /** Uloží pieseň do priečinka s piesňami (podpriečinok podľa zbierky). */
+    @JavascriptInterface
+    fun saveSongFile(folder: String, fileName: String, content: String): Boolean =
+        activity.saveSongFile(folder, fileName, content)
+
+    /** Zmaže súbor piesne z priečinka s piesňami. */
+    @JavascriptInterface
+    fun deleteSongFile(folder: String, fileName: String): Boolean =
+        activity.deleteSongFile(folder, fileName)
+
     /**
      * Stiahne stránku liturgického kalendára (responzóriový žalm).
      * Výsledok príde do JS cez window.organistaLiturgy.
@@ -113,5 +123,5 @@ class WebBridge(private val activity: MainActivity) {
 
 /** Verzia aplikácie bez potreby generovaného BuildConfig. */
 object BuildConfigCompat {
-    const val versionName: String = "a0.1.3"
+    const val versionName: String = "a0.1.4"
 }

@@ -185,6 +185,8 @@ export const DEFAULT_SETTINGS = {
   castAppId: '',
   theme: 'dark',            // dark | light | sepia
   fontScale: 1,
+  fontMin: 12,              // najmenšie písmo v % výšky plochy s textom
+  fontMax: 55,              // najväčšie písmo v % výšky plochy s textom
   header: 'both',           // none | number | title | both – hlavička na televízore
   showVerseLabel: true,     // číslo slohy v rohu obrazovky
   verseNumberInline: false, // číslo slohy pred prvým riadkom textu

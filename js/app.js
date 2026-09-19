@@ -261,6 +261,36 @@ const AUTO_BACKUP_FILE = 'organista-zaloha-auto.xml';
 const AUTO_BACKUP_MINUTES = 20;
 const RELEASE_API = 'https://api.github.com/repos/JakuGi/churchTextApp/releases';
 
+// ---------------------------------- priečinok s piesňami (Stiahnuté/…/piesne)
+
+/** Názov súboru piesne; ak ho pieseň nemá, odvodí sa z názvu. */
+function songFileName(song) {
+  if (song.fileName && /\.xml$/i.test(song.fileName)) return song.fileName;
+  const base = normalize(song.title || 'piesen')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60) || 'piesen';
+  return `${song.number ? `${song.number}-` : ''}${base}.xml`;
+}
+
+/**
+ * Zapíše pieseň do priečinka s piesňami, do podpriečinka podľa zbierky.
+ * Priečinok je zároveň úložiskom, z ktorého sa knižnica načíta pri spustení,
+ * takže nová pieseň tam musí pribudnúť hneď.
+ */
+function writeSongFile(song) {
+  if (!isNative || !song || song.temporary) return false;
+  if (!call('hasSongsFolder')) return false;
+  return call('saveSongFile', song.folder || 'Ostatné', songFileName(song), songToXml(song)) === true;
+}
+
+/** Zmaže súbor piesne, aby sa pri ďalšom spustení znovu nenačítala. */
+function removeSongFile(song) {
+  if (!isNative || !song || song.temporary) return false;
+  if (!call('hasSongsFolder')) return false;
+  return call('deleteSongFile', song.folder || 'Ostatné', songFileName(song)) === true;
+}
+
 /** Celá knižnica ako jeden .xml súbor. */
 function libraryXml() {
   const body = state.songs
@@ -550,6 +580,7 @@ async function savePsalm() {
   if (!psalm.song) return;
   const song = psalm.song;
   await store.putSongs([song]);
+  writeSongFile(song);
   const others = state.songs.filter((item) => item.folder === song.folder && item.id !== song.id).length;
   await store.putFolder({ name: song.folder, system: '', count: others + 1, updatedAt: Date.now() });
   await reloadLibrary();
@@ -580,6 +611,10 @@ function setupEditor() {
     toast,
     onSave: async (song, replacedId) => {
       if (replacedId) {
+        // Pieseň sa premenovala alebo presunula do inej zbierky – starý súbor
+        // v priečinku s piesňami treba zmazať, inak by sa vrátila pri štarte.
+        const previous = songById(replacedId);
+        if (previous) removeSongFile(previous);
         await store.deleteSongs([replacedId]);
         state.set.items = state.set.items.map((id) => (id === replacedId ? song.id : id));
       }
@@ -593,9 +628,13 @@ function setupEditor() {
         updatedAt: Date.now(),
       });
       await reloadLibrary();
-      toast(`Pieseň „${song.title}“ uložená.`, 'ok');
+      const stored = writeSongFile(song);
+      toast(stored
+        ? `Pieseň „${song.title}“ uložená do zbierky ${song.folder}.`
+        : `Pieseň „${song.title}“ uložená.`, 'ok');
     },
     onDelete: async (song) => {
+      removeSongFile(song);
       await store.deleteSongs([song.id]);
       state.set.items = state.set.items.filter((id) => id !== song.id);
       await reloadLibrary();
@@ -1090,6 +1129,14 @@ function watchNetStatus(active) {
   netPollTimer = active ? setInterval(() => net.probe(), 5000) : null;
 }
 
+/** Posuvníky s najmenším a najväčším písmom. */
+function renderFontLimits() {
+  $('#fontMin').value = String(state.settings.fontMin);
+  $('#fontMax').value = String(state.settings.fontMax);
+  $('#fontMinValue').textContent = `${state.settings.fontMin} %`;
+  $('#fontMaxValue').textContent = `${state.settings.fontMax} %`;
+}
+
 function renderSettings() {
   $('#castAppId').value = state.settings.castAppId;
   $('#themeSelect').value = state.settings.theme;
@@ -1097,6 +1144,7 @@ function renderSettings() {
   $('#fontScaleValue').textContent = `${Math.round(state.settings.fontScale * 100)} %`;
   $('#lineSpacing').value = String(state.settings.lineSpacing);
   $('#lineSpacingValue').textContent = state.settings.lineSpacing.toFixed(2);
+  renderFontLimits();
   $('#headerMode').value = state.settings.header;
   $('#fadeSelect').value = String(state.settings.fade);
   $('#showVerseLabel').checked = state.settings.showVerseLabel;
@@ -1146,7 +1194,11 @@ function renderFolderAdmin() {
     remove.className = 'btn btn--danger';
     remove.textContent = 'Odstrániť';
     remove.onclick = async () => {
-      if (!confirm(`Odstrániť zbierku „${folder.name}“ z knižnice?`)) return;
+      const inFolder = state.songs.filter((song) => song.folder === folder.name);
+      const extra = isNative && call('hasSongsFolder')
+        ? `\n\nZmažú sa aj súbory v priečinku ${call('songsFolder')}/${folder.name}.` : '';
+      if (!confirm(`Odstrániť zbierku „${folder.name}“ z knižnice?${extra}`)) return;
+      for (const song of inFolder) removeSongFile(song);
       await store.deleteFolder(folder.name);
       if (state.activeFolder === folder.name) state.activeFolder = null;
       await reloadLibrary();
@@ -1211,7 +1263,14 @@ function bindEvents() {
       loadPsalm();
     };
   });
-  $('#importSongsFolder').onclick = () => startNativeImport('songs');
+  $('#importSongsFolder').onclick = async () => {
+    const result = await startNativeImport('songs');
+    await syncSongsToFolder(result && result.filesInFolder);
+  };
+  $('#reloadSongsFolder').onclick = async () => {
+    const result = await startNativeImport('songs');
+    await syncSongsToFolder(result && result.filesInFolder);
+  };
   $('#pickFolder').onclick = () => {
     if (isNative) startNativeImport('pick');
     else $('#folderInput').click();
@@ -1335,6 +1394,17 @@ function bindEvents() {
     updateSettings({ lineSpacing: Number(event.target.value) });
     $('#lineSpacingValue').textContent = state.settings.lineSpacing.toFixed(2);
   };
+  // Najmenšie písmo nesmie prerásť najväčšie a naopak.
+  $('#fontMin').oninput = (event) => {
+    const value = Math.min(Number(event.target.value), state.settings.fontMax - 3);
+    updateSettings({ fontMin: value });
+    renderFontLimits();
+  };
+  $('#fontMax').oninput = (event) => {
+    const value = Math.max(Number(event.target.value), state.settings.fontMin + 3);
+    updateSettings({ fontMax: value });
+    renderFontLimits();
+  };
   $('#headerMode').onchange = (event) => updateSettings({ header: event.target.value });
   $('#fadeSelect').onchange = (event) => updateSettings({ fade: Number(event.target.value) });
   $('#showVerseLabel').onchange = (event) => updateSettings({ showVerseLabel: event.target.checked });
@@ -1348,7 +1418,10 @@ function bindEvents() {
   };
   $('#defaultSystem').onchange = (event) => updateSettings({ defaultSystem: event.target.value });
   $('#clearLibrary').onclick = async () => {
-    if (!confirm('Naozaj zmazať celú knižnicu piesní?')) return;
+    const extra = isNative && call('hasSongsFolder')
+      ? `\n\nZmažú sa aj súbory v priečinku ${call('songsFolder')}.` : '';
+    if (!confirm(`Naozaj zmazať celú knižnicu piesní?${extra}`)) return;
+    for (const song of state.songs) removeSongFile(song);
     await store.clearSongs();
     state.activeFolder = null;
     await reloadLibrary();
@@ -1416,21 +1489,75 @@ function exportLibrary() {
 
 // ------------------------------------------------- import v aplikácii Android
 
-const nativeImport = { files: [], running: false };
+const nativeImport = { files: [], running: false, total: 0, resolve: null };
+
+/** Pásik s priebehom načítavania piesní. */
+function showProgress(label, done, total) {
+  const box = $('#importProgress');
+  if (!box) return;
+  box.hidden = false;
+  $('#importProgressLabel').textContent = total
+    ? `${label} ${done}/${total}`
+    : label;
+  const percent = total ? Math.round((done / total) * 100) : 8;
+  $('#importProgressBar').style.width = `${Math.max(4, Math.min(100, percent))}%`;
+}
+
+function hideProgress() {
+  const box = $('#importProgress');
+  if (box) box.hidden = true;
+}
 
 /**
  * @param {'songs'|'pick'} mode  'songs' = priečinok Stiahnuté/Organista/piesne
  *                               (prvýkrát si ho dá Android potvrdiť),
  *                               'pick'  = vždy vybrať priečinok ručne.
+ * @returns {Promise<object|null>} výsledok načítania
  */
 function startNativeImport(mode = 'pick') {
+  if (nativeImport.running) return Promise.resolve(null);
   nativeImport.files = [];
+  nativeImport.total = 0;
   nativeImport.running = true;
   const known = mode === 'songs' && call('hasSongsFolder');
   $('#importInfo').textContent = known
     ? 'Čítam priečinok s piesňami…'
     : 'Potvrď priečinok s piesňami…';
+  if (known) showProgress('Načítavam piesne…', 0, 0);
   call(mode === 'songs' ? 'importSongsFolder' : 'importFolder');
+  return new Promise((resolve) => { nativeImport.resolve = resolve; });
+}
+
+/**
+ * Načítanie priečinka s piesňami pri spustení aplikácie. Priečinok je hlavné
+ * úložisko: čo je v ňom, to je v knižnici.
+ */
+async function loadSongsFolderAtStart() {
+  if (!isNative || !call('hasSongsFolder')) return;
+  const result = await startNativeImport('songs');
+  await syncSongsToFolder(result && result.filesInFolder);
+}
+
+/**
+ * Piesne, ktoré v priečinku ešte nemajú súbor (napríklad písané v aplikácii
+ * pred jeho potvrdením), sa doň dopíšu. Pri ďalších spusteniach už netreba
+ * zapisovať nič.
+ */
+async function syncSongsToFolder(present) {
+  if (!isNative || !call('hasSongsFolder') || !present) return;
+  const missing = state.songs.filter((song) => !song.temporary
+    && !present.has(`${song.folder}/${songFileName(song)}`)
+    && !present.has(songFileName(song)));
+  if (!missing.length) return;
+
+  let done = 0;
+  for (const song of missing) {
+    writeSongFile(song);
+    done += 1;
+    showProgress('Dopĺňam piesne do priečinka…', done, missing.length);
+  }
+  hideProgress();
+  toast(`Do priečinka pribudlo ${pluralSongs(missing.length)}.`, 'ok');
 }
 
 /** Vysvetlivka, kam sa dajú nahrať piesne z počítača. */
@@ -1438,47 +1565,73 @@ function renderSongsFolderHint() {
   const hint = $('#songsFolderHint');
   if (!hint || !isNative) return;
   const path = call('songsFolder') || 'Stiahnuté/Organista/piesne';
-  hint.innerHTML = call('hasSongsFolder')
-    ? `Tlačidlo načíta naposledy potvrdený priečinok – zvyčajne <strong>${path}</strong>. `
-      + 'Súbory .xml doň skopíruj z počítača cez USB kábel; podpriečinky sa stanú zbierkami.'
+  // Keď je priečinok potvrdený, číta sa sám pri každom spustení a veľké
+  // tlačidlo netreba – zostane len malé na opätovné načítanie.
+  const known = !!call('hasSongsFolder');
+  const big = $('#importSongsFolder');
+  const again = $('#reloadSongsFolder');
+  if (big) big.hidden = known;
+  if (again) again.hidden = !known;
+  hint.innerHTML = known
+    ? `Piesne sa načítavajú pri každom spustení z priečinka <strong>${path}</strong>. `
+      + 'Súbory .xml doň skopíruj z počítača cez USB kábel; podpriečinky sa stanú zbierkami. '
+      + 'Nové piesne z aplikácie sa doň ukladajú samy. Ak si niečo pridal počas behu '
+      + 'aplikácie, načítaj priečinok znovu tlačidlom vyššie.'
     : `Piesne z počítača skopíruj cez USB kábel do priečinka <strong>${path}</strong> `
       + '(v počítači: Tablet → Interná pamäť → Download → Organista → piesne) a potom '
       + 'ťukni na tlačidlo vyššie. Android sa raz spýta, či môže priečinok čítať – '
       + 'potvrď <strong>Použiť tento priečinok</strong>. Podpriečinky sa stanú zbierkami.';
 }
 
+/** Natívna časť najprv povie, koľko súborov v priečinku našla. */
+window.organistaImportStart = (total) => {
+  if (!nativeImport.running) return;
+  nativeImport.total = Number(total) || 0;
+  showProgress('Načítavam piesne…', 0, nativeImport.total);
+};
+
 /** Natívna časť posiela súbory po dávkach. */
 window.organistaImportChunk = (batch) => {
   if (!nativeImport.running) return;
   for (const item of batch || []) nativeImport.files.push(item);
   $('#importInfo').textContent = `Načítavam ${nativeImport.files.length} súborov…`;
+  showProgress('Načítavam piesne…', nativeImport.files.length, nativeImport.total);
 };
 
 window.organistaImportDone = async (total) => {
   if (!nativeImport.running) return;
   nativeImport.running = false;
   const files = nativeImport.files;
+  const finish = nativeImport.resolve;
   nativeImport.files = [];
+  nativeImport.resolve = null;
 
   if (!files.length) {
+    hideProgress();
     const path = call('songsFolder') || 'Stiahnuté/Organista/piesne';
     $('#importInfo').textContent = Number(total) === 0
       ? `V priečinku nie sú žiadne súbory .xml. Skopíruj ich tam z počítača (${path}).`
       : 'Načítanie sa nepodarilo.';
     renderSongsFolderHint();
+    if (finish) finish(null);
     return;
   }
 
+  showProgress('Spracúvam piesne…', files.length, nativeImport.total || files.length);
   const result = await importFiles(files.map((item) => ({
     name: item.name,
     webkitRelativePath: `${item.folder}/${item.name}`,
     text: async () => item.text,
   })));
+  // Zoznam toho, čo v priečinku naozaj je – podľa neho sa dopíšu chýbajúce.
+  result.filesInFolder = new Set(files.flatMap((item) => [`${item.folder}/${item.name}`, item.name]));
   await reloadLibrary();
   renderSettings();
   renderSongsFolderHint();
+  hideProgress();
   $('#importInfo').textContent = `Načítaných ${pluralSongs(result.songs)} z ${result.files} súborov.`;
   toast(`Načítaných ${pluralSongs(result.songs)}.`, 'ok');
+  if (finish) finish(result);
 };
 
 /** Zmena druhej obrazovky – volá natívna časť. */
@@ -1547,8 +1700,10 @@ async function main() {
   setView('library');
   publish();
 
-  // Po preinštalovaní (napríklad ručnou aktualizáciou) býva knižnica prázdna –
-  // vtedy sa načíta posledná automatická záloha.
+  // Priečinok s piesňami je úložisko – načíta sa pri každom spustení.
+  await loadSongsFolderAtStart();
+  // Ak je knižnica aj tak prázdna (napríklad po preinštalovaní a priečinok
+  // ešte nie je potvrdený), skúsi sa posledná automatická záloha.
   await restoreFromAutoBackup();
   startAutoBackup();
 

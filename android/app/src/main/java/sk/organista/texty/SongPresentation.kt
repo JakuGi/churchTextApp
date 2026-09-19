@@ -9,6 +9,7 @@ import android.os.Looper
 import android.os.SystemClock
 import android.view.Display
 import android.view.ViewGroup
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.webkit.WebViewAssetLoader
@@ -58,6 +59,11 @@ class SongPresentation(
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
             settings.mediaPlaybackRequiresUserGesture = true
+            // Bez tohto Android na veľkej obrazovke sám zväčšuje písmo
+            // („text autosizing“) a text potom vytečie – na televízore bolo
+            // vidieť menej riadkov než v náhľade na tablete.
+            settings.textZoom = 100
+            settings.layoutAlgorithm = WebSettings.LayoutAlgorithm.NORMAL
             isVerticalScrollBarEnabled = false
             isHorizontalScrollBarEnabled = false
             webViewClient = object : WebViewClient() {

@@ -45,6 +45,7 @@
         <button class="btn btn--primary btn--block btn--big only-native" id="importSongsFolder">
           ⬇ Načítať piesne z tabletu
         </button>
+        <button class="btn btn--block only-native" id="reloadSongsFolder" hidden>↻ Znovu načítať priečinok</button>
         <p class="hint only-native" id="songsFolderHint"></p>
         <button class="btn btn--block" id="pickFolder">Načítať priečinok</button>
         <button class="btn btn--block" id="pickFiles">Načítať súbory</button>
@@ -219,6 +220,18 @@
         <label>Riadkovanie <span class="value" id="lineSpacingValue"></span>
           <input type="range" id="lineSpacing" min="1" max="2" step="0.05">
         </label>
+        <label>Najmenšie písmo <span class="value" id="fontMinValue"></span>
+          <input type="range" id="fontMin" min="4" max="30" step="1">
+        </label>
+        <label>Najväčšie písmo <span class="value" id="fontMaxValue"></span>
+          <input type="range" id="fontMax" min="20" max="70" step="1">
+        </label>
+        <p class="hint">
+          Text sa vždy zväčší tak, aby zaplnil čo najviac obrazovky. Riadkovanie zo súboru
+          zostáva zachované; riadok sa rozdelí až vtedy, keď by kvôli nemu bolo písmo menšie
+          ako <em>najmenšie písmo</em>. <em>Najväčšie písmo</em> drží na uzde krátke slohy,
+          aby jedno slovo nezaplnilo pol obrazovky. Hodnoty sú v % výšky plochy s textom.
+        </p>
         <label>Predvolený číselník
           <select class="input" id="defaultSystem">
             <option value="JKS">JKS</option>
@@ -446,6 +459,10 @@ jej druhý riadok."></textarea>
   </div>
 </dialog>
 
+<div id="importProgress" class="progress" hidden>
+  <div class="progress__label" id="importProgressLabel">Načítavam piesne…</div>
+  <div class="progress__track"><div class="progress__bar" id="importProgressBar"></div></div>
+</div>
 <div class="toast" id="toast"></div>
 
 <script type="module" src="js/app.js"></script>

@@ -10,6 +10,37 @@ spoľahlivo). Pôvodné čísla `1.0.0` – `1.1.1` sa premenovali takto:
 Číslo `1.0.0` dostane až prvá verzia, ktorá bude na bežné používanie v kostole
 overená.
 
+## a0.1.4
+
+**Priečinok s piesňami je úložisko**
+
+- **Piesne sa načítajú pri každom spustení** z priečinka
+  `Stiahnuté/Organista/piesne` – s ukazovateľom priebehu, takže vidno, koľko
+  toho ešte zostáva. Tlačidlo na načítanie už teda netreba; zostalo len malé
+  **↻ Znovu načítať priečinok**, keď do neho niečo pribudne počas behu
+  aplikácie.
+- **Nová pieseň z aplikácie sa doň uloží sama**, do podpriečinka podľa svojej
+  zbierky. Ak zbierka priečinok ešte nemá, vytvorí sa. To isté platí pre
+  uložený žalm.
+- **Zmazanie piesne alebo zbierky zmaže aj súbor** v priečinku – inak by sa
+  pri ďalšom spustení vrátili. Mazanie celej knižnice na to upozorní.
+- Piesne, ktoré v priečinku ešte súbor nemajú (napríklad písané v aplikácii
+  predtým), sa doň po prvom načítaní dopíšu.
+
+**Veľkosť textu na obrazovke**
+
+- **Na televízore bolo vidieť menej riadkov než v náhľade.** Android na veľkej
+  obrazovke sám zväčšoval písmo a spodok textu potom vytiekol mimo plochu.
+  Toto zväčšovanie je vypnuté a veľkosť sa navyše po vykreslení ešte overí,
+  takže náhľad a televízor ukazujú to isté.
+- **Text sa roztiahne tak, aby zaplnil čo najviac obrazovky** a zostalo čo
+  najmenej čiernej plochy. Riadkovanie zo súboru sa zachováva; riadok sa
+  rozdelí, až keď by kvôli nemu bolo písmo pod nastavenou hranicou.
+- Nové nastavenia **Najmenšie písmo** a **Najväčšie písmo** (v % výšky plochy
+  s textom). *Najmenšie* rozhoduje, kedy sa riadok radšej rozdelí,
+  *najväčšie* drží na uzde krátke slohy, aby jedno slovo nezaplnilo celú
+  obrazovku.
+
 ## a0.1.3
 
 **Obraz na televízore**
@@ -39,6 +70,15 @@ overená.
   potom už stačí jedno ťuknutie.
 - Systémový výber priečinka sa otvára rovno v tomto priečinku, takže ho netreba
   hľadať. *Načítať priečinok* a *Načítať súbory* fungujú ako doteraz.
+
+**Známe chyby (opravené vo verzii a0.1.4)**
+
+- **Na televízore sa zobrazovalo menej riadkov než v náhľade na tablete** –
+  spodné riadky slohy chýbali, lebo Android na druhej obrazovke sám zväčšoval
+  písmo a text vytiekol mimo plochu.
+- **Piesne z priečinka sa načítavali len po ťuknutí na tlačidlo** a piesne
+  napísané v aplikácii sa doň neukladali, takže priečinok a knižnica sa
+  rozchádzali.
 
 **Zálohy**
 

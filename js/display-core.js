@@ -1,5 +1,15 @@
 // Vykreslenie textu na premietaciu plochu (okno na TV aj Chromecast prijímač).
 
+/** Koľko z veľkosti písma sme ochotní obetovať za zachovanie riadkov zo súboru. */
+const KEEP_BREAKS_RATIO = 0.9;
+
+/** Percento výšky plochy pre veľkosť písma – ochrana pred nezmyselnou hodnotou. */
+function clampPercent(value, fallback) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || number <= 0) return fallback;
+  return Math.max(2, Math.min(60, number));
+}
+
 const THEMES = {
   dark: { bg: '#000000', fg: '#ffffff', meta: 'rgba(255,255,255,.55)' },
   light: { bg: '#ffffff', fg: '#101010', meta: 'rgba(0,0,0,.5)' },
@@ -31,7 +41,7 @@ export function createDisplay(root) {
   function measure(wrap, available, width, cap) {
     linesBox.style.whiteSpace = wrap ? 'pre-wrap' : 'pre';
     let low = 6;
-    let high = cap;
+    let high = Math.max(6, Math.round(cap));
     let best = low;
     while (low <= high) {
       const mid = Math.floor((low + high) / 2);
@@ -48,26 +58,51 @@ export function createDisplay(root) {
     return best;
   }
 
+  /**
+   * Zmenší písmo, kým sa text naozaj nezmestí. Poistka pre druhú obrazovku:
+   * televízor vie mať iné zaokrúhľovanie riadkov než náhľad na tablete
+   * a text by potom vytiekol mimo plochu (spodné riadky by nebolo vidieť).
+   */
+  function shrinkToFit(size, available) {
+    let value = size;
+    for (let step = 0; step < 24 && value > 6; step += 1) {
+      if (linesBox.scrollHeight <= available) break;
+      value -= Math.max(1, Math.round(value * 0.04));
+      linesBox.style.fontSize = `${value}px`;
+    }
+    return value;
+  }
+
   function fit() {
     if (!current || current.blank || !current.lines.length) return;
-    const available = textBox.clientHeight;
+    const box = textBox.clientHeight;
     const width = textBox.clientWidth;
-    if (available < 8 || width < 8) return;
+    if (box < 8 || width < 8) return;
+
+    // Malá rezerva, aby posledný riadok neskončil tesne na hrane.
+    const available = Math.floor(box * 0.99);
     const scale = current.fontScale || 1;
-    const cap = Math.max(10, Math.round(available * 0.42 * scale));
+    const maxPercent = clampPercent(current.fontMax, 55);
+    const minPercent = clampPercent(current.fontMin, 12);
+    const cap = Math.max(10, available * (maxPercent / 100) * scale);
+    const floor = Math.min(cap, available * (minPercent / 100) * scale);
 
     const wrapped = measure(true, available, width, cap);
     const noWrap = measure(false, available, width, cap);
 
-    // Celé verše na jednom riadku sú prehľadnejšie; zalomíme len vtedy,
-    // ak by nás to stálo výraznú stratu veľkosti písma.
-    if (noWrap >= Math.max(14, wrapped * 0.72)) {
-      linesBox.style.whiteSpace = 'pre';
-      linesBox.style.fontSize = `${noWrap}px`;
-      return;
-    }
-    linesBox.style.whiteSpace = 'pre-wrap';
-    linesBox.style.fontSize = `${wrapped}px`;
+    // Riadkovanie zo súboru chceme zachovať. Zalomíme až vtedy, keď by kvôli
+    // nemu bolo písmo menšie, než je nastavené minimum – alebo keď by sme tým
+    // stratili viac než desatinu veľkosti.
+    const keepBreaks = noWrap >= floor && noWrap >= wrapped * KEEP_BREAKS_RATIO;
+    linesBox.style.whiteSpace = keepBreaks ? 'pre' : 'pre-wrap';
+    linesBox.style.fontSize = `${keepBreaks ? noWrap : wrapped}px`;
+    shrinkToFit(keepBreaks ? noWrap : wrapped, available);
+  }
+
+  /** Prepočet po dokreslení – rozmery bývajú hotové až v ďalšom snímku. */
+  function refit() {
+    fit();
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(fit);
   }
 
   /** Popisok slohy: „1.“ alebo „Refrén“. */
@@ -110,7 +145,7 @@ export function createDisplay(root) {
       if (!text.trim()) div.innerHTML = '&nbsp;';
       linesBox.appendChild(div);
     });
-    fit();
+    refit();
   }
 
   /** Porovnanie toho, čo je vidieť – podľa toho sa rozhodne o prelínaní. */
@@ -175,6 +210,10 @@ export function createDisplay(root) {
 
   window.addEventListener('resize', fit);
   if (typeof ResizeObserver === 'function') new ResizeObserver(fit).observe(root);
+  // Písmo sa doťahuje ešte raz, keď sa dokončí načítanie písiem stránky.
+  if (typeof document !== 'undefined' && document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(fit).catch(() => {});
+  }
   render({ blank: true, theme: 'dark', lines: [] });
   return { render };
 }
