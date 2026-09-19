@@ -17,6 +17,13 @@ on:
   release:
     types: [published]
 
+# Vetvy main a claude/organista-android držia ten istý commit, takže sa
+# spúšťajú dva behy naraz. Bez tohto si navzájom prepisujú vydanie
+# android-latest a jeden z nich skončí chybou.
+concurrency:
+  group: android-vydanie
+  cancel-in-progress: false
+
 permissions:
   contents: write
 
