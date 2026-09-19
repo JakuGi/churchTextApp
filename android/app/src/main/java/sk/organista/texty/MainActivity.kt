@@ -324,6 +324,47 @@ class MainActivity : ComponentActivity() {
         }.getOrDefault("")
     }
 
+    /**
+     * Načíta súbor uložený v Stiahnuté/Organista (prípadne v podpriečinku).
+     * Používa sa na automatickú obnovu knižnice zo zálohy po preinštalovaní.
+     *
+     * @return obsah súboru, alebo prázdny reťazec, keď sa nenašiel
+     */
+    fun readExportedFile(subFolder: String, fileName: String): String {
+        val safeName = fileName.ifBlank { return "" }
+        val folder = subFolder.filter { it.isLetterOrDigit() || it == '-' || it == '_' }
+        val relative = if (folder.isEmpty()) "Organista" else "Organista/$folder"
+
+        return runCatching {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val path = "${Environment.DIRECTORY_DOWNLOADS}/$relative"
+                contentResolver.query(
+                    MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                    arrayOf(MediaStore.Downloads._ID),
+                    "${MediaStore.Downloads.DISPLAY_NAME} = ? AND ${MediaStore.Downloads.RELATIVE_PATH} LIKE ?",
+                    arrayOf(safeName, "$path%"),
+                    "${MediaStore.Downloads.DATE_MODIFIED} DESC",
+                )?.use { cursor ->
+                    val column = cursor.getColumnIndexOrThrow(MediaStore.Downloads._ID)
+                    while (cursor.moveToNext()) {
+                        val uri = ContentUris.withAppendedId(
+                            MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                            cursor.getLong(column),
+                        )
+                        val text = runCatching {
+                            contentResolver.openInputStream(uri)?.use { it.readBytes().decodeToString() }
+                        }.getOrNull()
+                        if (!text.isNullOrBlank()) return@runCatching text
+                    }
+                }
+                ""
+            } else {
+                val file = File(File(getExternalFilesDir(null), relative), safeName)
+                if (file.isFile) file.readText() else ""
+            }
+        }.getOrDefault("")
+    }
+
     /** Zmaže predchádzajúci súbor rovnakého mena, aby záloha nepribúdala v kópiách. */
     private fun replaceInDownloads(name: String, relativePath: String) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return

@@ -44,7 +44,9 @@ export async function importFiles(fileList, options = {}) {
       });
       if (!parsed.length) result.errors.push(`${file.name}: nenašli sa slohy`);
       songs.push(...parsed);
-      result.folders.add(folder);
+      // Zbierku určuje samotná pieseň – záloha si ju nesie v sebe, takže
+      // jeden súbor môže obnoviť piesne do viacerých zbierok naraz.
+      for (const song of parsed) result.folders.add(song.folder);
     } catch (error) {
       result.errors.push(`${file.name}: ${error.message}`);
     }
@@ -56,7 +58,7 @@ export async function importFiles(fileList, options = {}) {
     const inFolder = songs.filter((song) => song.folder === folder);
     await store.putFolder({
       name: folder,
-      system: (options.system || systemForFolder(folder) || (inFolder.find((s) => s.system) || {}).system || '').toUpperCase(),
+      system: (systemForFolder(folder) || (inFolder.find((s) => s.system) || {}).system || options.system || '').toUpperCase(),
       count: inFolder.length,
       updatedAt: importedAt,
     });

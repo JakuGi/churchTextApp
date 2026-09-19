@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { parseSongFile, searchSongs, parseNumber, numberFromFileName, normalize } from '../js/songs.js';
+import { parseSongFile, searchSongs, parseNumber, numberFromFileName, normalize, songToXml } from '../js/songs.js';
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 
@@ -87,4 +87,37 @@ test('prázdne slohy sa zahodia, poškodené XML nespadne', () => {
   const songs = parseSongFile('<piesen><nazov>X</nazov><slohy><sloha>  </sloha><sloha>text</sloha></slohy>', { fileName: 'x.xml' });
   assert.equal(songs[0].verses.length, 1);
   assert.deepEqual(parseSongFile('nezmysel', { fileName: 'a.xml' }), []);
+});
+
+test('záloha si pamätá zbierku aj názov súboru', () => {
+  const [song] = parseSongFile(read('songs/JKS/342-Ó_Bože_náš.xml'), {
+    folder: 'JKS', fileName: '342-Ó_Bože_náš.xml', folderSystem: 'JKS',
+  });
+  const xml = songToXml(song);
+  assert.match(xml, /<zbierka>JKS<\/zbierka>/);
+  assert.match(xml, /<subor>342-Ó_Bože_náš\.xml<\/subor>/);
+
+  // obnova zo zálohy: súbor sa volá inak, zbierka sa aj tak zachová
+  const [restored] = parseSongFile(xml, { folder: 'Ostatné', fileName: 'organista-zaloha-auto.xml' });
+  assert.equal(restored.folder, 'JKS');
+  assert.equal(restored.fileName, '342-Ó_Bože_náš.xml');
+  assert.equal(restored.id, song.id, 'identifikátor zostáva, takže uložené sety fungujú');
+  assert.equal(restored.title, song.title);
+  assert.equal(restored.number, song.number);
+  assert.equal(restored.verses.length, song.verses.length);
+});
+
+test('záloha viacerých zbierok sa obnoví do pôvodných zbierok', () => {
+  const songs = [
+    ...parseSongFile(read('songs/JKS/078-Vitaj_svetlo.xml'), { folder: 'JKS', fileName: '078.xml', folderSystem: 'JKS' }),
+    ...parseSongFile(read('songs/Ukazkove/viacero-piesni.xml'), { folder: 'Ukazkove', fileName: 'viac.xml' }),
+  ];
+  const body = songs.map((song) => songToXml(song).replace(/<\?xml[^>]*\?>\s*/, '').trim()).join('\n');
+  const backup = `<?xml version="1.0" encoding="UTF-8"?>\n<piesne>\n${body}\n</piesne>\n`;
+
+  const restored = parseSongFile(backup, { folder: 'Ostatné', fileName: 'organista-zaloha-auto.xml' });
+  assert.equal(restored.length, songs.length);
+  assert.deepEqual(restored.map((s) => s.folder), songs.map((s) => s.folder));
+  assert.deepEqual(restored.map((s) => s.id), songs.map((s) => s.id));
+  assert.equal(new Set(restored.map((s) => s.id)).size, restored.length, 'identifikátory sú jedinečné');
 });

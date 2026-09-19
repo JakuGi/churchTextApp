@@ -4,6 +4,9 @@ import android.app.Presentation
 import android.content.Context
 import android.graphics.Color
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.os.SystemClock
 import android.view.Display
 import android.view.ViewGroup
 import android.webkit.WebView
@@ -26,6 +29,22 @@ class SongPresentation(
     private var webView: WebView? = null
     private var ready = false
     private var pending: String? = null
+
+    private val handler = Handler(Looper.getMainLooper())
+    private var drawUntil = 0L
+
+    /**
+     * Okno na druhej obrazovke sa samo prekresľuje len vtedy, keď ho o to
+     * niekto požiada. Po zmene textu preto chvíľu žiadame o prekreslenie
+     * v každom snímku – inak by prelínanie zamrzlo v polovici.
+     */
+    private val keepDrawing = object : Runnable {
+        override fun run() {
+            val view = webView ?: return
+            view.invalidate()
+            if (SystemClock.uptimeMillis() < drawUntil) handler.postDelayed(this, FRAME_MS)
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -51,7 +70,9 @@ class SongPresentation(
                     pending = null
                 }
             }
-            loadUrl("${WebApp.BASE_URL}display.html")
+            // ?rezim=tv – stránka vie, že stav dostane z natívnej časti
+            // a nemá sa pokúšať o spojenie so serverom ani o miestny prenos.
+            loadUrl("${WebApp.BASE_URL}display.html?rezim=tv")
         }
         webView = view
         setContentView(view)
@@ -67,13 +88,21 @@ class SongPresentation(
             return
         }
         view.evaluateJavascript("window.organistaRender($stateJson);", null)
-        // Okno na televízore si samo nevyžiada prekreslenie, keď sa obsah
-        // zmení bez dotyku – bez tohto by text zaostával o jeden krok.
-        view.postInvalidateOnAnimation()
+        // Prekresľuj, kým dobehne prelínanie (najdlhšie nastaviteľné je 400 ms).
+        val running = drawUntil > SystemClock.uptimeMillis()
+        drawUntil = SystemClock.uptimeMillis() + DRAW_WINDOW_MS
+        if (!running) handler.post(keepDrawing)
     }
 
     fun destroy() {
+        drawUntil = 0L
+        handler.removeCallbacks(keepDrawing)
         webView?.destroy()
         webView = null
+    }
+
+    private companion object {
+        const val FRAME_MS = 16L
+        const val DRAW_WINDOW_MS = 800L
     }
 }

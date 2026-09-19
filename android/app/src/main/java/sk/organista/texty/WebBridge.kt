@@ -76,6 +76,11 @@ class WebBridge(private val activity: MainActivity) {
     fun exportFileTo(subFolder: String, fileName: String, content: String): String =
         activity.exportFile(fileName, content, subFolder)
 
+    /** Načíta zálohu uloženú v Stiahnuté/Organista (napríklad z autosave). */
+    @JavascriptInterface
+    fun readExportedFile(subFolder: String, fileName: String): String =
+        activity.readExportedFile(subFolder, fileName)
+
     /** Stiahne text z povolenej adresy (GitHub) – kontrola novej verzie. */
     @JavascriptInterface
     fun fetchText(url: String, callback: String) {
@@ -91,5 +96,5 @@ class WebBridge(private val activity: MainActivity) {
 
 /** Verzia aplikácie bez potreby generovaného BuildConfig. */
 object BuildConfigCompat {
-    const val versionName: String = "a0.1.2"
+    const val versionName: String = "a0.1.3"
 }

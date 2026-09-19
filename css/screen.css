@@ -44,3 +44,9 @@
   opacity: 0;
   transition: none;
 }
+/* Koniec prelínania natvrdo – keby prechod na televízore zamrzol v polovici. */
+.screen.is-settled .lines,
+.screen.is-settled .meta {
+  opacity: 1;
+  transition: none;
+}

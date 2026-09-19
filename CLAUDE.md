@@ -34,10 +34,16 @@ v kostole. Ovládanie je na tablete, text ide na druhú obrazovku.
 > `claude/cool-feynman-88sk88`. Prepnúť na `main` vie iba vlastník repozitára
 > (*Settings → General → Default branch*); Claude na to nemá nástroj.
 
-**Číslovanie verzií:** všetko je zatiaľ **alfa** – `a0.x.y`, teraz `a0.1.2`.
+**Číslovanie verzií:** všetko je zatiaľ **alfa** – `a0.x.y`, teraz `a0.1.3`.
 Pôvodné čísla sa premenovali: `1.0.0 → a0.0.0`, `1.0.1 → a0.0.1`,
 `1.1.0 → a0.1.0`, `1.1.1 → a0.1.1`. Číslo `1.0.0` je vyhradené pre prvú
 odskúšanú verziu.
+
+> **Stále pravidlo od používateľa:** každá ďalšia úprava je nová verzia
+> `a0.1.<predchádzajúca+1>`, pokiaľ nepovie inak. A vždy, keď sa opraví chyba,
+> doplní sa jej popis do sekcie **predchádzajúcej** verzie v `CHANGELOG.md` ako
+> *Známe chyby (opravené vo verzii …)* – aby bolo pri každej verzii vidieť,
+> čo v nej nefungovalo.
 Verzia sa zapisuje na troch miestach a musia sedieť:
 
 - `android/app/build.gradle.kts` – `versionName` (+ zvýš `versionCode`),
@@ -78,7 +84,7 @@ Natívna časť (Kotlin, `android/app/src/main/java/sk/organista/texty/`):
 | `WebBridge.kt` | `window.OrganistaNative` – most medzi JS a Kotlinom, `versionName` |
 | `Storage.kt` | súbory piesní, zbierok a setov v súkromnom priečinku aplikácie |
 | `PresentationController.kt` | sledovanie externých displejov (`MediaRouter` + `DisplayManager`) |
-| `SongPresentation.kt` | `android.app.Presentation` – okno na televízore |
+| `SongPresentation.kt` | `android.app.Presentation` – okno na televízore (`display.html?rezim=tv`, prekresľuje sa počas prelínania) |
 | `WebApp.kt` | pomocné veci okolo WebView |
 
 ## 4. Ako sa to stavia a vydáva
@@ -129,6 +135,9 @@ testov). Testy žalmu používajú uložené stránky v `tests/fixtures/`.
   prijatím stavu a jeho vykreslením – v okne na druhej obrazovke sa časovače
   môžu oneskoriť a obraz potom zaostával o krok. Každá správa nesie `ts`
   a staršie sa zahadzujú; v Androide ide stav len natívnou cestou.
+- **Záloha nesie zbierku aj názov súboru** (`<zbierka>`, `<subor>` v `songToXml`).
+  Identifikátor piesne je `zbierka/súbor` (pri viacerých piesňach v súbore
+  s `#poradím`), takže po obnove zo zálohy sedia aj uložené sety.
 
 ## 6. Na čo si dať pozor (naučené po tvrdom)
 
@@ -145,6 +154,15 @@ testov). Testy žalmu používajú uložené stránky v `tests/fixtures/`.
   a `--notes-file`.
 - `android-actions/setup-android` potrebuje `packages: ''` (predvolený zoznam
   obsahuje zrušený balík `tools`).
+- **Okno na druhej obrazovke (`Presentation`) sa prekreslí len vtedy, keď ho
+  o to niekto požiada.** Jedno `invalidate()` po zmene stavu nestačí – animácia
+  potom zamrzne v prvom snímku. Preto sa prekresľuje v slučke po dobu
+  prelínania a JS má poistku (`is-settled`), ktorá prechod ukončí natvrdo.
+- **V okne druhej obrazovky nie je `window.OrganistaNative`** (most sa pridáva
+  len hlavnému WebView). Režim televízora sa preto pozná podľa `?rezim=tv`
+  v adrese.
+- Natívne testovanie sa dá obísť falošným mostom `window.OrganistaNative`
+  cez Playwright `addInitScript` – takto sa dá overiť aj obnova zo zálohy.
 
 ## 7. Obmedzenia prostredia, v ktorom Claude pracuje
 
@@ -164,6 +182,8 @@ testov). Testy žalmu používajú uložené stránky v `tests/fixtures/`.
 1. Prepnúť predvolenú vetvu repozitára na `main`.
 2. Nastaviť tajomstvá s podpisovacím kľúčom, aby sa dala aplikácia
    aktualizovať bez odinštalovania.
-3. Verziu `a0.1.1` treba do tabletu stiahnuť ručne – staršia inštalácia ešte
-   porovnáva staré číslo verzie. Ďalšie aktualizácie už tlačidlo v nastaveniach
-   nájde samo.
+3. Ak sa aplikácia inštaluje nanovo (odinštalovať + inštalovať), knižnica sa
+   po spustení obnoví z automatickej zálohy v `Stiahnuté/Organista/autosave/`.
+   Čítanie tejto zálohy po preinštalovaní závisí od toho, či Android nechá
+   aplikácii prístup k jej starým súborom – ak nie, piesne treba načítať ručne
+   cez *Načítať priečinok*.

@@ -10,6 +10,35 @@ spoľahlivo). Pôvodné čísla `1.0.0` – `1.1.1` sa premenovali takto:
 Číslo `1.0.0` dostane až prvá verzia, ktorá bude na bežné používanie v kostole
 overená.
 
+## a0.1.3
+
+**Obraz na televízore**
+
+- **Prelínanie už nezamrzne v polovici.** Okno na druhej obrazovke sa
+  prekresľovalo len raz po zmene textu, takže sloha zostala viditeľná na
+  polovicu a čierna obrazovka nechala na televízore presvitať text. Teraz sa
+  okno prekresľuje počas celého prelínania a na jeho konci sa text natvrdo
+  prepne na plnú viditeľnosť.
+- **Hlásenia „Pripájam sa k tabletu…“ a „Server nedostupný“ už na televízore
+  nezostávajú.** Druhá obrazovka v aplikácii pre Android o sebe vie (otvára sa
+  s `?rezim=tv`), takže sa nepokúša spájať so serverom, a akýkoľvek stav
+  z tabletu – aj čierna obrazovka – hlásenie schová.
+- **Odchod z premietania zhasne televízor okamžite.** Predtým čierna obrazovka
+  naskočila až po prechode do knižnice. Po návrate do premietania sa text
+  objaví, až keď ho sám zapneš.
+
+**Zálohy**
+
+- **Záloha si pamätá zbierky.** Ku každej piesni sa ukladá aj zbierka
+  a pôvodný názov súboru, takže po obnove sú piesne späť v *JKS*, *Žalmy*
+  a ostatných zbierkach – nie všetky v jednej kope. Piesne si zachovajú aj
+  svoje identifikátory, takže **uložené sety zostanú funkčné**.
+- **Prázdna knižnica sa pri spustení obnoví sama** z poslednej automatickej
+  zálohy v `Stiahnuté/Organista/autosave/`. Po ručnej aktualizácii aplikácie
+  (odinštalovanie a nová inštalácia) tak piesne netreba nahrávať znova.
+- Staršie zálohy, ktoré zbierku v sebe nemajú, sa načítajú do zbierky
+  *Ostatné* – tie treba prípadne roztriediť ručne.
+
 ## a0.1.2
 
 **Premietanie na televízore už nezaostáva**
@@ -29,6 +58,17 @@ overená.
 
 - **Zelené tlačidlo „✓ V sete“ pieseň zo setu odoberie.** Predtým sa nedalo
   stlačiť. Rovnako sa správa aj tlačidlo v okne s náhľadom piesne.
+
+**Známe chyby (opravené vo verzii a0.1.3)**
+
+- **Prelínanie na televízore zamŕzalo v polovici.** Text sa objavil len
+  spolovice viditeľný a takto zostal až do ďalšieho stlačenia; pri čiernej
+  obrazovke na televízore presvital text a po jej vypnutí čierna preblikla
+  a text sa vrátil opäť polovičný.
+- **Na televízore zostávali hlásenia** „Pripájam sa k tabletu…“ a „Server
+  nedostupný“, aj keď premietanie bežalo.
+- **Po odchode z premietania sa televízor nezhasol** hneď, ale až po prechode
+  do knižnice.
 
 ## a0.1.1
 

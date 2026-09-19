@@ -73,12 +73,19 @@ function toast(message, kind = 'info') {
 }
 
 function setView(view) {
+  const leavingLive = state.view === 'live' && view !== 'live';
   state.view = view;
   $$('.view').forEach((node) => node.classList.toggle('is-active', node.dataset.view === view));
   $$('.tab').forEach((node) => node.classList.toggle('is-active', node.dataset.goto === view));
   document.body.classList.toggle('is-live', view === 'live');
   if (view === 'live') enableWakeLock();
   else releaseWakeLock();
+  // Odchod z premietania hneď zhasne televízor; po návrate sa text
+  // neobjaví skôr, než ho organista sám zapne.
+  if (leavingLive) {
+    state.live.blank = true;
+    publish();
+  }
 }
 
 async function enableWakeLock() {
@@ -280,6 +287,30 @@ function startAutoBackup() {
   if (!isNative) return;
   autoBackup();
   setInterval(autoBackup, AUTO_BACKUP_MINUTES * 60 * 1000);
+}
+
+/**
+ * Prázdna knižnica po preinštalovaní aplikácie sa sama obnoví z automatickej
+ * zálohy v Stiahnuté/Organista/autosave. Piesne sa vrátia do tých istých
+ * zbierok, z ktorých boli – zbierku si každá pieseň nesie v zálohe.
+ */
+async function restoreFromAutoBackup() {
+  if (!isNative || state.songs.length) return false;
+  const xml = call('readExportedFile', 'autosave', AUTO_BACKUP_FILE);
+  if (!xml || !xml.trim()) return false;
+  try {
+    const result = await importFiles([{
+      name: AUTO_BACKUP_FILE,
+      webkitRelativePath: AUTO_BACKUP_FILE,
+      text: async () => xml,
+    }]);
+    if (!result.songs) return false;
+    await reloadLibrary();
+    toast(`Knižnica obnovená zo zálohy: ${pluralSongs(result.songs)}.`, 'ok');
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 // --------------------------------------------------------------- aktualizácia
@@ -1485,6 +1516,9 @@ async function main() {
   setView('library');
   publish();
 
+  // Po preinštalovaní (napríklad ručnou aktualizáciou) býva knižnica prázdna –
+  // vtedy sa načíta posledná automatická záloha.
+  await restoreFromAutoBackup();
   startAutoBackup();
 
   const kind = await storageKind();

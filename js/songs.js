@@ -210,10 +210,15 @@ function buildSong(root, context) {
   const number = numberInfo ? numberInfo.number + numberInfo.suffix : '';
   const system = numberInfo && numberInfo.system ? numberInfo.system : (context.folderSystem || '');
 
+  // Záloha si nesie svoju zbierku aj názov súboru – tie majú prednosť pred
+  // priečinkom, z ktorého sa súbor práve načítava.
+  const folder = textOf(firstElement(root, 'zbierka', 'folder')).trim() || context.folder || 'Ostatné';
+  const fileName = textOf(firstElement(root, 'subor', 'file')).trim() || context.fileName || '';
+
   return {
-    id: context.id,
-    folder: context.folder || 'Ostatné',
-    fileName: context.fileName || '',
+    id: `${folder}/${fileName}`,
+    folder,
+    fileName,
     title,
     author: data.author || '',
     melody: data.melody || '',
@@ -250,12 +255,26 @@ export function parseSongFile(xmlText, context = {}) {
     }
   }
 
-  return songNodes
-    .map((node, index) => buildSong(node, {
-      ...base,
-      id: `${base.folder}/${base.fileName}${songNodes.length > 1 ? `#${index + 1}` : ''}`,
-    }))
-    .filter((song) => song.verses.length > 0);
+  // Poradie sa počíta ešte pred zahodením piesní bez slôh, aby zostali
+  // rovnaké identifikátory ako pri pôvodnom načítaní.
+  const songs = songNodes.map((node) => buildSong(node, base));
+
+  // Identifikátor je „zbierka/súbor“, pri viacerých piesňach v jednom súbore
+  // s poradovým číslom. Vďaka tomu majú piesne obnovené zo zálohy tie isté
+  // identifikátory ako predtým a uložené sety zostanú funkčné.
+  const counts = new Map();
+  for (const song of songs) {
+    const key = `${song.folder}/${song.fileName}`;
+    counts.set(key, (counts.get(key) || 0) + 1);
+  }
+  const seen = new Map();
+  for (const song of songs) {
+    const key = `${song.folder}/${song.fileName}`;
+    const order = (seen.get(key) || 0) + 1;
+    seen.set(key, order);
+    song.id = counts.get(key) > 1 ? `${key}#${order}` : key;
+  }
+  return songs.filter((song) => song.verses.length > 0);
 }
 
 /** Zoradenie piesní: najprv podľa čísla (ak je), potom podľa názvu. */
@@ -409,6 +428,10 @@ const XML_TAGS = { verse: 'sloha', chorus: 'refren', bridge: 'medzihra', ending:
 export function songToXml(song) {
   const lines = ['<?xml version="1.0" encoding="UTF-8"?>', '<piesen>'];
   lines.push(`  <nazov>${escapeXml(song.title)}</nazov>`);
+  // Zbierka a pôvodný názov súboru sú v zálohe dôležité: po obnove sa piesne
+  // vrátia do tých istých zbierok, z ktorých boli.
+  if (song.folder) lines.push(`  <zbierka>${escapeXml(song.folder)}</zbierka>`);
+  if (song.fileName) lines.push(`  <subor>${escapeXml(song.fileName)}</subor>`);
   if (song.number) {
     lines.push(`  <cislo${song.system ? ` typ="${escapeXml(song.system)}"` : ''}>${escapeXml(song.number)}</cislo>`);
   }

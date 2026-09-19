@@ -22,6 +22,8 @@ export function createDisplay(root) {
   const metaVerse = root.querySelector('#metaVerse');
   let current = null;
   let lastTs = 0;
+  let settleTimer = null;
+  let fadeEndsAt = 0;
 
   // Najväčšie písmo, pri ktorom sa text ešte zmestí na plochu.
   // Prvá voľba: každý riadok piesne zostane na jednom riadku obrazovky.
@@ -148,13 +150,27 @@ export function createDisplay(root) {
     // takže na televízore nikdy nevidno predchádzajúcu slohu – aj keby sa
     // časovače v okne druhej obrazovky oneskorili.
     const changed = previousKey !== contentKey(state);
+    if (changed) {
+      clearTimeout(settleTimer);
+      screen.classList.remove('is-swapping', 'is-settled');
+    }
     paint(state);
-    screen.classList.remove('is-swapping');
-    if (!fade || !changed || !previousKey) return;
 
+    if (!changed || !fade || !previousKey) {
+      // Bez prelínania má byť text hneď plne viditeľný. Ak práve nejaké beží
+      // (ten istý stav prišiel druhý raz), nechá sa dobehnúť.
+      if (changed || Date.now() >= fadeEndsAt) screen.classList.add('is-settled');
+      return;
+    }
+
+    fadeEndsAt = Date.now() + fade;
     screen.classList.add('is-swapping');
     void screen.offsetWidth;   // vynúti prepočet štýlu, aby prechod nabehol
     screen.classList.remove('is-swapping');
+
+    // Poistka pre okno na televízore: keby tam prechod zamrzol v polovici,
+    // po jeho uplynutí sa text natvrdo prepne na plnú viditeľnosť.
+    settleTimer = setTimeout(() => screen.classList.add('is-settled'), fade + 60);
   }
 
   window.addEventListener('resize', fit);

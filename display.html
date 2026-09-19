@@ -17,39 +17,43 @@
 
   const display = createDisplay(document.getElementById('root'));
   const statusBox = document.getElementById('status');
-  let gotText = false;
+  let gotState = false;
 
   const show = (state) => {
+    if (!state) return;
     display.render(state);
-    if (state && !state.blank && state.lines && state.lines.length) {
-      gotText = true;
-      statusBox.hidden = true;
-    }
+    // Akýkoľvek stav z tabletu znamená, že spojenie funguje – aj čierna
+    // obrazovka. Hlásenie o pripájaní sa už potom nikdy neukáže.
+    gotState = true;
+    statusBox.hidden = true;
   };
   const setStatus = (text, ok) => {
-    if (gotText) return;
+    if (gotState) return;
     statusBox.textContent = text;
     statusBox.className = `dstatus${ok ? ' dstatus--ok' : ''}`;
     statusBox.hidden = false;
   };
 
-  // V aplikácii pre Android posiela stav natívna časť. Miestny prenos
-  // (BroadcastChannel/localStorage) sa tam nepoužíva – jeho správy chodia
-  // s oneskorením a prepísali by čerstvý stav tým predchádzajúcim.
-  const native = !!window.OrganistaNative;
-  if (!native) createLocalBus().subscribe(show);
+  // Druhú obrazovku v aplikácii pre Android otvára natívna časť s ?rezim=tv.
+  // Most window.OrganistaNative v tomto okne nie je, preto sa režim pozná
+  // podľa adresy. Miestny prenos (BroadcastChannel/localStorage) ani server
+  // sa tu nepoužívajú – stav chodí priamo z natívnej časti.
+  const native = new URLSearchParams(location.search).get('rezim') === 'tv'
+    || !!window.OrganistaNative;
 
   // Aplikácia pre Android posiela stav priamo sem, na druhú obrazovku.
-  window.organistaRender = (state) => {
-    if (state) show(state);
-  };
-  if (native) setStatus('Pripojené k tabletu. Čakám na text piesne…', true);
-  const net = native ? null : subscribeNet(show, {
-    onOpen: () => setStatus('Pripojené k tabletu. Čakám na text piesne…', true),
-    onError: () => setStatus('Server nedostupný – skontroluj Wi-Fi a adresu.', false),
-  });
-  if (!native && !net) setStatus('Táto obrazovka je riadená z toho istého zariadenia.', true);
-  setTimeout(() => { if (!gotText) statusBox.hidden = false; }, 500);
+  window.organistaRender = (state) => show(state);
+
+  if (native) {
+    setStatus('Pripojené k tabletu. Čakám na text piesne…', true);
+  } else {
+    createLocalBus().subscribe(show);
+    const net = subscribeNet(show, {
+      onOpen: () => setStatus('Pripojené k tabletu. Čakám na text piesne…', true),
+      onError: () => setStatus('Server nedostupný – skontroluj Wi-Fi a adresu.', false),
+    });
+    if (!net) setStatus('Táto obrazovka je riadená z toho istého zariadenia.', true);
+  }
 
   const fsButton = document.getElementById('fs');
   fsButton.onclick = () => {
