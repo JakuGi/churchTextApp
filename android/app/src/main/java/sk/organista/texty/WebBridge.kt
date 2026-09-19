@@ -68,6 +68,26 @@ class WebBridge(private val activity: MainActivity) {
     @JavascriptInterface
     fun songsFolder(): String = activity.songsFolderPath()
 
+    /** Plná cesta k priečinku s piesňami (do nastavení). */
+    @JavascriptInterface
+    fun songsFolderFull(): String = activity.songsFolderFullPath()
+
+    /** Má aplikácia povolený prístup k súborom v tablete? */
+    @JavascriptInterface
+    fun hasFileAccess(): Boolean = activity.hasFileAccess()
+
+    /** Otvorí systémové nastavenie „Prístup ku všetkým súborom“. */
+    @JavascriptInterface
+    fun requestFileAccess() {
+        activity.requestFileAccess()
+    }
+
+    /** Vyberie iný priečinok na piesne a presunie doň celý obsah. */
+    @JavascriptInterface
+    fun pickSongsFolder() {
+        activity.pickSongsDir()
+    }
+
     /** Je priečinok s piesňami už potvrdený? */
     @JavascriptInterface
     fun hasSongsFolder(): Boolean = activity.hasSongsFolder()
@@ -123,5 +143,5 @@ class WebBridge(private val activity: MainActivity) {
 
 /** Verzia aplikácie bez potreby generovaného BuildConfig. */
 object BuildConfigCompat {
-    const val versionName: String = "a0.1.4"
+    const val versionName: String = "a0.1.5"
 }

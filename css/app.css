@@ -212,6 +212,32 @@ main { flex: 1; min-height: 0; display: flex; overflow-x: hidden; }
   flex: 1; min-height: 0; border-radius: var(--radius);
   overflow: hidden; border: 2px solid var(--line); background: #000;
 }
+/* Slohy piesne ako malé obrazovky pod sebou (živý režim) */
+.versescreens {
+  flex: 1; min-height: 0; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 10px; padding-right: 4px;
+}
+.vscreen {
+  display: flex; align-items: stretch; gap: 10px; padding: 6px;
+  border: 2px solid var(--line); border-radius: var(--radius);
+  background: var(--panel); color: var(--fg); cursor: pointer; text-align: left;
+}
+.vscreen__label {
+  flex: 0 0 68px; display: flex; flex-direction: column; justify-content: center;
+  font-weight: 800; font-size: 20px; line-height: 1.2;
+}
+.vscreen__label small { display: block; font-size: 11px; font-weight: 600; color: var(--muted); }
+.vscreen__screen {
+  flex: 1; min-width: 0; aspect-ratio: 16 / 9; border-radius: 8px;
+  overflow: hidden; background: #000;
+}
+.vscreen.is-selected { border-color: var(--accent); }
+.vscreen.is-live {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px rgba(226,87,76,.35);
+}
+.vscreen.is-live .vscreen__label { color: var(--danger); }
+
 .notice {
   background: rgba(226,87,76,.14); border: 1px solid rgba(226,87,76,.5);
   color: #ffb3ad; border-radius: 10px; padding: 10px 14px; font-size: 15px; font-weight: 600;
@@ -252,7 +278,13 @@ main { flex: 1; min-height: 0; display: flex; overflow-x: hidden; }
   position: fixed; inset: auto 12px 12px 12px; z-index: 40;
   background: var(--panel); border: 2px solid var(--accent); border-radius: 18px;
   padding: 16px; display: flex; flex-direction: column; gap: 12px;
-  max-height: 85vh; overflow-y: auto; box-shadow: 0 24px 60px rgba(0,0,0,.6);
+  max-height: 85vh; box-shadow: 0 24px 60px rgba(0,0,0,.6);
+}
+/* Nájdené piesne sú nad klávesnicou a majú stálu výšku – klávesnica tak
+   pri písaní neposkakuje. */
+.quickresults--live {
+  height: 27vh; min-height: 120px; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 8px;
 }
 [hidden] { display: none !important; }
 .jumppanel__head { display: flex; align-items: center; gap: 16px; }
@@ -269,7 +301,6 @@ main { flex: 1; min-height: 0; display: flex; overflow-x: hidden; }
   border: 1px solid var(--line); background: var(--panel-2); color: var(--fg); cursor: pointer;
 }
 .key--alt { background: var(--panel); color: var(--muted); font-size: 24px; }
-.quickresults--live { max-height: 30vh; overflow-y: auto; }
 
 /* ----------------------------------------------------------------- dialóg */
 .dialog {

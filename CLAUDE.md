@@ -34,7 +34,7 @@ v kostole. Ovládanie je na tablete, text ide na druhú obrazovku.
 > `claude/cool-feynman-88sk88`. Prepnúť na `main` vie iba vlastník repozitára
 > (*Settings → General → Default branch*); Claude na to nemá nástroj.
 
-**Číslovanie verzií:** všetko je zatiaľ **alfa** – `a0.x.y`, teraz `a0.1.4`.
+**Číslovanie verzií:** všetko je zatiaľ **alfa** – `a0.x.y`, teraz `a0.1.5`.
 Pôvodné čísla sa premenovali: `1.0.0 → a0.0.0`, `1.0.1 → a0.0.1`,
 `1.1.0 → a0.1.0`, `1.1.1 → a0.1.1`. Číslo `1.0.0` je vyhradené pre prvú
 odskúšanú verziu.
@@ -141,9 +141,17 @@ testov). Testy žalmu používajú uložené stránky v `tests/fixtures/`.
 - **Priečinok `Stiahnuté/Organista/piesne` je úložisko piesní.** Číta sa pri
   každom spustení (`loadSongsFolderAtStart`), nové a upravené piesne sa doň
   zapisujú (`writeSongFile`) a zmazané sa z neho mažú (`removeSongFile`) –
-  inak by sa pri ďalšom štarte vrátili. Prístup je cez SAF: strom si
-  používateľ potvrdí raz, uloží sa do `SharedPreferences` a berie sa naň
-  trvalé právo na čítanie aj zápis.
+  inak by sa pri ďalšom štarte vrátili.
+- **Prístup k priečinku:** hlavná cesta je povolenie
+  `MANAGE_EXTERNAL_STORAGE` („Prístup ku všetkým súborom“) a potom bežné
+  `java.io.File` – vďaka tomu sa nič nevyberá a priečinok je predvolený.
+  Cesta sa dá zmeniť (`moveSongsDir` presunie obsah). Keď povolenie nie je,
+  použije sa pôvodná cesta cez SAF (strom potvrdený používateľom, uložený
+  v `SharedPreferences`).
+- **Živý režim ukazuje slohy ako malé obrazovky pod sebou**
+  (`renderVerseScreens`), ťuknutím sa premietnu, premietaná má červený rámik
+  (`.vscreen.is-live`). Dva pôvodné náhľady sú preč. Z premietania sa dá
+  pieseň rovno upraviť (`editCurrentSong`, návrat cez `editorReturn`).
 - **Veľkosť textu** (`display-core.js`): binárne hľadanie hľadá najväčšie
   písmo medzi `fontMin` a `fontMax` (% výšky plochy s textom). Riadkovanie zo
   súboru sa zachová, ak by zalomenie prinieslo menej než 10 % veľkosti navyše
@@ -177,6 +185,9 @@ testov). Testy žalmu používajú uložené stránky v `tests/fixtures/`.
   a na televízore je vidieť menej riadkov než v náhľade.
 - Natívne testovanie sa dá obísť falošným mostom `window.OrganistaNative`
   cez Playwright `addInitScript` – takto sa dá overiť aj obnova zo zálohy.
+- **Panel rýchleho výberu čísla je ukotvený dole**, preto musia mať nájdené
+  piesne stálu výšku a byť **nad** klávesnicou – inak sa tlačidlá pri písaní
+  posúvajú.
 
 ## 7. Obmedzenia prostredia, v ktorom Claude pracuje
 

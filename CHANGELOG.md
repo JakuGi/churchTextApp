@@ -10,6 +10,29 @@ spoľahlivo). Pôvodné čísla `1.0.0` – `1.1.1` sa premenovali takto:
 Číslo `1.0.0` dostane až prvá verzia, ktorá bude na bežné používanie v kostole
 overená.
 
+## a0.1.5
+
+**Priečinok s piesňami bez pýtania**
+
+- **Po inštalácii sa aplikácia už nepýta, kde má piesne ukladať.** Rovno
+  používa priečinok `Stiahnuté/Organista/piesne` a načíta ho pri spustení.
+  Stačí jej raz zapnúť **prístup k súborom** (*Nastavenia → Priečinok
+  s piesňami → Povoliť prístup k súborom*); Android inak aplikácii do
+  bežných priečinkov nevidí.
+- **Priečinok sa dá zmeniť** v *Nastavenia → Priečinok s piesňami →
+  Zmeniť priečinok*. Celý obsah toho starého sa do nového presunie.
+
+**Premietanie**
+
+- Namiesto dvoch náhľadov sú pod sebou **obrazovky jednotlivých slôh** tak,
+  ako budú vyzerať na televízore. Ťuknutím na slohu ju premietneš a práve
+  premietaná má **červený rámik**. Výber slôh číslami vpravo aj veľké
+  tlačidlá dole zostali bez zmeny.
+- Nové tlačidlo **✎ Upraviť** priamo v premietaní: keď v texte nájdeš chybu,
+  hneď ju opravíš a uloží sa natrvalo. Po uložení sa vrátiš tam, kde si bol.
+- **Rýchly výber čísla už neuteká.** Nájdené piesne sú nad klávesnicou
+  a majú stálu výšku, takže sa tlačidlá pri písaní nehýbu.
+
 ## a0.1.4
 
 **Priečinok s piesňami je úložisko**
@@ -40,6 +63,13 @@ overená.
   s textom). *Najmenšie* rozhoduje, kedy sa riadok radšej rozdelí,
   *najväčšie* drží na uzde krátke slohy, aby jedno slovo nezaplnilo celú
   obrazovku.
+
+**Známe chyby (opravené vo verzii a0.1.5)**
+
+- **Pri prvom spustení sa aplikácia pýtala, ktorý priečinok má používať** –
+  namiesto toho, aby rovno použila ten predvolený.
+- **V rýchlom výbere čísla počas premietania utekala klávesnica**: len čo sa
+  pod ňou objavili nájdené piesne, tlačidlá sa posunuli a ťukalo sa vedľa.
 
 ## a0.1.3
 

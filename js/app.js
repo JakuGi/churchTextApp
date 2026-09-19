@@ -30,8 +30,6 @@ const bus = createLocalBus();
 const net = createNetBus({ onStatus: (status) => renderNetStatus(status) });
 const nativeBus = createNativeBus();
 let editor = null;
-let preview = null;
-let previewSelected = null;
 let displayWindow = null;
 let wakeLock = null;
 
@@ -598,9 +596,39 @@ function playPsalm() {
 
 // ---------------------------------------------------------------- editor
 
-function openEditor(song) {
+/** Odkiaľ sa editor otvoril – po uložení sa tam vrátime. */
+let editorReturn = 'library';
+
+function openEditor(song, from = 'library') {
+  editorReturn = from;
   editor.open(song || null);
   setView('editor');
+}
+
+/**
+ * Úprava piesne priamo z premietania: keď je v texte chyba, dá sa opraviť
+ * hneď a natrvalo. Po uložení sa premietanie vráti na tú istú pieseň.
+ */
+function editCurrentSong() {
+  const song = currentSong();
+  if (!song) {
+    toast('Najprv vyber pieseň.', 'warn');
+    return;
+  }
+  if (song.temporary) {
+    toast('Túto pieseň (žalm) najprv ulož do knižnice.', 'warn');
+    return;
+  }
+  openEditor(song, 'live');
+}
+
+/** Po úprave z premietania nahradí pieseň v zozname jej novou podobou. */
+function refreshLiveSong(song, replacedId) {
+  const index = state.live.songs.findIndex((item) => item.id === (replacedId || song.id));
+  if (index >= 0) state.live.songs[index] = song;
+  state.live.verseIndex = Math.min(state.live.verseIndex, song.verses.length - 1);
+  verseScreens.key = '';
+  renderLive();
 }
 
 function setupEditor() {
@@ -632,16 +660,30 @@ function setupEditor() {
       toast(stored
         ? `Pieseň „${song.title}“ uložená do zbierky ${song.folder}.`
         : `Pieseň „${song.title}“ uložená.`, 'ok');
+      if (editorReturn === 'live') {
+        editorReturn = 'library';
+        setView('live');
+        refreshLiveSong(song, replacedId);
+      }
     },
     onDelete: async (song) => {
       removeSongFile(song);
       await store.deleteSongs([song.id]);
       state.set.items = state.set.items.filter((id) => id !== song.id);
+      state.live.songs = state.live.songs.filter((item) => item.id !== song.id);
+      state.live.songIndex = Math.min(state.live.songIndex, Math.max(0, state.live.songs.length - 1));
+      state.live.verseIndex = 0;
+      verseScreens.key = '';
+      editorReturn = 'library';
       await reloadLibrary();
       toast(`Pieseň „${song.title}“ zmazaná.`, 'ok');
       setView('library');
     },
-    onClose: () => setView('library'),
+    onClose: () => {
+      const back = editorReturn;
+      editorReturn = 'library';
+      setView(back === 'live' && state.live.songs.length ? 'live' : 'library');
+    },
   });
 }
 
@@ -963,11 +1005,78 @@ function renderLive() {
     });
   }
 
+  renderVerseScreens();
+
   $('#prevVerse').disabled = !song || (state.live.verseIndex === 0 && state.live.songIndex === 0);
   $('#nextVerse').disabled = !song
     || (state.live.verseIndex >= song.verses.length - 1 && state.live.songIndex >= state.live.songs.length - 1);
 
   publish();
+}
+
+// ------------------------------------------- obrazovky slôh v živom režime
+
+const verseScreens = { key: '', items: [] };
+
+/** Podľa čoho sa pozná, že sa obrazovky slôh musia prekresliť. */
+function verseScreensKey(song) {
+  if (!song) return '';
+  const look = [
+    state.settings.theme, state.settings.fontScale, state.settings.fontMin, state.settings.fontMax,
+    state.settings.header, state.settings.showVerseLabel, state.settings.verseNumberInline,
+    state.settings.uppercase, state.settings.lineSpacing,
+  ];
+  return JSON.stringify([song.id, song.verses.map((verse) => verse.lines.join('|')), look]);
+}
+
+/**
+ * Sloha po slohe ako malé obrazovky pod sebou. Ťuknutím sa sloha premietne,
+ * práve premietaná má červený rámik.
+ */
+function renderVerseScreens() {
+  const box = $('#verseScreens');
+  if (!box) return;
+  const song = currentSong();
+  const key = verseScreensKey(song);
+  if (key === verseScreens.key) {
+    updateVerseScreens();
+    return;
+  }
+  verseScreens.key = key;
+  verseScreens.items = [];
+  box.innerHTML = '';
+  if (!song) return;
+
+  song.verses.forEach((verse, index) => {
+    const item = document.createElement('button');
+    item.className = 'vscreen';
+    item.type = 'button';
+    const label = verse.type === 'chorus' ? 'R' : verse.label;
+    const name = VERSE_TYPES[verse.type] ? VERSE_TYPES[verse.type].label : 'Sloha';
+    item.innerHTML = `<div class="vscreen__label">${label}<small>${name}</small></div>
+      <div class="vscreen__screen"></div>`;
+    const display = createDisplay(item.querySelector('.vscreen__screen'));
+    display.render(displayState({
+      song, verse, blank: false, settings: state.settings, position: '',
+    }));
+    item.onclick = () => selectVerse(index);
+    box.appendChild(item);
+    verseScreens.items.push(item);
+  });
+  updateVerseScreens();
+}
+
+/** Zvýraznenie vybranej slohy a červený rámik okolo tej premietanej. */
+function updateVerseScreens() {
+  const live = state.view === 'live' && !state.live.blank;
+  verseScreens.items.forEach((item, index) => {
+    const selected = index === state.live.verseIndex;
+    item.classList.toggle('is-selected', selected);
+    item.classList.toggle('is-live', selected && live);
+    if (selected && item.scrollIntoView) {
+      item.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+  });
 }
 
 // ------------------------------------------------------------- publikovanie
@@ -986,9 +1095,7 @@ function publish() {
   net.send(payload);
   nativeBus.send(payload);
   cast.send(payload);
-  if (preview) preview.render(payload);
-  // Ľavý náhľad ukazuje vybranú slohu aj vtedy, keď je na televízore čierno.
-  if (previewSelected) previewSelected.render({ ...payload, blank: state.view !== 'live' });
+  updateVerseScreens();
 }
 
 function renderDisplayStatus({ connected, name }) {
@@ -1275,6 +1382,7 @@ function bindEvents() {
     if (isNative) startNativeImport('pick');
     else $('#folderInput').click();
   };
+  $('#liveEdit').onclick = editCurrentSong;
   $('#pickFiles').onclick = () => $('#fileInput').click();
   const handleFiles = async (files, folderName) => {
     if (!files || !files.length) return;
@@ -1530,13 +1638,44 @@ function startNativeImport(mode = 'pick') {
 
 /**
  * Načítanie priečinka s piesňami pri spustení aplikácie. Priečinok je hlavné
- * úložisko: čo je v ňom, to je v knižnici.
+ * úložisko: čo je v ňom, to je v knižnici. Keď má aplikácia prístup k súborom,
+ * nič sa nevyberá – priečinok je predvolený a číta sa rovno.
  */
 async function loadSongsFolderAtStart() {
   if (!isNative || !call('hasSongsFolder')) return;
   const result = await startNativeImport('songs');
   await syncSongsToFolder(result && result.filesInFolder);
 }
+
+/** Nastavenia: kde sú piesne uložené a ako to zmeniť. */
+function renderSongsDir() {
+  const info = $('#songsDirInfo');
+  if (!info || !isNative) return;
+  const path = call('songsFolderFull') || call('songsFolder') || '';
+  const access = call('hasFileAccess') === true;
+  info.innerHTML = access
+    ? `Piesne sú v priečinku <strong>${path}</strong>.`
+    : `Predvolený priečinok je <strong>${path}</strong>, aplikácia doň ale zatiaľ nevidí. `
+      + 'Zapni jej prístup k súborom – potom sa piesne načítajú samy pri každom spustení '
+      + 'a nemusíš nič vyberať.';
+  const allow = $('#songsDirAllow');
+  if (allow) allow.hidden = access;
+}
+
+/** Po zmene priečinka sa knižnica načíta z nového miesta. */
+window.organistaSongsDirChanged = async (result) => {
+  hideProgress();
+  if (!result || !result.ok) {
+    renderSongsDir();
+    renderSongsFolderHint();
+    toast('Priečinok sa nepodarilo zmeniť.', 'warn');
+    return;
+  }
+  renderSongsDir();
+  renderSongsFolderHint();
+  toast(`Piesne sa presunuli do ${result.path}.`, 'ok');
+  await loadSongsFolderAtStart();
+};
 
 /**
  * Piesne, ktoré v priečinku ešte nemajú súbor (napríklad písané v aplikácii
@@ -1679,8 +1818,6 @@ async function loadSampleSongs() {
 // -------------------------------------------------------------------- štart
 
 async function main() {
-  preview = createDisplay($('#previewScreen'));
-  previewSelected = createDisplay($('#previewSelected'));
   setupEditor();
   bindEvents();
   renderSettings();
@@ -1690,6 +1827,20 @@ async function main() {
     $('#displayBtn').onclick = () => call('openDisplaySettings');
     $('#displaySettingsBtn').onclick = () => call('openDisplaySettings');
     renderSongsFolderHint();
+    renderSongsDir();
+    $('#songsDirPick').onclick = () => {
+      showProgress('Presúvam piesne…', 0, 0);
+      call('pickSongsFolder');
+    };
+    $('#songsDirAllow').onclick = () => call('requestFileAccess');
+
+    // Po návrate zo systémových nastavení sa prístup skontroluje znovu.
+    document.addEventListener('visibilitychange', async () => {
+      if (document.hidden || !call('hasFileAccess') || state.songs.length) return;
+      renderSongsDir();
+      renderSongsFolderHint();
+      await loadSongsFolderAtStart();
+    });
   } else {
     renderCastStatus(cast.state);
     renderNetStatus(net.status);

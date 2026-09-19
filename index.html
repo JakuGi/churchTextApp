@@ -98,21 +98,14 @@
           <h1 id="liveTitle">Bez piesne</h1>
         </div>
         <span class="pill pill--pos" id="livePosition"></span>
+        <button class="btn" id="liveEdit" title="Upraviť text piesne">✎ Upraviť</button>
         <button class="btn" id="jumpToggle">Rýchly výber čísla</button>
       </div>
 
       <div class="live__body">
         <div class="live__left">
-          <div class="previews">
-            <div class="preview">
-              <div class="preview__label">Vybraná sloha</div>
-              <div class="preview__screen" id="previewSelected"></div>
-            </div>
-            <div class="preview">
-              <div class="preview__label preview__label--live">Na televízore</div>
-              <div class="preview__screen" id="previewScreen"></div>
-            </div>
-          </div>
+          <div class="preview__label">Slohy piesne – ťuknutím premietneš</div>
+          <div class="versescreens" id="verseScreens"></div>
           <div class="notice" id="blankNotice" hidden></div>
           <div class="songnav">
             <button class="btn btn--nav" id="prevSong">
@@ -151,6 +144,7 @@
           <div class="jumpvalue" id="jumpValue"></div>
           <button class="btn btn--icon" id="jumpClose" title="Zavrieť">✕</button>
         </div>
+        <div class="quickresults quickresults--live" id="jumpResults"></div>
         <div class="keypad" id="keypad">
           <button class="key" data-key="1">1</button>
           <button class="key" data-key="2">2</button>
@@ -165,7 +159,6 @@
           <button class="key" data-key="0">0</button>
           <button class="key key--alt" data-key="del">⌫</button>
         </div>
-        <div class="quickresults quickresults--live" id="jumpResults"></div>
       </div>
     </div>
   </section>
@@ -275,6 +268,19 @@
           Porovná verziu v tablete s najnovšou na GitHube. Ak je nová, stiahne ju a otvorí
           inštalátor – aplikácia sa aktualizuje bez straty piesní a setov. Pred inštaláciou
           sa automaticky uloží záloha knižnice.
+        </p>
+      </div>
+
+      <h2 class="section-title only-native">Priečinok s piesňami</h2>
+      <div class="card only-native">
+        <p class="hint" id="songsDirInfo"></p>
+        <div class="row">
+          <button class="btn btn--big" id="songsDirPick">Zmeniť priečinok</button>
+          <button class="btn btn--primary btn--big" id="songsDirAllow" hidden>Povoliť prístup k súborom</button>
+        </div>
+        <p class="hint">
+          Piesne sú bežné súbory .xml v tomto priečinku – načítajú sa pri každom spustení
+          a nové pribúdajú samy. Po zmene priečinka sa doň presunie celý obsah toho starého.
         </p>
       </div>
 

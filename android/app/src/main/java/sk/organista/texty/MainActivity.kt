@@ -9,6 +9,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.content.pm.PackageManager
 import android.provider.DocumentsContract
 import android.provider.MediaStore
 import android.provider.Settings
@@ -57,6 +58,35 @@ class MainActivity : ComponentActivity() {
             prefs.edit().putString(KEY_SONGS_TREE, uri.toString()).apply()
         }
         readFolder(uri)
+    }
+
+    /** Výber iného priečinka na piesne (nastavenia) – obsah sa doň presunie. */
+    private val pickTarget = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+        if (uri == null) {
+            callJs("window.organistaSongsDirChanged", JSONObject().put("ok", false).toString())
+            return@registerForActivityResult
+        }
+        runCatching {
+            contentResolver.takePersistableUriPermission(
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+            )
+        }
+        Thread {
+            val path = pathFromTree(uri)
+            val moved = if (path.isBlank()) "" else moveSongsDir(path)
+            if (moved.isBlank()) {
+                // Bez prístupu k súborom zostane aspoň systémový priečinok.
+                prefs.edit().putString(KEY_SONGS_TREE, uri.toString()).apply()
+            }
+            callJs(
+                "window.organistaSongsDirChanged",
+                JSONObject()
+                    .put("ok", moved.isNotBlank())
+                    .put("path", songsFolderPath())
+                    .toString(),
+            )
+        }.start()
     }
 
     private val pickFiles = registerForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
@@ -221,12 +251,15 @@ class MainActivity : ComponentActivity() {
     }
 
     /**
-     * Načíta piesne z priečinka Stiahnuté/Organista/piesne, do ktorého sa dajú
-     * súbory nakopírovať z počítača cez USB. Prvýkrát si ho dá používateľ
-     * potvrdiť v systémovom okne (Android inak k cudzím súborom nepustí),
-     * potom už stačí jedno ťuknutie.
+     * Načíta piesne z priečinka s piesňami. Keď má aplikácia povolený prístup
+     * k súborom, číta priečinok priamo (netreba nič vyberať). Inak sa vráti
+     * k systémovému výberu priečinka.
      */
     fun importSongsFolder() {
+        if (hasFileAccess()) {
+            readSongsDir()
+            return
+        }
         val saved = savedSongsTree()
         if (saved != null) {
             readFolder(saved)
@@ -235,11 +268,152 @@ class MainActivity : ComponentActivity() {
         startFolderImport()
     }
 
-    /** Má aplikácia potvrdený priečinok s piesňami? */
-    fun hasSongsFolder(): Boolean = savedSongsTree() != null
+    /** Má aplikácia kde ukladať piesne? */
+    fun hasSongsFolder(): Boolean = hasFileAccess() || savedSongsTree() != null
+
+    // ------------------------------------------- priečinok ako bežné súbory
+
+    /**
+     * Povolenie na prácu so súbormi v tablete. Na Androide 11+ je to jediný
+     * prepínač „Prístup ku všetkým súborom“, na starších bežné povolenie.
+     */
+    fun hasFileAccess(): Boolean = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        Environment.isExternalStorageManager()
+    } else {
+        checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE) ==
+            PackageManager.PERMISSION_GRANTED
+    }
+
+    /** Otvorí systémovú obrazovku, kde sa prístup k súborom zapína. */
+    fun requestFileAccess() {
+        runOnUiThread {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
+                    .setData(Uri.parse("package:$packageName"))
+                runCatching { startActivity(intent) }.onFailure {
+                    runCatching { startActivity(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)) }
+                        .onFailure { toast("Nastavenia sa nepodarilo otvoriť.") }
+                }
+            } else {
+                requestPermissions(arrayOf(android.Manifest.permission.WRITE_EXTERNAL_STORAGE), 1)
+            }
+        }
+    }
+
+    /** Priečinok s piesňami – predvolený alebo ten, ktorý si zvolil používateľ. */
+    fun songsDir(): File {
+        val saved = prefs.getString(KEY_SONGS_PATH, null)
+        if (!saved.isNullOrBlank()) return File(saved)
+        return File(Environment.getExternalStorageDirectory(), "${Environment.DIRECTORY_DOWNLOADS}/$SONGS_RELATIVE")
+    }
 
     /** Cesta k priečinku s piesňami tak, ako ju vidno z počítača. */
-    fun songsFolderPath(): String = "Stiahnuté/$SONGS_RELATIVE"
+    fun songsFolderPath(): String {
+        val path = songsDir().absolutePath
+        return path.replace("/storage/emulated/0/", "").replace(
+            "${Environment.DIRECTORY_DOWNLOADS}/",
+            "Stiahnuté/",
+        )
+    }
+
+    /** Plná cesta – do nastavení, nech je jasné, kde presne priečinok je. */
+    fun songsFolderFullPath(): String = songsDir().absolutePath
+
+    /** Načíta všetky .xml z priečinka s piesňami (podpriečinky = zbierky). */
+    private fun readSongsDir() {
+        Thread {
+            val root = songsDir()
+            runCatching { root.mkdirs() }
+            val found = ArrayList<Pair<String, File>>()
+            fun walk(dir: File, folderName: String) {
+                val children = dir.listFiles() ?: return
+                for (child in children) {
+                    if (child.isDirectory) {
+                        walk(child, child.name)
+                        continue
+                    }
+                    if (child.name.endsWith(".xml", ignoreCase = true)) found.add(folderName to child)
+                }
+            }
+            walk(root, "Ostatné")
+            callJs("window.organistaImportStart", found.size.toString())
+
+            var total = 0
+            var batch = JSONArray()
+            for ((folderName, file) in found) {
+                val text = runCatching { file.readText() }.getOrNull() ?: continue
+                batch.put(
+                    JSONObject()
+                        .put("folder", folderName)
+                        .put("name", file.name)
+                        .put("text", text),
+                )
+                total += 1
+                if (batch.length() >= 25) {
+                    callJs("window.organistaImportChunk", batch.toString())
+                    batch = JSONArray()
+                }
+            }
+            if (batch.length() > 0) callJs("window.organistaImportChunk", batch.toString())
+            callJs("window.organistaImportDone", total.toString())
+        }.start()
+    }
+
+    /**
+     * Presunie celý obsah priečinka s piesňami na nové miesto a odteraz sa
+     * používa ono. Volá sa po zmene priečinka v nastaveniach.
+     */
+    fun moveSongsDir(target: String): String {
+        if (!hasFileAccess()) return ""
+        val to = File(target)
+        val from = songsDir()
+        return runCatching {
+            if (to.absolutePath == from.absolutePath) return@runCatching to.absolutePath
+            to.mkdirs()
+            if (!to.isDirectory) return@runCatching ""
+            moveContents(from, to)
+            prefs.edit().putString(KEY_SONGS_PATH, to.absolutePath).apply()
+            to.absolutePath
+        }.getOrDefault("")
+    }
+
+    private fun moveContents(from: File, to: File) {
+        val children = from.listFiles() ?: return
+        for (child in children) {
+            val target = File(to, child.name)
+            if (child.isDirectory) {
+                target.mkdirs()
+                moveContents(child, target)
+                child.delete()
+                continue
+            }
+            if (!child.renameTo(target)) {
+                runCatching {
+                    child.copyTo(target, overwrite = true)
+                    child.delete()
+                }
+            }
+        }
+    }
+
+    /** Vyberie iný priečinok na piesne (systémové okno) a presunie doň obsah. */
+    fun pickSongsDir() {
+        runOnUiThread {
+            runCatching { pickTarget.launch(null) }
+                .onFailure { toast("Výber priečinka sa nepodarilo otvoriť.") }
+        }
+    }
+
+    /** Z adresy systémového výberu urobí bežnú cestu k priečinku. */
+    private fun pathFromTree(uri: Uri): String {
+        val id = runCatching { DocumentsContract.getTreeDocumentId(uri) }.getOrNull() ?: return ""
+        val parts = id.split(":", limit = 2)
+        val volume = parts.getOrNull(0).orEmpty()
+        val relative = parts.getOrNull(1).orEmpty()
+        val root = if (volume == "primary") Environment.getExternalStorageDirectory().absolutePath
+        else "/storage/$volume"
+        return if (relative.isBlank()) root else "$root/$relative"
+    }
 
     private fun savedSongsTree(): Uri? {
         val saved = prefs.getString(KEY_SONGS_TREE, null) ?: return null
@@ -263,6 +437,12 @@ class MainActivity : ComponentActivity() {
      */
     fun ensureSongsFolder() {
         runCatching {
+            if (hasFileAccess()) {
+                val dir = songsDir().apply { mkdirs() }
+                val file = File(dir, SONGS_README)
+                if (!file.exists()) file.writeText(SONGS_README_TEXT)
+                return@runCatching
+            }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 val path = "${Environment.DIRECTORY_DOWNLOADS}/$SONGS_RELATIVE"
                 if (readExportedFile(SONGS_SUBFOLDER, SONGS_README).isNotBlank()) return@runCatching
@@ -336,6 +516,14 @@ class MainActivity : ComponentActivity() {
      * podľa zbierky. Ak zbierka ešte nemá priečinok, vytvorí sa.
      */
     fun saveSongFile(folder: String, fileName: String, content: String): Boolean {
+        if (hasFileAccess()) {
+            return runCatching {
+                val dir = if (folder.isBlank() || folder == "Ostatné") songsDir() else File(songsDir(), folder)
+                dir.mkdirs()
+                File(dir, fileName).writeText(content)
+                true
+            }.getOrDefault(false)
+        }
         val tree = savedSongsTree() ?: return false
         return runCatching {
             val root = DocumentFile.fromTreeUri(this, tree) ?: return false
@@ -350,6 +538,12 @@ class MainActivity : ComponentActivity() {
 
     /** Zmaže súbor piesne, aby sa pri ďalšom spustení znovu nenačítala. */
     fun deleteSongFile(folder: String, fileName: String): Boolean {
+        if (hasFileAccess()) {
+            return runCatching {
+                val dir = if (folder.isBlank() || folder == "Ostatné") songsDir() else File(songsDir(), folder)
+                File(dir, fileName).delete()
+            }.getOrDefault(false)
+        }
         val tree = savedSongsTree() ?: return false
         return runCatching {
             val root = DocumentFile.fromTreeUri(this, tree) ?: return false
@@ -605,6 +799,7 @@ class MainActivity : ComponentActivity() {
         const val SONGS_RELATIVE = "Organista/piesne"
         const val SONGS_README = "PRECITAJ-MA.txt"
         const val KEY_SONGS_TREE = "songsTree"
+        const val KEY_SONGS_PATH = "songsPath"
         val SONGS_README_TEXT = """
             PIESNE PRE APLIKÁCIU ORGANISTA
             ==============================

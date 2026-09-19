@@ -30,7 +30,7 @@ hosting, žiadny internet.**
 
 1. V tablete otvor priamy odkaz na stiahnutie:
 
-   **https://github.com/JakuGi/churchTextApp/releases/download/android-latest/organista-a0.1.4.apk**
+   **https://github.com/JakuGi/churchTextApp/releases/download/android-latest/organista-a0.1.5.apk**
 
    (Alebo: stránka projektu na GitHube → vpravo **Releases** → vydanie
    **Organista pre Android (posledná verzia)**.)
@@ -124,15 +124,19 @@ Stiahnuté/Organista/piesne
    └── Vlastne/
    ```
 
-4. Odpoj tablet, otvor Organistu a v časti **Knižnica** ťukni na
-   **⬇ Načítať piesne z tabletu**.
-5. **Len prvýkrát**: Android sa spýta na povolenie čítať tento priečinok –
-   ťukni na **Použiť tento priečinok** a potom **Povoliť**.
+4. Odpoj tablet a otvor Organistu – piesne z priečinka sa načítajú samy.
+5. **Len prvýkrát**: aplikácia potrebuje povolenie pracovať so súbormi
+   v tablete. V *Nastavenia → Priečinok s piesňami* ťukni na
+   **Povoliť prístup k súborom** a v systémovom okne prepínač zapni.
+   (Android bez toho do bežných priečinkov aplikácii nevidí.)
 
 > **Potom už netreba nič.** Aplikácia tento priečinok číta pri **každom
 > spustení** (ukáže pritom pásik s priebehom), takže stačí do neho nakopírovať
 > nové piesne a aplikáciu zapnúť. Ak si niečo pridal, kým aplikácia beží,
 > použi malé tlačidlo **↻ Znovu načítať priečinok**.
+>
+> Priečinok sa dá zmeniť v *Nastavenia → Priečinok s piesňami → Zmeniť
+> priečinok*; obsah toho starého sa do nového presunie.
 
 > Priečinok je zároveň úložiskom: **pieseň napísaná v aplikácii sa doň uloží
 > sama** (do podpriečinka podľa zbierky) a **zmazaná pieseň sa z neho zmaže**.
@@ -428,7 +432,7 @@ správať s televízorom.
 3. V okne emulátora klikni na **⋯** (Extended controls) → **Displays** →
    **Add secondary display** → zvoľ rozlíšenie → *Apply changes*.
 4. Nainštaluj APK: stiahnutý súbor pretiahni myšou do okna emulátora, alebo
-   `adb install organista-a0.1.4.apk`.
+   `adb install organista-a0.1.5.apk`.
 5. Spusti aplikáciu a premietaj – text sa objaví na druhej obrazovke emulátora.
 
 Overiť, či Android naozaj hlási druhú obrazovku, sa dá aj z príkazového riadka:
