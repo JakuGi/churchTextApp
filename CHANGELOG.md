@@ -27,6 +27,19 @@ overená.
   naskočila až po prechode do knižnice. Po návrate do premietania sa text
   objaví, až keď ho sám zapneš.
 
+**Piesne z počítača**
+
+- Aplikácia si sama vytvorí priečinok **`Stiahnuté/Organista/piesne`**, ktorý je
+  z počítača bežne vidieť (*Tablet → Interná pamäť → Download → Organista →
+  piesne*). Je v ňom aj súbor `PRECITAJ-MA.txt` s návodom, takže sa dá spoznať
+  na prvý pohľad.
+- V knižnici pribudlo tlačidlo **⬇ Načítať piesne z tabletu** – načíta všetko
+  z tohto priečinka vrátane podpriečinkov, z ktorých sa stanú zbierky.
+  Android sa iba prvýkrát spýta na povolenie („Použiť tento priečinok“),
+  potom už stačí jedno ťuknutie.
+- Systémový výber priečinka sa otvára rovno v tomto priečinku, takže ho netreba
+  hľadať. *Načítať priečinok* a *Načítať súbory* fungujú ako doteraz.
+
 **Zálohy**
 
 - **Záloha si pamätá zbierky.** Ku každej piesni sa ukladá aj zbierka

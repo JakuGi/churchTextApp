@@ -200,11 +200,15 @@ function renderSongList() {
   box.innerHTML = '';
 
   if (!state.songs.length) {
+    const path = (isNative && call('songsFolder')) || 'Stiahnuté/Organista/piesne';
     box.innerHTML = `<div class="empty">
       <h3>Knižnica je prázdna</h3>
       <p>Napíš prvú pieseň tlačidlom <strong>✎ Nová pieseň</strong>, alebo načítaj priečinok
       s .xml súbormi tlačidlom <strong>Načítať priečinok</strong> – každý podpriečinok sa stane
-      samostatnou zbierkou (napr. <em>JKS</em>).</p></div>`;
+      samostatnou zbierkou (napr. <em>JKS</em>).</p>
+      <p class="only-native">Piesne z počítača: tablet pripoj USB káblom, súbory .xml skopíruj
+      do priečinka <strong>${path}</strong> a potom ťukni na
+      <strong>⬇ Načítať piesne z tabletu</strong>.</p></div>`;
     return;
   }
   if (!songs.length) {
@@ -1207,8 +1211,9 @@ function bindEvents() {
       loadPsalm();
     };
   });
+  $('#importSongsFolder').onclick = () => startNativeImport('songs');
   $('#pickFolder').onclick = () => {
-    if (isNative) startNativeImport();
+    if (isNative) startNativeImport('pick');
     else $('#folderInput').click();
   };
   $('#pickFiles').onclick = () => $('#fileInput').click();
@@ -1413,11 +1418,33 @@ function exportLibrary() {
 
 const nativeImport = { files: [], running: false };
 
-function startNativeImport() {
+/**
+ * @param {'songs'|'pick'} mode  'songs' = priečinok Stiahnuté/Organista/piesne
+ *                               (prvýkrát si ho dá Android potvrdiť),
+ *                               'pick'  = vždy vybrať priečinok ručne.
+ */
+function startNativeImport(mode = 'pick') {
   nativeImport.files = [];
   nativeImport.running = true;
-  $('#importInfo').textContent = 'Vyber priečinok s piesňami…';
-  call('importFolder');
+  const known = mode === 'songs' && call('hasSongsFolder');
+  $('#importInfo').textContent = known
+    ? 'Čítam priečinok s piesňami…'
+    : 'Potvrď priečinok s piesňami…';
+  call(mode === 'songs' ? 'importSongsFolder' : 'importFolder');
+}
+
+/** Vysvetlivka, kam sa dajú nahrať piesne z počítača. */
+function renderSongsFolderHint() {
+  const hint = $('#songsFolderHint');
+  if (!hint || !isNative) return;
+  const path = call('songsFolder') || 'Stiahnuté/Organista/piesne';
+  hint.innerHTML = call('hasSongsFolder')
+    ? `Tlačidlo načíta naposledy potvrdený priečinok – zvyčajne <strong>${path}</strong>. `
+      + 'Súbory .xml doň skopíruj z počítača cez USB kábel; podpriečinky sa stanú zbierkami.'
+    : `Piesne z počítača skopíruj cez USB kábel do priečinka <strong>${path}</strong> `
+      + '(v počítači: Tablet → Interná pamäť → Download → Organista → piesne) a potom '
+      + 'ťukni na tlačidlo vyššie. Android sa raz spýta, či môže priečinok čítať – '
+      + 'potvrď <strong>Použiť tento priečinok</strong>. Podpriečinky sa stanú zbierkami.';
 }
 
 /** Natívna časť posiela súbory po dávkach. */
@@ -1434,9 +1461,11 @@ window.organistaImportDone = async (total) => {
   nativeImport.files = [];
 
   if (!files.length) {
+    const path = call('songsFolder') || 'Stiahnuté/Organista/piesne';
     $('#importInfo').textContent = Number(total) === 0
-      ? 'Nenašli sa žiadne .xml súbory.'
+      ? `V priečinku nie sú žiadne súbory .xml. Skopíruj ich tam z počítača (${path}).`
       : 'Načítanie sa nepodarilo.';
+    renderSongsFolderHint();
     return;
   }
 
@@ -1447,6 +1476,7 @@ window.organistaImportDone = async (total) => {
   })));
   await reloadLibrary();
   renderSettings();
+  renderSongsFolderHint();
   $('#importInfo').textContent = `Načítaných ${pluralSongs(result.songs)} z ${result.files} súborov.`;
   toast(`Načítaných ${pluralSongs(result.songs)}.`, 'ok');
 };
@@ -1506,6 +1536,7 @@ async function main() {
     renderDisplayStatus({ connected: !!call('displayName'), name: call('displayName') || '' });
     $('#displayBtn').onclick = () => call('openDisplaySettings');
     $('#displaySettingsBtn').onclick = () => call('openDisplaySettings');
+    renderSongsFolderHint();
   } else {
     renderCastStatus(cast.state);
     renderNetStatus(net.status);

@@ -100,12 +100,44 @@ V aplikácii to vidíš takto:
 
 Aplikácia je na začiatku prázdna. Piesne do nej dostaneš dvomi spôsobmi:
 
-**a) Načítať priečinok so súbormi `.xml`**
+**a) Skopírovať piesne z počítača (najjednoduchšie)**
 
-1. Priečinok s piesňami prekopíruj do tabletu (káblom, cez Google Drive, na USB kľúči).
-2. V aplikácii: **Knižnica → Načítať priečinok** → vyber priečinok a potvrď.
-3. Podpriečinky sa stanú zbierkami: priečinok `JKS` dostane číslovanie JKS,
-   priečinok `LS` číslovanie LS.
+Aplikácia si pri prvom spustení sama vytvorí v tablete priečinok, do ktorého
+stačí piesne nakopírovať:
+
+```
+Stiahnuté/Organista/piesne
+```
+
+1. Tablet pripoj k počítaču USB káblom a na tablete zvoľ **Prenos súborov**.
+2. V počítači otvor **Tablet → Interná pamäť → Download** (niekde sa ukazuje ako
+   *Stiahnuté*) **→ Organista → piesne**. Nájdeš tam aj súbor
+   `PRECITAJ-MA.txt` s týmto istým návodom – podľa neho spoznáš, že si
+   v správnom priečinku.
+3. Nakopíruj doň svoje súbory `.xml`. Priečinky, ktoré si v ňom vytvoríš, sa
+   stanú zbierkami:
+
+   ```
+   piesne/
+   ├── JKS/       ← piesne z Jednotného katolíckeho spevníka
+   ├── LS/        ← piesne z Liturgického spevníka
+   └── Vlastne/
+   ```
+
+4. Odpoj tablet, otvor Organistu a v časti **Knižnica** ťukni na
+   **⬇ Načítať piesne z tabletu**.
+5. **Len prvýkrát**: Android sa spýta na povolenie čítať tento priečinok –
+   ťukni na **Použiť tento priečinok** a potom **Povoliť**. Nabudúce už stačí
+   jedno ťuknutie na to isté tlačidlo.
+
+> Keď neskôr pridáš ďalšie piesne, znovu ťukni na **⬇ Načítať piesne z tabletu**.
+> Súbory s rovnakým názvom sa prepíšu, nové pribudnú.
+
+**a2) Iný priečinok alebo jednotlivé súbory**
+
+Tlačidlo **Načítať priečinok** otvorí systémový výber, kde sa dá zvoliť
+ktorýkoľvek priečinok v tablete (napríklad zo služby Disk Google alebo z USB
+kľúča). Tlačidlo **Načítať súbory** pridá jednotlivé súbory `.xml`.
 
 **b) Napísať pieseň priamo v aplikácii**
 
@@ -259,33 +291,32 @@ v zálohovaní Androidu, takže sa prenesie aj na nový tablet.
 
 > ⚠️ **Do tohto priečinka sa z počítača nedostaneš** a je to zámer – takto sa
 > k tvojim piesňam nedostane žiadna iná aplikácia. Android ho ukazuje len
-> samotnej aplikácii (bez rootnutého zariadenia). Ak chceš nahrať piesne
-> z počítača, použi postup nižšie – je jednoduchší a bezpečnejší.
+> samotnej aplikácii (bez rootnutého zariadenia). Na nahrávanie piesní
+> z počítača slúži priečinok nižšie, ktorý je z počítača bežne vidieť.
 
-### Ako nahrať piesne z počítača (odporúčaný postup)
+### Priečinok na piesne z počítača
 
-1. Tablet pripoj k počítaču USB káblom a na tablete zvoľ **Prenos súborov**.
-   V počítači sa objaví ako *Interné úložisko*.
-2. Vytvor si tam priečinok, napríklad:
+Aplikácia si ho pri prvom spustení vytvorí sama:
 
-   ```
-   Interné úložisko/Organista/Piesne/
-   ├── JKS/     ← piesne z Jednotného katolíckeho spevníka
-   ├── LS/      ← piesne z Liturgického spevníka
-   └── Vlastne/
-   ```
+```
+Interné úložisko/Download/Organista/piesne/
+├── PRECITAJ-MA.txt   ← návod priamo v priečinku
+├── JKS/              ← piesne z Jednotného katolíckeho spevníka
+├── LS/               ← piesne z Liturgického spevníka
+└── Vlastne/
+```
 
-   Na tablete je to cesta `/storage/emulated/0/Organista/Piesne`.
-3. Nakopíruj do neho svoje `.xml` súbory.
-4. Odpoj tablet, otvor Organistu a zvoľ **Knižnica → Načítať priečinok** →
-   vyber `Organista/Piesne` → potvrď.
-5. Podpriečinky sa stanú zbierkami a piesne sa uložia do aplikácie.
+Na tablete je to cesta `/storage/emulated/0/Download/Organista/piesne`.
+V počítači ho nájdeš ako **Tablet → Interná pamäť → Download → Organista →
+piesne** (Windows aj macOS ho ukazujú rovnako, priečinok *Download* býva
+preložený ako *Stiahnuté*).
 
-Rovnako to funguje aj cez Google Drive, e-mail či USB kľúč – dôležité je len to,
-aby bol priečinok na tablete viditeľný v systémovom výbere súborov.
+Postup je v časti [3](#3-prvé-spustenie-piesne): súbory `.xml` doň skopíruj
+a v aplikácii ťukni na **Knižnica → ⬇ Načítať piesne z tabletu**. Prvýkrát si
+Android vypýta potvrdenie priečinka, potom už stačí jedno ťuknutie.
 
-> Po pridaní ďalších piesní do toho istého priečinka zopakuj krok 4. Piesne
-> s rovnakým názvom súboru sa prepíšu, ostatné pribudnú.
+> Ak by sa priečinok v počítači neukázal, stačí ho vytvoriť ručne s presne
+> takýmto názvom – aplikácia ho nájde rovnako.
 
 ### Kam ukladá aplikácia zálohy a exporty
 
@@ -335,7 +366,8 @@ rovnakým tlačidlom.
 | **Na televízore je to isté, čo na tablete (aj s tlačidlami)** | Zrkadlenie beží, ale druhú obrazovku appka nedostala. Vypni a znova zapni zrkadlenie; niektoré staršie televízory a lacné adaptéry druhú obrazovku nepodporujú. |
 | **Televízor je čierny aj po spustení piesne** | Skontroluj, či nie je zapnutá **ČIERNA OBRAZOVKA** (tlačidlo svieti načerveno). |
 | **Text je primalý alebo priveľký** | *Nastavenia → Vzhľad premietania → Veľkosť písma*. |
-| **Načítanie priečinka nič nenašlo** | Priečinok musí obsahovať súbory `.xml`. Skontroluj, či si vybral správny priečinok (nie napr. *Stiahnuté* ako celok). |
+| **Načítanie priečinka nič nenašlo** | Priečinok musí obsahovať súbory `.xml`. Pri tlačidle **⬇ Načítať piesne z tabletu** skontroluj, či sú súbory naozaj v `Download/Organista/piesne` (v tom priečinku je aj `PRECITAJ-MA.txt`). |
+| **Nemôžem nájsť priečinok v počítači** | Na tablete musí byť pri pripojení káblom zapnutý **Prenos súborov** (potiahni lištu zhora a ťukni na oznámenie o nabíjaní cez USB). Potom je cesta *Tablet → Interná pamäť → Download → Organista → piesne*. |
 | **Piesne zmizli** | Načítaj poslednú zálohu (*Knižnica → Načítať priečinok* a vyber priečinok so zálohou). |
 
 ---

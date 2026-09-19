@@ -56,6 +56,23 @@ class WebBridge(private val activity: MainActivity) {
     }
 
     /**
+     * Načíta piesne z priečinka Stiahnuté/Organista/piesne (tam sa dajú
+     * nakopírovať z počítača). Prvýkrát si ho dá používateľ potvrdiť.
+     */
+    @JavascriptInterface
+    fun importSongsFolder() {
+        activity.importSongsFolder()
+    }
+
+    /** Cesta k priečinku s piesňami tak, ako ju vidno z počítača. */
+    @JavascriptInterface
+    fun songsFolder(): String = activity.songsFolderPath()
+
+    /** Je priečinok s piesňami už potvrdený? */
+    @JavascriptInterface
+    fun hasSongsFolder(): Boolean = activity.hasSongsFolder()
+
+    /**
      * Stiahne stránku liturgického kalendára (responzóriový žalm).
      * Výsledok príde do JS cez window.organistaLiturgy.
      */

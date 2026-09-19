@@ -9,6 +9,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.provider.DocumentsContract
 import android.provider.MediaStore
 import android.provider.Settings
 import android.view.View
@@ -48,6 +49,8 @@ class MainActivity : ComponentActivity() {
         }
         runCatching {
             contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            // Priečinok si zapamätáme, aby sa nabudúce piesne načítali na jedno ťuknutie.
+            prefs.edit().putString(KEY_SONGS_TREE, uri.toString()).apply()
         }
         readFolder(uri)
     }
@@ -58,10 +61,14 @@ class MainActivity : ComponentActivity() {
         callback?.onReceiveValue(uris.toTypedArray())
     }
 
+    private val prefs by lazy { getSharedPreferences("organista", MODE_PRIVATE) }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         storage = Storage(this)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        // Priečinok na piesne z počítača nech existuje hneď po prvom spustení.
+        Thread { ensureSongsFolder() }.start()
 
         assetLoader = WebViewAssetLoader.Builder()
             .addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(this))
@@ -200,8 +207,72 @@ class MainActivity : ComponentActivity() {
 
     fun startFolderImport() {
         runOnUiThread {
-            runCatching { pickFolder.launch(null) }
-                .onFailure { toast("Výber priečinka sa nepodarilo otvoriť.") }
+            runCatching { pickFolder.launch(songsFolderUri()) }
+                .onFailure {
+                    runCatching { pickFolder.launch(null) }
+                        .onFailure { toast("Výber priečinka sa nepodarilo otvoriť.") }
+                }
+        }
+    }
+
+    /**
+     * Načíta piesne z priečinka Stiahnuté/Organista/piesne, do ktorého sa dajú
+     * súbory nakopírovať z počítača cez USB. Prvýkrát si ho dá používateľ
+     * potvrdiť v systémovom okne (Android inak k cudzím súborom nepustí),
+     * potom už stačí jedno ťuknutie.
+     */
+    fun importSongsFolder() {
+        val saved = savedSongsTree()
+        if (saved != null) {
+            readFolder(saved)
+            return
+        }
+        startFolderImport()
+    }
+
+    /** Má aplikácia potvrdený priečinok s piesňami? */
+    fun hasSongsFolder(): Boolean = savedSongsTree() != null
+
+    /** Cesta k priečinku s piesňami tak, ako ju vidno z počítača. */
+    fun songsFolderPath(): String = "Stiahnuté/$SONGS_RELATIVE"
+
+    private fun savedSongsTree(): Uri? {
+        val saved = prefs.getString(KEY_SONGS_TREE, null) ?: return null
+        val uri = runCatching { Uri.parse(saved) }.getOrNull() ?: return null
+        val allowed = contentResolver.persistedUriPermissions.any { it.uri == uri && it.isReadPermission }
+        return if (allowed) uri else null
+    }
+
+    /** Adresa priečinka pre systémové okno výberu, aby sa otvorilo rovno v ňom. */
+    private fun songsFolderUri(): Uri? = runCatching {
+        DocumentsContract.buildDocumentUri(
+            "com.android.externalstorage.documents",
+            "primary:${Environment.DIRECTORY_DOWNLOADS}/$SONGS_RELATIVE",
+        )
+    }.getOrNull()
+
+    /**
+     * Vytvorí priečinok Stiahnuté/Organista/piesne aj s návodom, aby ho bolo
+     * z počítača kde nájsť ešte predtým, než doň niekto niečo nakopíruje.
+     */
+    fun ensureSongsFolder() {
+        runCatching {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val path = "${Environment.DIRECTORY_DOWNLOADS}/$SONGS_RELATIVE"
+                if (readExportedFile(SONGS_SUBFOLDER, SONGS_README).isNotBlank()) return@runCatching
+                val values = ContentValues().apply {
+                    put(MediaStore.Downloads.DISPLAY_NAME, SONGS_README)
+                    put(MediaStore.Downloads.MIME_TYPE, "text/plain")
+                    put(MediaStore.Downloads.RELATIVE_PATH, path)
+                }
+                val uri = contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+                    ?: return@runCatching
+                contentResolver.openOutputStream(uri)?.use { it.write(SONGS_README_TEXT.toByteArray()) }
+            } else {
+                val dir = File(getExternalFilesDir(null), SONGS_RELATIVE).apply { mkdirs() }
+                val file = File(dir, SONGS_README)
+                if (!file.exists()) file.writeText(SONGS_README_TEXT)
+            }
         }
     }
 
@@ -481,5 +552,35 @@ class MainActivity : ComponentActivity() {
 
     private fun toast(message: String) {
         Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+    }
+
+    private companion object {
+        const val SONGS_SUBFOLDER = "piesne"
+        const val SONGS_RELATIVE = "Organista/piesne"
+        const val SONGS_README = "PRECITAJ-MA.txt"
+        const val KEY_SONGS_TREE = "songsTree"
+        val SONGS_README_TEXT = """
+            PIESNE PRE APLIKÁCIU ORGANISTA
+            ==============================
+
+            Sem (Stiahnuté/Organista/piesne) skopíruj z počítača súbory .xml
+            s piesňami. Tablet pripoj k počítaču USB káblom a v počítači otvor:
+
+                Tablet -> Interná pamäť -> Download (Stiahnuté) -> Organista -> piesne
+
+            Priečinky, ktoré sem vytvoríš, sa v aplikácii stanú zbierkami.
+            Napríklad:
+
+                piesne/JKS/342-O_Boze_nas.xml
+                piesne/Vlastne/Moja_piesen.xml
+
+            Potom v tablete otvor aplikáciu Organista, choď do časti Knižnica
+            a ťukni na "Načítať piesne z tabletu". Prvýkrát sa Android spýta,
+            či aplikácia môže tento priečinok čítať - potvrď "Použiť tento
+            priečinok" a "Povoliť". Nabudúce to už stačí jedno ťuknutie.
+
+            Podporované sú súbory .xml vo vlastnom formáte aplikácie,
+            v formáte OpenSong aj OpenLyrics/OpenLP.
+        """.trimIndent()
     }
 }
