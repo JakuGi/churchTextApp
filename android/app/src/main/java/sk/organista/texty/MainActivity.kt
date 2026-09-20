@@ -6,6 +6,7 @@ import android.content.ContentValues
 import android.content.Intent
 import android.graphics.Color
 import android.net.Uri
+import android.os.BatteryManager
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
@@ -270,6 +271,13 @@ class MainActivity : ComponentActivity() {
 
     /** Má aplikácia kde ukladať piesne? */
     fun hasSongsFolder(): Boolean = hasFileAccess() || savedSongsTree() != null
+
+    /** Percento nabitia batérie tabletu (0-100), alebo -1, keď sa nedá zistiť. */
+    fun batteryLevel(): Int {
+        val manager = getSystemService(BATTERY_SERVICE) as? BatteryManager ?: return -1
+        return runCatching { manager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY) }
+            .getOrDefault(-1)
+    }
 
     // ------------------------------------------- priečinok ako bežné súbory
 

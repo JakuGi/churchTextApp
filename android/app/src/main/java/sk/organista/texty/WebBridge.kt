@@ -13,6 +13,10 @@ class WebBridge(private val activity: MainActivity) {
     @JavascriptInterface
     fun version(): String = BuildConfigCompat.versionName
 
+    /** Percento nabitia batérie (0-100), alebo -1, keď sa nedá zistiť. */
+    @JavascriptInterface
+    fun batteryLevel(): Int = activity.batteryLevel()
+
     /** Stav (sloha, ktorá sa má premietať) pre druhú obrazovku. */
     @JavascriptInterface
     fun publish(stateJson: String) {
@@ -157,5 +161,5 @@ class WebBridge(private val activity: MainActivity) {
 
 /** Verzia aplikácie bez potreby generovaného BuildConfig. */
 object BuildConfigCompat {
-    const val versionName: String = "a0.1.7"
+    const val versionName: String = "a0.1.8"
 }

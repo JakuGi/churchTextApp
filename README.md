@@ -30,7 +30,7 @@ hosting, žiadny internet.**
 
 1. V tablete otvor priamy odkaz na stiahnutie:
 
-   **https://github.com/JakuGi/churchTextApp/releases/download/android-latest/organista-a0.1.7.apk**
+   **https://github.com/JakuGi/churchTextApp/releases/download/android-latest/organista-a0.1.8.apk**
 
    (Alebo: stránka projektu na GitHube → vpravo **Releases** → vydanie
    **Organista pre Android (posledná verzia)**.)
@@ -174,7 +174,7 @@ ju nepridáš dvakrát.
 | Ďalšia sloha | veľké **ĎALŠIA SLOHA** vpravo dole | `→`, medzerník |
 | Predošlá sloha | veľké **PREDOŠLÁ SLOHA** vľavo dole | `←` |
 | Skočiť na konkrétnu slohu | číselné tlačidlá vpravo (1, 2, R, 3…) | `1`–`9`, refrén `0` |
-| Zhasnúť text na TV | veľké **ČIERNA OBRAZOVKA** v strede | `B` |
+| Zhasnúť text na TV | veľké červené **ZASTAVIŤ** v strede (zelené **ZOBRAZIŤ TEXT**, keď je obrazovka čierna) | `B` |
 | Ďalšia / predošlá pieseň | tlačidlá pod náhľadom | `↓` / `↑` |
 | Pieseň mimo setu | **Rýchly výber čísla** hore | – |
 
@@ -374,7 +374,7 @@ rovnakým tlačidlom.
 | **Android nedovolí inštaláciu APK** | Pri inštalácii potvrď *Povoliť z tohto zdroja*. Súbor musí byť stiahnutý celý (skús znova pri lepšej sieti). |
 | **V lište stále svieti „Druhá obrazovka: nepripojená“** | Zrkadlenie sa zapína v nastaveniach tabletu, nie v aplikácii. Tablet aj Chromecast musia byť na rovnakej Wi-Fi. Pomôže tlačidlo *📺 Pripojiť obrazovku*. |
 | **Na televízore je to isté, čo na tablete (aj s tlačidlami)** | Zrkadlenie beží, ale druhú obrazovku appka nedostala. Vypni a znova zapni zrkadlenie; niektoré staršie televízory a lacné adaptéry druhú obrazovku nepodporujú. |
-| **Televízor je čierny aj po spustení piesne** | Skontroluj, či nie je zapnutá **ČIERNA OBRAZOVKA** (tlačidlo svieti načerveno). |
+| **Televízor je čierny aj po spustení piesne** | Skontroluj, či obrazovka nie je zhasnutá (tlačidlo svieti nazeleno a hovorí **ZOBRAZIŤ TEXT**). |
 | **Text je primalý alebo priveľký** | *Nastavenia → Vzhľad premietania → Veľkosť písma*. |
 | **Načítanie priečinka nič nenašlo** | Priečinok musí obsahovať súbory `.xml`. Pri tlačidle **⬇ Načítať piesne z tabletu** skontroluj, či sú súbory naozaj v `Download/Organista/piesne` (v tom priečinku je aj `PRECITAJ-MA.txt`). |
 | **Nemôžem nájsť priečinok v počítači** | Na tablete musí byť pri pripojení káblom zapnutý **Prenos súborov** (potiahni lištu zhora a ťukni na oznámenie o nabíjaní cez USB). Potom je cesta *Tablet → Interná pamäť → Download → Organista → piesne*. |
@@ -432,7 +432,7 @@ správať s televízorom.
 3. V okne emulátora klikni na **⋯** (Extended controls) → **Displays** →
    **Add secondary display** → zvoľ rozlíšenie → *Apply changes*.
 4. Nainštaluj APK: stiahnutý súbor pretiahni myšou do okna emulátora, alebo
-   `adb install organista-a0.1.7.apk`.
+   `adb install organista-a0.1.8.apk`.
 5. Spusti aplikáciu a premietaj – text sa objaví na druhej obrazovke emulátora.
 
 Overiť, či Android naozaj hlási druhú obrazovku, sa dá aj z príkazového riadka:
@@ -448,7 +448,7 @@ adb shell dumpsys display | grep -i presentation
 | Druhá obrazovka pripojená | badge hore sa zmení na zelený **Druhá obrazovka: …** |
 | Spustenie piesne | na druhej obrazovke je text, na tablete ovládanie |
 | Ďalšia sloha / iná pieseň | text sa zmení okamžite |
-| **ČIERNA OBRAZOVKA** | druhá obrazovka sčernie, vybraná sloha zostane označená |
+| **ZASTAVIŤ** | druhá obrazovka sčernie, vybraná sloha zostane označená, tlačidlo sa zmení na zelené **ZOBRAZIŤ TEXT** |
 | Vypnutie druhej obrazovky | badge zoranžovie, aplikácia funguje ďalej |
 | Zatvorenie a znovuotvorenie aplikácie | piesne aj sety sú na mieste |
 

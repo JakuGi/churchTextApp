@@ -49,6 +49,15 @@ code { background: var(--panel-2); padding: 2px 6px; border-radius: 6px; }
 .topbar__brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 17px; }
 .topbar__cast { margin-left: auto; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
+/* Čas a batéria – vždy vidno, bez toho, aby zväčšili panel (rovnaká výška
+   riadku ako ostatné tlačidlá/odznaky v ňom). */
+.statusbar {
+  display: flex; align-items: center; gap: 10px;
+  font-weight: 700; font-size: 15px; color: var(--muted); white-space: nowrap;
+}
+.statusbar__battery.is-warn { color: var(--warn); }
+.statusbar__battery.is-danger { color: var(--danger); }
+
 .tabs { display: flex; gap: 6px; }
 .tab {
   min-height: 40px; padding: 0 16px; border: 1px solid var(--line);
@@ -243,15 +252,16 @@ main { flex: 1; min-height: 0; display: flex; overflow-x: hidden; }
 }
 .vscreen__label small { display: block; font-size: 11px; font-weight: 600; color: var(--muted); }
 .vscreen__screen {
-  flex: 1; min-width: 0; min-height: 0; border-radius: 8px;
+  flex: 1; min-width: 0; border-radius: 8px;
   overflow: hidden; background: #000;
+  aspect-ratio: 16 / 9; max-height: 100%; align-self: center;
 }
 .vscreen.is-selected { border-color: var(--accent); }
 .vscreen.is-live {
-  border-color: var(--danger);
-  box-shadow: 0 0 0 3px rgba(226,87,76,.35);
+  border-color: var(--ok);
+  box-shadow: 0 0 0 3px rgba(46,204,113,.35);
 }
-.vscreen.is-live .vscreen__label { color: var(--danger); }
+.vscreen.is-live .vscreen__label { color: var(--ok); }
 
 .notice {
   background: rgba(226,87,76,.14); border: 1px solid rgba(226,87,76,.5);
@@ -286,8 +296,10 @@ main { flex: 1; min-height: 0; display: flex; overflow-x: hidden; }
 .bigbtn__label { font-size: 19px; font-weight: 800; letter-spacing: .03em; }
 .bigbtn:active { background: var(--panel); }
 .bigbtn:disabled { opacity: .3; }
-.bigbtn--blank { flex: .9; background: #101317; border-color: #3a444f; }
-.bigbtn--blank.is-on { background: var(--danger); border-color: var(--danger); color: #fff; }
+/* Červené „Zastaviť“, keď sa premieta text (ťuknutím zhasneš obrazovku);
+   zelené so šípkou, keď je obrazovka čierna (ťuknutím sa vrátiš k textu). */
+.bigbtn--blank { flex: .9; background: var(--danger); border-color: var(--danger); color: #fff; }
+.bigbtn--blank.is-on { background: var(--ok); border-color: var(--ok); color: #fff; }
 
 .jumppanel {
   position: fixed; inset: auto 12px 12px 12px; z-index: 40;

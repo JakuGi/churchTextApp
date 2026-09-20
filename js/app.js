@@ -155,6 +155,17 @@ async function reloadLibrary() {
 
 // ------------------------------------------------------------------ knižnica
 
+/**
+ * Vyprázdni vyhľadávacie pole v knižnici – pri prepnutí zbierky alebo pri
+ * pridaní nájdenej piesne do setu, aby nezostalo filtrovať zvyšok knižnice.
+ */
+function clearLibrarySearch() {
+  if (!state.query) return;
+  state.query = '';
+  const input = $('#searchInput');
+  if (input) input.value = '';
+}
+
 function renderFolders() {
   const box = $('#folders');
   const counts = new Map();
@@ -177,6 +188,7 @@ function renderFolders() {
       <span class="folder__meta">${item.system ? `<em>${item.system}</em>` : ''}${item.count}</span>`;
     button.onclick = () => {
       state.activeFolder = item.name;
+      clearLibrarySearch();
       renderFolders();
       renderSongList();
     };
@@ -254,7 +266,10 @@ function renderSongList() {
   for (const song of songs.slice(0, 400)) {
     fragment.appendChild(songRow(song, {
       actionLabel: '+ Do setu',
-      action: (target) => addToSet(target.id),
+      action: (target) => {
+        clearLibrarySearch();
+        addToSet(target.id);
+      },
     }));
   }
   box.appendChild(fragment);
@@ -293,7 +308,6 @@ function openSongPreview(song) {
 // ------------------------------------------- záloha a aktualizácia (Android)
 
 const AUTO_BACKUP_FILE = 'organista-zaloha-auto.xml';
-const AUTO_BACKUP_MINUTES = 20;
 const RELEASE_API = 'https://api.github.com/repos/JakuGi/churchTextApp/releases';
 
 // ---------------------------------- priečinok s piesňami (Stiahnuté/…/piesne)
@@ -394,9 +408,12 @@ function libraryXml() {
 }
 
 /**
- * Automatická záloha do priečinka Stiahnuté/Organista/autosave.
- * Robí sa po spustení aplikácie a potom každých 20 minút; vždy prepíše
- * predchádzajúci súbor, takže zaberá stále rovnaké miesto.
+ * Automatická záloha do priečinka Stiahnuté/Organista/autosave. Robí sa po
+ * spustení aplikácie a pred inštaláciou aktualizácie – vždy prepíše
+ * predchádzajúci súbor, takže zaberá stále rovnaké miesto. Opakované
+ * ukladanie každých 20 minút je vypnuté (knižnica sa aj tak zapisuje priamo
+ * do priečinka s piesňami pri každej zmene, takže priebežná záloha navyše
+ * nie je potrebná).
  */
 function autoBackup() {
   if (!isNative || !state.songs.some((song) => !song.temporary)) return;
@@ -405,7 +422,7 @@ function autoBackup() {
   if (info) {
     const time = new Date().toLocaleTimeString('sk-SK', { hour: '2-digit', minute: '2-digit' });
     info.textContent = where
-      ? `Automatická záloha: ${where} (naposledy ${time}, obnovuje sa každých ${AUTO_BACKUP_MINUTES} minút).`
+      ? `Automatická záloha: ${where} (naposledy ${time}).`
       : 'Automatickú zálohu sa nepodarilo uložiť.';
   }
 }
@@ -413,7 +430,6 @@ function autoBackup() {
 function startAutoBackup() {
   if (!isNative) return;
   autoBackup();
-  setInterval(autoBackup, AUTO_BACKUP_MINUTES * 60 * 1000);
 }
 
 /**
@@ -810,6 +826,52 @@ function setupEditor() {
 
 // ------------------------------------------------------------------- set
 
+const CURRENT_SET_BACKUP_ID = 'aktualny-set-zaloha';
+const CURRENT_SET_BACKUP_NAME = 'Aktuálny set (zálohovaný)';
+let lastSetBackupKey = null;
+
+/**
+ * Rozpracovaný set sa priebežne zálohuje medzi uložené sety pod pevným id –
+ * keby appka počas jeho prípravy spadla, pri ďalšom spustení sa z tejto
+ * zálohy obnoví (pozri restoreCurrentSetBackup v main()). Prázdny set zálohu
+ * zase zmaže, aby v uložených setoch nezostala zastaraná.
+ */
+async function persistCurrentSetBackup() {
+  const key = JSON.stringify(state.set.items);
+  if (key === lastSetBackupKey) return;
+  lastSetBackupKey = key;
+
+  const existing = state.sets.find((item) => item.id === CURRENT_SET_BACKUP_ID);
+  if (!state.set.items.length) {
+    if (!existing) return;
+    state.sets = state.sets.filter((item) => item.id !== CURRENT_SET_BACKUP_ID);
+    removeSetFile(existing);
+    await store.deleteSet(CURRENT_SET_BACKUP_ID);
+    return;
+  }
+  const backup = {
+    id: CURRENT_SET_BACKUP_ID,
+    name: CURRENT_SET_BACKUP_NAME,
+    items: state.set.items.slice(),
+    updatedAt: Date.now(),
+  };
+  const index = state.sets.findIndex((item) => item.id === CURRENT_SET_BACKUP_ID);
+  if (index >= 0) state.sets[index] = backup; else state.sets.push(backup);
+  await store.putSet(backup);
+  writeSetFile(backup);
+}
+
+/** Pri páde appky uprostred prípravy setu ho pri ďalšom spustení obnoví. */
+function restoreCurrentSetBackup() {
+  if (state.set.items.length) return;
+  const backup = state.sets.find((item) => item.id === CURRENT_SET_BACKUP_ID);
+  if (!backup || !backup.items.length) return;
+  state.set = { id: null, name: 'Nový set', items: backup.items.slice() };
+  renderSetList();
+  renderSongList();
+  toast('Obnovený rozpracovaný set zo zálohy.', 'ok');
+}
+
 function isInSet(songId) {
   return state.set.items.includes(songId);
 }
@@ -854,6 +916,7 @@ function moveInSet(index, delta) {
 }
 
 function renderSetList() {
+  persistCurrentSetBackup();
   const box = $('#setList');
   $('#setCount').textContent = String(state.set.items.length);
   $('#setNameInput').value = state.set.name;
@@ -1176,7 +1239,8 @@ function renderLive() {
 
   const blankButton = $('#blankBtn');
   blankButton.classList.toggle('is-on', state.live.blank);
-  blankButton.querySelector('.bigbtn__label').textContent = state.live.blank ? 'ZOBRAZIŤ TEXT' : 'ČIERNA OBRAZOVKA';
+  blankButton.querySelector('.bigbtn__icon').textContent = state.live.blank ? '▶' : '◼';
+  blankButton.querySelector('.bigbtn__label').textContent = state.live.blank ? 'ZOBRAZIŤ TEXT' : 'ZASTAVIŤ';
 
   const grid = $('#verseGrid');
   grid.innerHTML = '';
@@ -1286,6 +1350,48 @@ function publish() {
   nativeBus.send(payload);
   cast.send(payload);
   updateVerseScreens();
+}
+
+// -------------------------------------------- hodiny a batéria (vrchný panel)
+
+let batteryPercent = null;
+
+function renderClock() {
+  const time = new Date().toLocaleTimeString('sk-SK', { hour: '2-digit', minute: '2-digit' });
+  $$('.statusbar__time').forEach((el) => { el.textContent = time; });
+}
+
+function renderBatteryDisplay() {
+  $$('.statusbar__battery').forEach((el) => {
+    el.hidden = batteryPercent === null;
+    el.textContent = batteryPercent === null ? '' : `🔋 ${batteryPercent} %`;
+    el.classList.toggle('is-warn', batteryPercent !== null && batteryPercent < 20 && batteryPercent >= 10);
+    el.classList.toggle('is-danger', batteryPercent !== null && batteryPercent < 10);
+  });
+}
+
+/** V appke sa číta cez natívny most, v prehliadači skúsi Battery Status API (ak ho má). */
+async function refreshBattery() {
+  if (isNative) {
+    const level = call('batteryLevel');
+    batteryPercent = typeof level === 'number' && level >= 0 ? level : null;
+  } else if (navigator.getBattery) {
+    try {
+      const battery = await navigator.getBattery();
+      batteryPercent = Math.round(battery.level * 100);
+    } catch {
+      batteryPercent = null;
+    }
+  }
+  renderBatteryDisplay();
+}
+
+/** Čas a percento batérie sú vždy vidno vo vrchnom paneli aj v premietaní. */
+function startStatusBar() {
+  renderClock();
+  refreshBattery();
+  setInterval(renderClock, 30 * 1000);
+  setInterval(refreshBattery, 60 * 1000);
 }
 
 function renderDisplayStatus({ connected, name }) {
@@ -1505,6 +1611,30 @@ function bindEvents() {
     requestAnimationFrame(() => el.scrollIntoView({ block: 'start', behavior: 'smooth' }));
   });
 
+  // Otvorený dialóg (napr. vyhľadávanie v sete počas premietania) sa pri
+  // otvorení klávesnice posunie k vrchu viditeľnej plochy a skráti, aby bol
+  // celý – aj to, čo sa práve vyhľadáva – vidno nad klávesnicou.
+  if (window.visualViewport) {
+    const repositionOpenDialog = () => {
+      const dialog = $('dialog[open]');
+      if (!dialog) return;
+      const shrink = window.innerHeight - window.visualViewport.height;
+      if (shrink > 80) {
+        dialog.style.position = 'fixed';
+        dialog.style.margin = '0 auto';
+        dialog.style.top = `${Math.max(8, Math.round(window.visualViewport.offsetTop))}px`;
+        dialog.style.maxHeight = `${Math.round(window.visualViewport.height - 16)}px`;
+      } else {
+        dialog.style.position = '';
+        dialog.style.margin = '';
+        dialog.style.top = '';
+        dialog.style.maxHeight = '';
+      }
+    };
+    window.visualViewport.addEventListener('resize', repositionOpenDialog);
+    window.visualViewport.addEventListener('scroll', repositionOpenDialog);
+  }
+
   $$('[data-goto]').forEach((node) => {
     node.onclick = () => {
       if (state.view === 'editor' && editor.isDirty()
@@ -1569,6 +1699,12 @@ function bindEvents() {
     $('#liveSetSearch').value = '';
     $('#liveSetResults').innerHTML = '';
     $('#liveSetDialog').showModal();
+    // Dialóg sám neponúka vyhľadávanie – klávesnica sa má otvoriť, až keď
+    // do poľa ťukne používateľ, nie hneď pri otvorení (showModal() vie
+    // niekedy sám presunúť fokus na prvý ovládací prvok v ňom).
+    if (document.activeElement && document.activeElement !== document.body) {
+      document.activeElement.blur();
+    }
   };
   $('#liveSetSearch').oninput = (event) => {
     renderQuickResults('#liveSetResults', event.target.value, addToLiveSet);
@@ -2061,11 +2197,14 @@ async function main() {
   await reloadLibrary();
   setView('library');
   publish();
+  startStatusBar();
 
   // Priečinok s piesňami je úložisko – načíta sa pri každom spustení.
   await loadSongsFolderAtStart();
   // Sety vedľa neho rovnako.
   await loadSetsFolderAtStart();
+  // Keby appka spadla uprostred prípravy setu, obnoví sa z priebežnej zálohy.
+  restoreCurrentSetBackup();
   // Ak je knižnica aj tak prázdna (napríklad po preinštalovaní a priečinok
   // ešte nie je potvrdený), skúsi sa posledná automatická záloha.
   await restoreFromAutoBackup();

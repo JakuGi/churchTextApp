@@ -34,7 +34,7 @@ v kostole. Ovládanie je na tablete, text ide na druhú obrazovku.
 > `claude/cool-feynman-88sk88`. Prepnúť na `main` vie iba vlastník repozitára
 > (*Settings → General → Default branch*); Claude na to nemá nástroj.
 
-**Číslovanie verzií:** všetko je zatiaľ **alfa** – `a0.x.y`, teraz `a0.1.6`.
+**Číslovanie verzií:** všetko je zatiaľ **alfa** – `a0.x.y`, teraz `a0.1.8`.
 Pôvodné čísla sa premenovali: `1.0.0 → a0.0.0`, `1.0.1 → a0.0.1`,
 `1.1.0 → a0.1.0`, `1.1.1 → a0.1.1`. Číslo `1.0.0` je vyhradené pre prvú
 odskúšanú verziu.
@@ -210,6 +210,37 @@ testov). Testy žalmu používajú uložené stránky v `tests/fixtures/`.
   (`quickMatches()`): zadanie „25“ nájde všetky piesne, ktorých číslo
   predponou „25“ začína (25, 250, 251, …), zoradené tak, že presná zhoda je
   vždy prvá.
+- **Čas a batéria vo vrchnom paneli** (`.statusbar`, `startStatusBar()`):
+  čas sa počíta v JS (`toLocaleTimeString`), batéria ide cez nový natívny
+  most `OrganistaNative.batteryLevel()` (Kotlin `BatteryManager`,
+  `MainActivity.batteryLevel()`) – webová Battery Status API je vo väčšine
+  prehliadačov zrušená/skrytá, natívny most je spoľahlivejší. Prvky majú
+  spoločnú triedu (`.statusbar__time`, `.statusbar__battery`), nie id, lebo
+  sa vykresľujú na dvoch miestach naraz (vrchný panel aj premietanie) a
+  aktualizujú sa spolu (`$$(...).forEach`).
+- **Opakovaná automatická záloha každých 20 minút je vypnutá**
+  (`startAutoBackup()` už nevolá `setInterval`) – zbytočná odkedy sa
+  knižnica zapisuje priamo do priečinka s piesňami pri každej zmene. Záloha
+  pri spustení a pred inštaláciou aktualizácie (`autoBackup()`) zostáva.
+- **Vyhľadávanie v knižnici sa vyprázdňuje** (`clearLibrarySearch()`) pri
+  prepnutí zbierky a pri pridaní nájdenej piesne do setu – inak filtrovalo
+  knižnicu podľa starého textu aj potom, čo už nebol dôvod.
+- **Tlačidlo čiernej obrazovky a rámik premietanej slohy sú teraz zelené**,
+  keď je obrazovka čierna (šípka, „ZOBRAZIŤ TEXT“) a **červené**, keď sa
+  premieta text („ZASTAVIŤ“) – opačne než pôvodne, pretože červená má
+  organistu upozorniť na akciu, ktorú spraví ďalším ťuknutím (zastaviť), nie
+  na aktuálny stav.
+- **Rozpracovaný set sa priebežne zálohuje** (`persistCurrentSetBackup()`,
+  volané z `renderSetList()` pri každej zmene, teda po každej mutácii
+  `state.set.items`) pod pevným id `aktualny-set-zaloha` – medzi uložené
+  sety aj do priečinka `sety`. Prázdny set zálohu zase zmaže. Pri štarte
+  appky ho `restoreCurrentSetBackup()` obnoví do `state.set`, ak appka
+  spadla s rozpracovaným (neuloženým) setom.
+- **Dialóg so sety počas premietania neotvára klávesnicu hneď**
+  (`liveSetBtn` po `showModal()` odfokusuje, čo si prehliadač/WebView sám
+  zafokusoval) a keď sa klávesnica otvorí ťuknutím do poľa, otvorený dialóg
+  sa cez `visualViewport.resize`/`scroll` posunie k vrchu viditeľnej plochy
+  a skráti, aby bol celý nad klávesnicou vidno.
 
 ## 6. Na čo si dať pozor (naučené po tvrdom)
 

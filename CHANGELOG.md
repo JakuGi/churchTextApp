@@ -10,6 +10,49 @@ spoľahlivo). Pôvodné čísla `1.0.0` – `1.1.1` sa premenovali takto:
 Číslo `1.0.0` dostane až prvá verzia, ktorá bude na bežné používanie v kostole
 overená.
 
+## a0.1.8
+
+**Vrchný panel**
+
+- **Vždy vidno čas a batériu** – vo vrchnom paneli aj v premietaní, bez
+  toho, aby sa panel zväčšil. Pod 20 % sa batéria sfarbí oranžovo, pod
+  10 % červeno.
+
+**Automatická záloha**
+
+- Opakovaná záloha knižnice **každých 20 minút je vypnutá** – knižnica sa aj
+  tak zapisuje rovno do priečinka s piesňami pri každej zmene, takže
+  priebežná záloha navyše bola zbytočná. Záloha pri spustení appky a pred
+  inštaláciou aktualizácie zostáva.
+
+**Vyhľadávanie v knižnici**
+
+- Pole na vyhľadávanie sa **vyprázdni** pri prepnutí na inú zbierku a pri
+  pridaní nájdenej piesne do setu – predtým zostalo filtrovať knižnicu podľa
+  starého textu aj potom, čo už nebol potrebný.
+
+**Premietanie**
+
+- Tlačidlo na čiernu obrazovku je teraz **zelené so šípkou**, keď je čierna
+  obrazovka aktívna (ťuknutím sa vrátiš k textu), a **červené s nápisom
+  „Zastaviť“**, keď sa premieta text (ťuknutím zhasneš obrazovku).
+- Rámik, ktorý na „televízorkoch“ so slohami označuje práve premietanú
+  slohu, je teraz **zelený** namiesto červeného.
+- „Televízorky“ so slohami majú pomer strán **16:9**, rovnaký ako skutočná
+  obrazovka.
+- **Menšie okraje na premietanej ploche** – text teraz zaplní viac miesta
+  (menší okraj okolo textu aj nižšie pásy s názvom/číslom slohy hore a dole).
+- Tlačidlo **Set** počas premietania už neotvorí klávesnicu hneď pri
+  otvorení – len po ťuknutí do vyhľadávania. Keď sa klávesnica otvorí, celý
+  dialóg sa posunie k vrchu obrazovky, aby bolo vidno aj to, čo sa vyhľadáva.
+
+**Sety**
+
+- **Rozpracovaný set sa priebežne zálohuje** medzi uložené sety (aj do
+  priečinka vedľa piesní) pod každou zmenou – bez toho, aby si musel
+  ťuknúť na Uložiť. Ak appka spadne alebo sa reštartuje, rozpracovaný set sa
+  pri ďalšom spustení obnoví z tejto zálohy.
+
 ## a0.1.7
 
 **Úprava piesne počas premietania**
@@ -50,6 +93,14 @@ overená.
   **všetky piesne, ktorých číslo tým zadaním začína** – napríklad zadanie
   „25“ ukáže aj 250, 251 atď., nielen presné 25 (presná zhoda je v zozname
   vždy prvá).
+
+**Známe chyby (opravené vo verzii a0.1.8)**
+
+- Vyhľadávacie pole v knižnici zostalo filtrovať aj po prepnutí zbierky
+  alebo po pridaní nájdenej piesne do setu – trebalo ho vždy ručne vymazať.
+- Tlačidlo **Set** počas premietania vedelo otvoriť klávesnicu hneď pri
+  otvorení dialógu, ešte pred ťuknutím do vyhľadávania, a keď sa klávesnica
+  otvorila, mohla zakryť to, čo sa vyhľadáva.
 
 ## a0.1.6
 
