@@ -71,6 +71,16 @@ code { background: var(--panel-2); padding: 2px 6px; border-radius: 6px; }
 }
 .badge--ok { color: var(--ok); border-color: rgba(46,204,113,.5); }
 .badge--warn { color: var(--warn); border-color: rgba(255,138,61,.5); }
+/* Premietanie beží ďalej na pozadí, kým sa upravuje práve hraná pieseň */
+.badge--presenting {
+  color: #ffb3ad; border-color: rgba(226,87,76,.6); background: rgba(226,87,76,.14);
+  font-weight: 700; animation: presenting-pulse 2.4s ease-in-out infinite;
+}
+@keyframes presenting-pulse { 50% { opacity: .6; } }
+body.is-presenting-bg .topbar {
+  background: linear-gradient(rgba(226,87,76,.14), rgba(226,87,76,.14)), var(--panel);
+  border-bottom-color: rgba(226,87,76,.55);
+}
 
 /* -------------------------------------------------------------- tlačidlá */
 .btn {

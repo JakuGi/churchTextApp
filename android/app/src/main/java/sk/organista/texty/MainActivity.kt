@@ -349,6 +349,9 @@ class MainActivity : ComponentActivity() {
                         .put("text", text),
                 )
                 total += 1
+                // Samostatný, ľahký signál za každý súbor – vďaka nemu pásik
+                // priebehu ukazuje skutočné číslo, nielen skoky po dávkach.
+                callJs("window.organistaImportTick", total.toString())
                 if (batch.length() >= 25) {
                     callJs("window.organistaImportChunk", batch.toString())
                     batch = JSONArray()
@@ -501,6 +504,7 @@ class MainActivity : ComponentActivity() {
                         .put("text", text),
                 )
                 total += 1
+                callJs("window.organistaImportTick", total.toString())
                 if (batch.length() >= 25) {
                     callJs("window.organistaImportChunk", batch.toString())
                     batch = JSONArray()
@@ -510,6 +514,14 @@ class MainActivity : ComponentActivity() {
             callJs("window.organistaImportDone", total.toString())
         }.start()
     }
+
+    // Bez povolenia na súbory (MANAGE_EXTERNAL_STORAGE) sa pracuje cez SAF
+    // (DocumentFile), kde je DocumentFile.findFile() plná listovanie celého
+    // priečinka pri KAŽDOM volaní – pri väčšej zbierke to vedelo trvať aj
+    // niekoľko sekúnd. Vyriešené priečinky aj súbory sa preto pre bežiacu
+    // appku zapamätajú, takže ďalšie uloženie do tej istej zbierky je rýchle.
+    private val safDirCache = HashMap<String, DocumentFile>()
+    private val safFileCache = HashMap<String, DocumentFile>()
 
     /**
      * Uloží pieseň ako .xml priamo do priečinka s piesňami, do podpriečinka
@@ -528,9 +540,12 @@ class MainActivity : ComponentActivity() {
         return runCatching {
             val root = DocumentFile.fromTreeUri(this, tree) ?: return false
             val dir = songDir(root, folder) ?: return false
-            val file = dir.findFile(fileName)?.takeIf { it.isFile }
+            val cacheKey = "$folder/$fileName"
+            val file = safFileCache[cacheKey]?.takeIf { it.isFile }
+                ?: dir.findFile(fileName)?.takeIf { it.isFile }
                 ?: dir.createFile("text/xml", fileName)
                 ?: return false
+            safFileCache[cacheKey] = file
             contentResolver.openOutputStream(file.uri, "wt")?.use { it.write(content.toByteArray()) }
             true
         }.getOrDefault(false)
@@ -549,15 +564,59 @@ class MainActivity : ComponentActivity() {
             val root = DocumentFile.fromTreeUri(this, tree) ?: return false
             val dir = if (folder.isBlank() || folder == "Ostatné") root
             else root.findFile(folder)?.takeIf { it.isDirectory } ?: return false
-            dir.findFile(fileName)?.takeIf { it.isFile }?.delete() ?: false
+            val ok = dir.findFile(fileName)?.takeIf { it.isFile }?.delete() ?: false
+            safFileCache.remove("$folder/$fileName")
+            ok
         }.getOrDefault(false)
     }
 
     private fun songDir(root: DocumentFile, folder: String): DocumentFile? {
         if (folder.isBlank() || folder == "Ostatné") return root
+        safDirCache[folder]?.let { return it }
         val existing = root.findFile(folder)
-        if (existing != null && existing.isDirectory) return existing
-        return root.createDirectory(folder)
+        val dir = if (existing != null && existing.isDirectory) existing else root.createDirectory(folder)
+        if (dir != null) safDirCache[folder] = dir
+        return dir
+    }
+
+    // ---------------------------------------------------------------- sety
+
+    /** Priečinok pre sety – vedľa priečinka s piesňami (rovnaký rodič). */
+    fun setsDir(): File {
+        val parent = songsDir().parentFile
+            ?: File(Environment.getExternalStorageDirectory(), "${Environment.DIRECTORY_DOWNLOADS}/Organista")
+        return File(parent, SETS_SUBFOLDER)
+    }
+
+    /** Uloží set ako .json vedľa priečinka s piesňami. Funguje len s povolením na súbory. */
+    fun saveSetFile(fileName: String, content: String): Boolean {
+        if (!hasFileAccess()) return false
+        return runCatching {
+            val dir = setsDir().apply { mkdirs() }
+            File(dir, fileName).writeText(content)
+            true
+        }.getOrDefault(false)
+    }
+
+    /** Zmaže súbor setu, aby sa pri ďalšom spustení znovu nenačítal. */
+    fun deleteSetFile(fileName: String): Boolean {
+        if (!hasFileAccess()) return false
+        return runCatching { File(setsDir(), fileName).delete() }.getOrDefault(false)
+    }
+
+    /** Načíta všetky sety z priečinka vedľa piesní. Sety sú málo objemné, netreba dávkovanie. */
+    fun readSetsFolder(): String {
+        if (!hasFileAccess()) return "[]"
+        return runCatching {
+            val files = setsDir().listFiles { file -> file.isFile && file.name.endsWith(".json", ignoreCase = true) }
+                ?: return "[]"
+            val array = JSONArray()
+            for (file in files) {
+                val text = runCatching { file.readText() }.getOrNull() ?: continue
+                array.put(JSONObject().put("name", file.name).put("text", text))
+            }
+            array.toString()
+        }.getOrDefault("[]")
     }
 
     // ----------------------------------------------- liturgický kalendár
@@ -797,6 +856,7 @@ class MainActivity : ComponentActivity() {
     private companion object {
         const val SONGS_SUBFOLDER = "piesne"
         const val SONGS_RELATIVE = "Organista/piesne"
+        const val SETS_SUBFOLDER = "sety"
         const val SONGS_README = "PRECITAJ-MA.txt"
         const val KEY_SONGS_TREE = "songsTree"
         const val KEY_SONGS_PATH = "songsPath"

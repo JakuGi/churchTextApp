@@ -10,6 +10,47 @@ spoľahlivo). Pôvodné čísla `1.0.0` – `1.1.1` sa premenovali takto:
 Číslo `1.0.0` dostane až prvá verzia, ktorá bude na bežné používanie v kostole
 overená.
 
+## a0.1.7
+
+**Úprava piesne počas premietania**
+
+- Keď je zapnuté premietanie a priamo z neho otvoríš úpravu premietanej
+  piesne, **premietanie na televízore beží ďalej** – neprepne sa na čiernu
+  obrazovku. Vrchný panel sa počas úpravy **sfarbí načerveno** a ukazuje
+  odznak „🔴 Premieta sa: <názov piesne>“, aby bolo jasné, že sa stále
+  niečo premieta na pozadí. Po uložení sa premietanie vráti k upravenej
+  piesni; keď z úpravy odídeš inam bez uloženia, premietanie sa až vtedy
+  zastaví (čierna obrazovka).
+
+**Rýchlejšie ukladanie piesne**
+
+- Uloženie upravenej piesne už neprečíta a neprepíše celú knižnicu cez most
+  do Androidu – zmena sa uloží rovno do rozpracovaného zoznamu a zapíše sa
+  len raz. Na zariadeniach bez povolenia *Prístup ku všetkým súborom* je
+  navyše priečinok s piesňami (zbierky aj súbory) v pamäti vďaka čomu sa
+  opakované ukladanie do rovnakého priečinka už neprehľadáva odznova.
+
+**Sety v priečinku s piesňami**
+
+- **Sety vytvorené v appke sa teraz ukladajú aj ako súbory** – do priečinka
+  `sety` vedľa priečinka `piesne` (na tom istom mieste ako `Stiahnuté/Organista`).
+  Pri každom spustení appky sa odtiaľ načítajú, rovnako ako piesne z priečinka
+  `piesne`. Funguje to na zariadeniach s povoleným prístupom ku všetkým
+  súborom; bez neho zostávajú sety uložené len v appke ako doteraz.
+
+**Načítavací pásik**
+
+- Pásik pri načítavaní piesní a setov teraz ukazuje **každé jedno číslo**
+  (nielen po 25) a k tomu aj **percentá** – je vidieť, že sa naozaj niečo
+  deje, aj keď je knižnica veľká.
+
+**Rýchly výber čísla pri premietaní**
+
+- Keď počas premietania zadávaš číslo piesne, výsledky teraz ukazujú
+  **všetky piesne, ktorých číslo tým zadaním začína** – napríklad zadanie
+  „25“ ukáže aj 250, 251 atď., nielen presné 25 (presná zhoda je v zozname
+  vždy prvá).
+
 ## a0.1.6
 
 **Rozhranie premietania**
@@ -43,6 +84,18 @@ overená.
 - **Klik do poľa, kam sa píše, ho presunie navrch** jeho scrollovanej časti
   (bočný panel, dialóg, editor) – aby ho na tablete nezakryla klávesnica
   spolu s tým, čo sa pod ním hľadá alebo píše.
+
+**Známe chyby (opravené vo verzii a0.1.7)**
+
+- Úprava práve premietanej piesne priamo z živého režimu **zrušila
+  premietanie na televízore** (čierna obrazovka), aj keď šlo len o krátku
+  opravu textu.
+- Uloženie upravenej piesne vedelo trvať približne **10 sekúnd**.
+- Sety vytvorené v appke sa neukladali nikam mimo appky – po preinštalovaní
+  alebo obnove sa stratili.
+- Pásik pri načítavaní piesní skákal len po 25 kusoch a neukazoval percentá.
+- Rýchly výber čísla pri premietaní hľadal len presnú zhodu – zadanie „25“
+  neukázalo pieseň číslo 250 ani 251.
 
 ## a0.1.5
 

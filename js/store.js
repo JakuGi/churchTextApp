@@ -52,6 +52,13 @@ function nativeBackend() {
       }
       write(name, all);
     },
+    // Zapíše presne dodaný zoznam bez toho, aby si najprv prečítal a zlúčil
+    // to, čo je uložené – volajúci už má celú knižnicu v pamäti (state.songs).
+    // Cez natívny most ide veľký blok textu pomaly, takže vynechanie tohto
+    // čítania výrazne skráti ukladanie pri väčšej knižnici.
+    async replaceAll(name, items) {
+      write(name, items);
+    },
     async remove(name, keys) {
       const path = STORES[name];
       const drop = new Set(keys);
@@ -106,6 +113,13 @@ function idbBackend(db) {
     kind: 'indexeddb',
     getAll: (name) => run(name, 'readonly', (store) => store.getAll()),
     putAll: (name, items) => run(name, 'readwrite', (store) => {
+      items.forEach((item) => store.put(item));
+      return null;
+    }),
+    // IndexedDB nečíta pred zápisom (žiadny bridge, žiadny problém s
+    // rýchlosťou), takže „replaceAll“ tu znamená to isté ako putAll –
+    // volajúci aj tak posiela celý zoznam.
+    replaceAll: (name, items) => run(name, 'readwrite', (store) => {
       items.forEach((item) => store.put(item));
       return null;
     }),
@@ -164,6 +178,13 @@ export const store = {
   async putFolder(folder) {
     await (await backend()).putAll('folders', [folder]);
     return folder;
+  },
+  /** Zapíše celú knižnicu piesní naraz – rýchla cesta pre editor (viď vyššie). */
+  async replaceSongs(songs) {
+    await (await backend()).replaceAll('songs', songs);
+  },
+  async replaceFolders(folders) {
+    await (await backend()).replaceAll('folders', folders);
   },
   async sets() {
     return (await backend()).getAll('sets');

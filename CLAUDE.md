@@ -176,6 +176,40 @@ testov). Testy žalmu používajú uložené stránky v `tests/fixtures/`.
   súboru sa zachová, ak by zalomenie prinieslo menej než 10 % veľkosti navyše
   alebo ak by bolo písmo pod `fontMin`. Na záver `shrinkToFit` overí, že text
   naozaj nepreteká.
+- **Úprava piesne počas premietania beží na pozadí** (`app.js`,
+  `setView`/`updatePresentingIndicator`): `editCurrentSong()` volá
+  `openEditor(song, 'live', { keepPresenting: true })`, čo nastaví
+  `presentingInBackground = true` a nevypína premietanie (`publish()` berie
+  do úvahy aj tento flag, nielen `state.view === 'live'`). Vrchný panel
+  dostane triedu `is-presenting-bg` (červený nádych, `css/app.css`) a odznak
+  `#presentingBadge`. Odchod z úpravy inam než späť do živého režimu
+  (`abandoningBackgroundEdit`) premietanie až vtedy vypne (čierna obrazovka).
+- **Ukladanie piesne bez prekreslenia celej knižnice** (`onSave` v
+  `setupEditor()`): namiesto `store.putSongs` + `store.putFolder` +
+  `reloadLibrary()` (čo pri veľkej zbierke znamená viacnásobné čítanie a
+  zápis celej JSON tabuľky cez most do Androidu) sa `state.songs`/`folders`
+  upravia v pamäti a zapíšu sa raz cez `store.replaceSongs`/`replaceFolders`
+  (`nativeBackend.replaceAll` – len zápis, žiadne interné čítanie). Na
+  strane Androida (`MainActivity.kt`) pribudla aj medzipamäť SAF priečinkov
+  a súborov (`safDirCache`, `safFileCache`), lebo `DocumentFile.findFile()`
+  robí pri každom volaní celý výpis priečinka cez ContentProvider – pomáha
+  to len pri opakovanom ukladaní do toho istého priečinka v rámci behu
+  appky, nie pri prvom uložení.
+- **Sety sa ukladajú aj do súborov** vedľa priečinka s piesňami
+  (`Stiahnuté/Organista/sety`, `setsDir()` v `MainActivity.kt` odvodené z
+  `songsDir().parentFile`) – funguje len s povoleným `MANAGE_EXTERNAL_STORAGE`
+  (bez SAF fallbacku, lebo `DocumentFile` strom sa nedá jednoducho posunúť
+  na súrodenecký priečinok mimo pôvodne vybraného stromu). Načítavajú sa pri
+  štarte rovnako ako piesne (`loadSetsFolderAtStart()`).
+- **Načítavací pásik ukazuje každé číslo aj percentá** (`showProgress()`):
+  signalizácia priebehu je oddelená od prenosu obsahu – nová správa
+  `organistaImportTick` chodí za každý súbor zvlášť (lacná, len číslo),
+  zatiaľ čo `organistaImportChunk` posiela obsah dávkovo po 25 (kvôli
+  rýchlosti mosta).
+- **Rýchly výber čísla pri premietaní hľadá podľa predpony**
+  (`quickMatches()`): zadanie „25“ nájde všetky piesne, ktorých číslo
+  predponou „25“ začína (25, 250, 251, …), zoradené tak, že presná zhoda je
+  vždy prvá.
 
 ## 6. Na čo si dať pozor (naučené po tvrdom)
 

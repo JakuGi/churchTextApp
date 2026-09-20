@@ -102,6 +102,20 @@ class WebBridge(private val activity: MainActivity) {
     fun deleteSongFile(folder: String, fileName: String): Boolean =
         activity.deleteSongFile(folder, fileName)
 
+    /** Uloží set ako .json vedľa priečinka s piesňami (len s povolením na súbory). */
+    @JavascriptInterface
+    fun saveSetFile(fileName: String, content: String): Boolean =
+        activity.saveSetFile(fileName, content)
+
+    /** Zmaže súbor setu spomedzi setov uložených vedľa piesní. */
+    @JavascriptInterface
+    fun deleteSetFile(fileName: String): Boolean =
+        activity.deleteSetFile(fileName)
+
+    /** Načíta všetky sety uložené vedľa priečinka s piesňami (pre spustenie appky). */
+    @JavascriptInterface
+    fun readSetsFolder(): String = activity.readSetsFolder()
+
     /**
      * Stiahne stránku liturgického kalendára (responzóriový žalm).
      * Výsledok príde do JS cez window.organistaLiturgy.
@@ -143,5 +157,5 @@ class WebBridge(private val activity: MainActivity) {
 
 /** Verzia aplikácie bez potreby generovaného BuildConfig. */
 object BuildConfigCompat {
-    const val versionName: String = "a0.1.6"
+    const val versionName: String = "a0.1.7"
 }

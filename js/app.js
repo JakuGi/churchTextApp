@@ -78,19 +78,48 @@ function toast(message, kind = 'info') {
   box._timer = setTimeout(() => box.classList.remove('is-visible'), 3200);
 }
 
-function setView(view) {
-  const leavingLive = state.view === 'live' && view !== 'live';
+// Aktívne, keď editor bol otvorený priamo z premietania (editCurrentSong) –
+// televízor vtedy ukazuje pôvodný text ďalej, kým sa pieseň opravuje.
+let presentingInBackground = false;
+
+function setView(view, opts = {}) {
+  const previous = state.view;
+  const leavingLiveDirectly = previous === 'live' && view !== 'live';
+  // Keď organista z editora (otvoreného cez editCurrentSong) odíde inam než
+  // späť na premietanie, berie sa to ako skutočné ukončenie premietania.
+  const abandoningBackgroundEdit = presentingInBackground && previous === 'editor' && view !== 'live';
+
   state.view = view;
   $$('.view').forEach((node) => node.classList.toggle('is-active', node.dataset.view === view));
   $$('.tab').forEach((node) => node.classList.toggle('is-active', node.dataset.goto === view));
   document.body.classList.toggle('is-live', view === 'live');
   if (view === 'live') enableWakeLock();
   else releaseWakeLock();
-  // Odchod z premietania hneď zhasne televízor; po návrate sa text
-  // neobjaví skôr, než ho organista sám zapne.
-  if (leavingLive) {
+
+  if (view === 'live') {
+    presentingInBackground = false;
+  } else if (leavingLiveDirectly && opts.keepPresenting) {
+    presentingInBackground = true;
+  } else if (leavingLiveDirectly || abandoningBackgroundEdit) {
+    // Skutočný odchod z premietania hneď zhasne televízor; po návrate sa
+    // text neobjaví skôr, než ho organista sám zapne.
     state.live.blank = true;
+    presentingInBackground = false;
     publish();
+  }
+  updatePresentingIndicator();
+}
+
+/** Vrchný panel sa sfarbí, keď premietanie beží ďalej mimo záložky Naživo. */
+function updatePresentingIndicator() {
+  const active = presentingInBackground && !state.live.blank && state.live.songs.length > 0;
+  document.body.classList.toggle('is-presenting-bg', active);
+  const badge = $('#presentingBadge');
+  if (!badge) return;
+  badge.hidden = !active;
+  if (active) {
+    const song = currentSong();
+    badge.textContent = `🔴 Premieta sa${song ? `: ${song.title}` : ''}`;
   }
 }
 
@@ -295,6 +324,64 @@ function removeSongFile(song) {
   if (!isNative || !song || song.temporary) return false;
   if (!call('hasSongsFolder')) return false;
   return call('deleteSongFile', song.folder || 'Ostatné', songFileName(song)) === true;
+}
+
+// ------------------------------------- sety v priečinku vedľa piesní (Organista/sety)
+
+/** Názov súboru setu podľa jeho (nemenného) id. */
+function setFileName(set) {
+  const safe = String((set && set.id) || '').replace(/[^a-zA-Z0-9_-]/g, '') || `set-${Date.now()}`;
+  return `${safe}.json`;
+}
+
+/**
+ * Zapíše set do priečinka vedľa piesní. Funguje len s povoleným prístupom
+ * k súborom (rovnaká podmienka ako pri priamom zápise piesní).
+ */
+function writeSetFile(set) {
+  if (!isNative || !set || !call('hasFileAccess')) return false;
+  return call('saveSetFile', setFileName(set), JSON.stringify(set, null, 2)) === true;
+}
+
+/** Zmaže súbor setu, aby sa pri ďalšom spustení znovu nenačítal. */
+function removeSetFile(set) {
+  if (!isNative || !set || !call('hasFileAccess')) return false;
+  return call('deleteSetFile', setFileName(set)) === true;
+}
+
+/**
+ * Sety uložené vedľa priečinka s piesňami sa načítajú pri každom spustení,
+ * rovnako ako piesne – doplnia sa do knižnice uložených setov v pamäti.
+ */
+async function loadSetsFolderAtStart() {
+  if (!isNative || !call('hasFileAccess')) return;
+  let files = [];
+  try {
+    files = JSON.parse(call('readSetsFolder') || '[]');
+  } catch {
+    files = [];
+  }
+  if (!files.length) return;
+
+  showProgress('Načítavam sety…', 0, files.length);
+  const parsed = [];
+  files.forEach((file, index) => {
+    try {
+      const set = JSON.parse(file.text);
+      if (set && set.id && Array.isArray(set.items)) parsed.push(set);
+    } catch {
+      /* poškodený súbor sa preskočí */
+    }
+    showProgress('Načítavam sety…', index + 1, files.length);
+  });
+  hideProgress();
+  if (!parsed.length) return;
+
+  const byId = new Map(state.sets.map((set) => [set.id, set]));
+  for (const set of parsed) byId.set(set.id, set);
+  state.sets = Array.from(byId.values()).sort((a, b) => b.updatedAt - a.updatedAt);
+  await Promise.all(parsed.map((set) => store.putSet(set)));
+  renderSavedSets();
 }
 
 /** Celá knižnica ako jeden .xml súbor. */
@@ -607,15 +694,17 @@ function playPsalm() {
 /** Odkiaľ sa editor otvoril – po uložení sa tam vrátime. */
 let editorReturn = 'library';
 
-function openEditor(song, from = 'library') {
+function openEditor(song, from = 'library', opts = {}) {
   editorReturn = from;
   editor.open(song || null);
-  setView('editor');
+  setView('editor', opts);
 }
 
 /**
  * Úprava piesne priamo z premietania: keď je v texte chyba, dá sa opraviť
- * hneď a natrvalo. Po uložení sa premietanie vráti na tú istú pieseň.
+ * hneď a natrvalo. Premietanie sa počas úpravy neruší – televízor ukazuje
+ * ďalej pôvodný text, len sa sfarbí vrchný panel (updatePresentingIndicator).
+ * Po uložení sa premietanie vráti na tú istú pieseň.
  */
 function editCurrentSong() {
   const song = currentSong();
@@ -627,7 +716,7 @@ function editCurrentSong() {
     toast('Túto pieseň (žalm) najprv ulož do knižnice.', 'warn');
     return;
   }
-  openEditor(song, 'live');
+  openEditor(song, 'live', { keepPresenting: true });
 }
 
 /** Po úprave z premietania nahradí pieseň v zozname jej novou podobou. */
@@ -651,19 +740,43 @@ function setupEditor() {
         // v priečinku s piesňami treba zmazať, inak by sa vrátila pri štarte.
         const previous = songById(replacedId);
         if (previous) removeSongFile(previous);
-        await store.deleteSongs([replacedId]);
         state.set.items = state.set.items.map((id) => (id === replacedId ? song.id : id));
       }
-      await store.putSongs([song]);
+
+      // Knižnicu v pamäti (state.songs) už máme celú, takže sa rovno zapíše
+      // ona – bez toho, aby si natívna časť najprv musela prečítať a zlúčiť
+      // to, čo je uložené. Práve to bol hlavný dôvod, prečo uloženie jednej
+      // piesne pri väčšej knižnici trvalo aj niekoľko sekúnd.
+      const withoutOld = replacedId
+        ? state.songs.filter((item) => item.id !== replacedId)
+        : state.songs;
+      const existingIndex = withoutOld.findIndex((item) => item.id === song.id);
+      const nextSongs = existingIndex >= 0
+        ? withoutOld.map((item, index) => (index === existingIndex ? song : item))
+        : [...withoutOld, song];
+      state.songs = nextSongs.sort(compareSongs);
+
       const others = state.songs.filter((item) => item.folder === song.folder && item.id !== song.id).length;
-      await store.putFolder({
+      const folder = {
         name: song.folder,
-        system: (state.folders.find((folder) => folder.name === song.folder) || {}).system
+        system: (state.folders.find((item) => item.name === song.folder) || {}).system
           || (song.number ? song.system : ''),
         count: others + 1,
         updatedAt: Date.now(),
-      });
-      await reloadLibrary();
+      };
+      state.folders = state.folders.filter((item) => item.name !== folder.name)
+        .concat(folder)
+        .sort((a, b) => a.name.localeCompare(b.name, 'sk'));
+
+      await Promise.all([
+        store.replaceSongs(state.songs),
+        store.replaceFolders(state.folders),
+      ]);
+      renderFolders();
+      renderSongList();
+      renderSetList();
+      renderSavedSets();
+
       const stored = writeSongFile(song);
       toast(stored
         ? `Pieseň „${song.title}“ uložená do zbierky ${song.folder}.`
@@ -807,6 +920,7 @@ function renderSavedSets() {
     remove.textContent = 'Zmazať';
     remove.onclick = async () => {
       if (!confirm(`Zmazať set „${saved.name}“?`)) return;
+      removeSetFile(saved);
       await store.deleteSet(saved.id);
       await reloadLibrary();
     };
@@ -836,21 +950,39 @@ async function saveCurrentSet() {
   state.set.id = set.id;
   state.set.name = set.name;
   await reloadLibrary();
-  toast(existing ? `Set „${set.name}“ prepísaný.` : `Set „${set.name}“ uložený.`, 'ok');
+  const stored = writeSetFile(set);
+  toast(existing
+    ? `Set „${set.name}“ prepísaný${stored ? ' aj v priečinku' : ''}.`
+    : `Set „${set.name}“ uložený${stored ? ' aj do priečinka' : ''}.`, 'ok');
 }
 
 // -------------------------------------------------------- rýchly výber čísla
 
+/**
+ * Zadané číslo hľadá ako predponu, nie presnú zhodu – „25“ tak nájde aj 250,
+ * 251, 252…, presná zhoda (ak existuje) je vždy prvá. Uľahčuje to písanie na
+ * číselnej klávesnici, kde sa píše po jednej číslici.
+ */
 function quickMatches(value) {
   const raw = String(value || '').trim();
   if (!raw) return [];
   const asNumber = parseNumber(raw);
   if (asNumber) {
-    return state.songs.filter((song) => song.number
-      && parseInt(song.number, 10) === parseInt(asNumber.number, 10)
-      && (!asNumber.system || song.system === asNumber.system));
+    const prefix = String(parseInt(asNumber.number, 10));
+    const target = Number(prefix);
+    return state.songs
+      .filter((song) => song.number
+        && String(parseInt(song.number, 10)).startsWith(prefix)
+        && (!asNumber.system || song.system === asNumber.system))
+      .sort((a, b) => {
+        const an = parseInt(a.number, 10);
+        const bn = parseInt(b.number, 10);
+        if (an === target && bn !== target) return -1;
+        if (bn === target && an !== target) return 1;
+        return an - bn;
+      });
   }
-  return searchSongs(state.songs, raw).slice(0, 8);
+  return searchSongs(state.songs, raw);
 }
 
 function renderQuickResults(boxId, value, onPick) {
@@ -1139,10 +1271,11 @@ function updateVerseScreens() {
 // ------------------------------------------------------------- publikovanie
 
 function publish() {
+  const presenting = state.view === 'live' || presentingInBackground;
   const payload = displayState({
     song: currentSong(),
     verse: currentVerse(),
-    blank: state.live.blank || state.view !== 'live',
+    blank: state.live.blank || !presenting,
     settings: state.settings,
     position: state.live.songs.length > 1 ? `${state.live.songIndex + 1}/${state.live.songs.length}` : '',
   });
@@ -1667,16 +1800,16 @@ function exportLibrary() {
 
 const nativeImport = { files: [], running: false, total: 0, resolve: null };
 
-/** Pásik s priebehom načítavania piesní. */
+/** Pásik s priebehom načítavania piesní a setov – ukazuje každé číslo aj %. */
 function showProgress(label, done, total) {
   const box = $('#importProgress');
   if (!box) return;
   box.hidden = false;
+  const percent = total ? Math.round((done / total) * 100) : 0;
   $('#importProgressLabel').textContent = total
-    ? `${label} ${done}/${total}`
+    ? `${label} ${done}/${total} (${percent} %)`
     : label;
-  const percent = total ? Math.round((done / total) * 100) : 8;
-  $('#importProgressBar').style.width = `${Math.max(4, Math.min(100, percent))}%`;
+  $('#importProgressBar').style.width = `${Math.max(4, Math.min(100, total ? percent : 8))}%`;
 }
 
 function hideProgress() {
@@ -1743,6 +1876,7 @@ window.organistaSongsDirChanged = async (result) => {
   renderSongsFolderHint();
   toast(`Piesne sa presunuli do ${result.path}.`, 'ok');
   await loadSongsFolderAtStart();
+  await loadSetsFolderAtStart();
 };
 
 /**
@@ -1797,12 +1931,21 @@ window.organistaImportStart = (total) => {
   showProgress('Načítavam piesne…', 0, nativeImport.total);
 };
 
-/** Natívna časť posiela súbory po dávkach. */
+/**
+ * Natívna časť posiela tento signál za KAŽDÝ súbor zvlášť (obsah chodí
+ * dávkovo nižšie, kvôli rýchlosti) – vďaka tomu pásik ukazuje skutočné
+ * číslo namiesto skokov po 25.
+ */
+window.organistaImportTick = (done) => {
+  if (!nativeImport.running) return;
+  showProgress('Načítavam piesne…', Number(done) || 0, nativeImport.total);
+};
+
+/** Natívna časť posiela obsah súborov po dávkach (kvôli rýchlosti prenosu). */
 window.organistaImportChunk = (batch) => {
   if (!nativeImport.running) return;
   for (const item of batch || []) nativeImport.files.push(item);
   $('#importInfo').textContent = `Načítavam ${nativeImport.files.length} súborov…`;
-  showProgress('Načítavam piesne…', nativeImport.files.length, nativeImport.total);
 };
 
 window.organistaImportDone = async (total) => {
@@ -1921,6 +2064,8 @@ async function main() {
 
   // Priečinok s piesňami je úložisko – načíta sa pri každom spustení.
   await loadSongsFolderAtStart();
+  // Sety vedľa neho rovnako.
+  await loadSetsFolderAtStart();
   // Ak je knižnica aj tak prázdna (napríklad po preinštalovaní a priečinok
   // ešte nie je potvrdený), skúsi sa posledná automatická záloha.
   await restoreFromAutoBackup();
