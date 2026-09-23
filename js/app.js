@@ -363,21 +363,26 @@ function removeSetFile(set) {
   return call('deleteSetFile', setFileName(set)) === true;
 }
 
+let setsFolderLoaded = false;
+
 /**
  * Sety uložené vedľa priečinka s piesňami sa načítajú pri každom spustení,
  * rovnako ako piesne – doplnia sa do knižnice uložených setov v pamäti.
+ * Priečinok je to, čo prežije preinštalovanie appky, preto sa doň zároveň
+ * dopíšu sety, ktoré v ňom ešte nie sú (napríklad uložené staršou verziou,
+ * ktorá sety do priečinka ešte nezapisovala).
  */
 async function loadSetsFolderAtStart() {
   if (!isNative || !call('hasFileAccess')) return;
+  setsFolderLoaded = true;
   let files = [];
   try {
     files = JSON.parse(call('readSetsFolder') || '[]');
   } catch {
     files = [];
   }
-  if (!files.length) return;
 
-  showProgress('Načítavam sety…', 0, files.length);
+  if (files.length) showProgress('Načítavam sety…', 0, files.length);
   const parsed = [];
   files.forEach((file, index) => {
     try {
@@ -388,13 +393,27 @@ async function loadSetsFolderAtStart() {
     }
     showProgress('Načítavam sety…', index + 1, files.length);
   });
-  hideProgress();
-  if (!parsed.length) return;
+  if (files.length) hideProgress();
 
+  // Pri rovnakom id vyhrá novšia verzia setu.
   const byId = new Map(state.sets.map((set) => [set.id, set]));
-  for (const set of parsed) byId.set(set.id, set);
+  const fromFolder = [];
+  for (const set of parsed) {
+    const known = byId.get(set.id);
+    if (!known || (set.updatedAt || 0) >= (known.updatedAt || 0)) {
+      byId.set(set.id, set);
+      fromFolder.push(set);
+    } else {
+      writeSetFile(known);
+    }
+  }
   state.sets = Array.from(byId.values()).sort((a, b) => b.updatedAt - a.updatedAt);
-  await Promise.all(parsed.map((set) => store.putSet(set)));
+
+  const inFolder = new Set(files.map((file) => file.name));
+  const missing = state.sets.filter((set) => !inFolder.has(setFileName(set)));
+  missing.forEach((set) => writeSetFile(set));
+
+  if (fromFolder.length) await Promise.all(fromFolder.map((set) => store.putSet(set)));
   renderSavedSets();
 }
 
@@ -829,6 +848,9 @@ function setupEditor() {
 const CURRENT_SET_BACKUP_ID = 'aktualny-set-zaloha';
 const CURRENT_SET_BACKUP_NAME = 'Aktuálny set (zálohovaný)';
 let lastSetBackupKey = null;
+// Kým sa pri štarte nepokúsime zálohu obnoviť, nesmie sa prepisovať: prvé
+// vykreslenie (ešte prázdneho) setu by ju inak zmazalo skôr, než sa obnoví.
+let setBackupReady = false;
 
 /**
  * Rozpracovaný set sa priebežne zálohuje medzi uložené sety pod pevným id –
@@ -837,6 +859,7 @@ let lastSetBackupKey = null;
  * zase zmaže, aby v uložených setoch nezostala zastaraná.
  */
 async function persistCurrentSetBackup() {
+  if (!setBackupReady) return;
   const key = JSON.stringify(state.set.items);
   if (key === lastSetBackupKey) return;
   lastSetBackupKey = key;
@@ -861,12 +884,17 @@ async function persistCurrentSetBackup() {
   writeSetFile(backup);
 }
 
-/** Pri páde appky uprostred prípravy setu ho pri ďalšom spustení obnoví. */
+/**
+ * Pri štarte (a po neskoršom povolení prístupu k súborom) obnoví rozpracovaný
+ * set zo zálohy – ak appka spadla, reštartovala sa alebo sa preinštalovala.
+ */
 function restoreCurrentSetBackup() {
+  setBackupReady = true;
   if (state.set.items.length) return;
   const backup = state.sets.find((item) => item.id === CURRENT_SET_BACKUP_ID);
   if (!backup || !backup.items.length) return;
   state.set = { id: null, name: 'Nový set', items: backup.items.slice() };
+  lastSetBackupKey = JSON.stringify(state.set.items);
   renderSetList();
   renderSongList();
   toast('Obnovený rozpracovaný set zo zálohy.', 'ok');
@@ -1214,10 +1242,35 @@ function renderLiveSetList() {
       <div class="setrow__body">
         <div class="song__title">${song.title}</div>
         <div class="song__sub">${[songLabel(song), pluralVerses(song.verses.length)].filter(Boolean).join(' · ')}</div>
+      </div>
+      <div class="setrow__tools">
+        <button class="btn btn--icon" data-up title="Hore" ${index === 0 ? 'disabled' : ''}>▲</button>
+        <button class="btn btn--icon" data-down title="Dole" ${index === state.live.songs.length - 1 ? 'disabled' : ''}>▼</button>
       </div>`;
-    row.onclick = () => jumpToLiveSong(index);
+    $('[data-up]', row).onclick = () => moveInLiveSet(index, -1);
+    $('[data-down]', row).onclick = () => moveInLiveSet(index, 1);
+    row.onclick = (event) => {
+      if (event.target.closest('button')) return;
+      jumpToLiveSong(index);
+    };
     box.appendChild(row);
   });
+}
+
+/**
+ * Presunie pieseň v bežiacom sete. Práve premietaná pieseň zostáva tá istá
+ * (posunie sa len jej poradie), takže premietanie sa nepreruší.
+ */
+function moveInLiveSet(index, delta) {
+  const target = index + delta;
+  const songs = state.live.songs;
+  if (target < 0 || target >= songs.length) return;
+  const current = songs[state.live.songIndex];
+  const [item] = songs.splice(index, 1);
+  songs.splice(target, 0, item);
+  state.live.songIndex = songs.indexOf(current);
+  renderLiveSetList();
+  renderLive();
 }
 
 function renderLive() {
@@ -1307,7 +1360,7 @@ function renderVerseScreens() {
     const label = verse.type === 'chorus' ? 'R' : verse.label;
     const name = VERSE_TYPES[verse.type] ? VERSE_TYPES[verse.type].label : 'Sloha';
     item.innerHTML = `<div class="vscreen__label">${label}<small>${name}</small></div>
-      <div class="vscreen__screen"></div>`;
+      <div class="vscreen__frame"><div class="vscreen__screen"></div></div>`;
     const display = createDisplay(item.querySelector('.vscreen__screen'));
     display.render(displayState({
       song, verse, blank: false, settings: state.settings, position: '',
@@ -2182,11 +2235,19 @@ async function main() {
     $('#songsDirAllow').onclick = () => call('requestFileAccess');
 
     // Po návrate zo systémových nastavení sa prístup skontroluje znovu.
+    // Po preinštalovaní appka prístup ešte nemá – sety aj piesne z priečinka
+    // sa preto načítajú až vtedy, keď sa používateľ vráti s povolením.
     document.addEventListener('visibilitychange', async () => {
-      if (document.hidden || !call('hasFileAccess') || state.songs.length) return;
-      renderSongsDir();
-      renderSongsFolderHint();
-      await loadSongsFolderAtStart();
+      if (document.hidden || !call('hasFileAccess')) return;
+      if (!state.songs.length) {
+        renderSongsDir();
+        renderSongsFolderHint();
+        await loadSongsFolderAtStart();
+      }
+      if (!setsFolderLoaded) {
+        await loadSetsFolderAtStart();
+        restoreCurrentSetBackup();
+      }
     });
   } else {
     renderCastStatus(cast.state);

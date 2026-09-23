@@ -1,6 +1,6 @@
 {
   "name": "organista-texty",
-  "version": "a0.1.8",
+  "version": "a0.1.9",
   "description": "Aplikácia pre organistu na premietanie textov piesní na TV cez Chromecast",
   "type": "module",
   "private": true,

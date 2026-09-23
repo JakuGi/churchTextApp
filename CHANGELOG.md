@@ -10,6 +10,29 @@ spoľahlivo). Pôvodné čísla `1.0.0` – `1.1.1` sa premenovali takto:
 Číslo `1.0.0` dostane až prvá verzia, ktorá bude na bežné používanie v kostole
 overená.
 
+## a0.1.9
+
+**Premietanie**
+
+- **Náhľady slôh sú naozaj 16:9** – obrazovka v náhľade má vždy presne pomer
+  televízora, na šírku ani na výšku sa už nenaťahuje (keď je pre ňu v riadku
+  priveľa miesta, zostane po stranách voľný okraj).
+- V okne **Set** počas premietania sa dá **meniť poradie piesní** šípkami
+  ▲ ▼. Práve premietaná pieseň sa pritom nezmení a premietanie beží ďalej.
+
+**Zálohovanie setov**
+
+- **Rozpracovaný set po reštarte appky zostane.** Vo verzii a0.1.8 sa jeho
+  záloha pri štarte omylom zmazala skôr, než sa stihla obnoviť.
+- **Sety prežijú preinštalovanie appky:**
+  - keď appka po preinštalovaní ešte nemá prístup k súborom, sety
+    z priečinka `sety` sa načítajú hneď, ako ho povolíš (predtým sa
+    načítali len pri spustení, takže sa už nikdy neobjavili),
+  - sety uložené staršou verziou (ešte pred a0.1.7), ktoré boli len vnútri
+    appky, sa pri štarte samy dopíšu do priečinka `sety` – predtým sa pri
+    odinštalovaní stratili spolu s appkou,
+  - ak je ten istý set v appke aj v priečinku, použije sa novšia verzia.
+
 ## a0.1.8
 
 **Vrchný panel**
@@ -52,6 +75,16 @@ overená.
   priečinka vedľa piesní) pod každou zmenou – bez toho, aby si musel
   ťuknúť na Uložiť. Ak appka spadne alebo sa reštartuje, rozpracovaný set sa
   pri ďalšom spustení obnoví z tejto zálohy.
+
+**Známe chyby (opravené vo verzii a0.1.9)**
+
+- **Rozpracovaný set sa po reštarte appky neobnovil** – jeho záloha sa pri
+  štarte zmazala skôr, než sa z nej dalo obnoviť.
+- **Sety sa po preinštalovaní appky stratili**, ak appka pri prvom spustení
+  ešte nemala prístup k súborom, a sety zo starších verzií neboli
+  v priečinku `sety` vôbec.
+- **Náhľady slôh boli na šírku roztiahnuté** (na tablete na šírku približne
+  2,3 : 1 namiesto 16 : 9).
 
 ## a0.1.7
 

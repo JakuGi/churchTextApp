@@ -34,7 +34,7 @@ v kostole. Ovládanie je na tablete, text ide na druhú obrazovku.
 > `claude/cool-feynman-88sk88`. Prepnúť na `main` vie iba vlastník repozitára
 > (*Settings → General → Default branch*); Claude na to nemá nástroj.
 
-**Číslovanie verzií:** všetko je zatiaľ **alfa** – `a0.x.y`, teraz `a0.1.8`.
+**Číslovanie verzií:** všetko je zatiaľ **alfa** – `a0.x.y`, teraz `a0.1.9`.
 Pôvodné čísla sa premenovali: `1.0.0 → a0.0.0`, `1.0.1 → a0.0.1`,
 `1.1.0 → a0.1.0`, `1.1.1 → a0.1.1`. Číslo `1.0.0` je vyhradené pre prvú
 odskúšanú verziu.
@@ -149,9 +149,15 @@ testov). Testy žalmu používajú uložené stránky v `tests/fixtures/`.
   použije sa pôvodná cesta cez SAF (strom potvrdený používateľom, uložený
   v `SharedPreferences`).
 - **Živý režim ukazuje slohy ako malé obrazovky pod sebou**
-  (`renderVerseScreens`), ťuknutím sa premietnu, premietaná má červený rámik
-  (`.vscreen.is-live`). Dva pôvodné náhľady sú preč. Obrazovky majú výšku
+  (`renderVerseScreens`), ťuknutím sa premietnu, premietaná má zelený rámik
+  (`.vscreen.is-live`). Dva pôvodné náhľady sú preč. Riadky majú výšku
   `flex: 0 0 calc(50% - 5px)`, aby ich bolo pri scrollovaní vidno vždy dve.
+  Obrazovka je v `.vscreen__frame` (`container-type: size`) a má rozmery
+  `min(100cqw, 100cqh*16/9)` × `min(100cqh, 100cqw*9/16)` – vždy presne
+  16:9. Samotné `aspect-ratio` pri `flex: 1` nefungovalo (šírka vyhrala,
+  na šírku to bolo ~2,3:1). Rámik má navyše `aspect-ratio: 16/9`, aby mal
+  výšku aj vtedy, keď riadok pevnú výšku nemá (tablet na výšku) – size
+  containment by ho inak zrazil na nulu.
   Z premietania sa dá pieseň rovno upraviť (`editCurrentSong`, návrat cez
   `editorReturn`).
 - **Tlačidlo „Set“ v premietaní** (`liveSetDialog`) nahradilo číselnú polohu
@@ -235,7 +241,20 @@ testov). Testy žalmu používajú uložené stránky v `tests/fixtures/`.
   `state.set.items`) pod pevným id `aktualny-set-zaloha` – medzi uložené
   sety aj do priečinka `sety`. Prázdny set zálohu zase zmaže. Pri štarte
   appky ho `restoreCurrentSetBackup()` obnoví do `state.set`, ak appka
-  spadla s rozpracovaným (neuloženým) setom.
+  spadla s rozpracovaným (neuloženým) setom. **Pozor:** kým
+  `restoreCurrentSetBackup()` neprebehne, zálohovanie je vypnuté
+  (`setBackupReady`) – prvé `renderSetList()` v `reloadLibrary()` vidí ešte
+  prázdny set a v a0.1.8 tým zálohu zmazalo skôr, než sa obnovila.
+- **Sety a preinštalovanie** (`loadSetsFolderAtStart()`): priečinok `sety`
+  je to, čo odinštalovanie prežije. Pri načítaní sa pri rovnakom id berie
+  novší set (`updatedAt`) a sety, ktoré v priečinku chýbajú (napr. zo
+  starších verzií), sa doň dopíšu. Po preinštalovaní appka prístup
+  k súborom ešte nemá – sety sa preto načítajú aj neskôr, keď sa používateľ
+  vráti s povolením (`visibilitychange` + `setsFolderLoaded`).
+- **Poradie piesní v bežiacom sete** (`moveInLiveSet()` v dialógu Set počas
+  premietania) mení len `state.live.songs` (nie `state.set.items`, rovnako
+  ako `addToLiveSet`) a `songIndex` sa prepočíta tak, aby ostala premietaná
+  tá istá pieseň.
 - **Dialóg so sety počas premietania neotvára klávesnicu hneď**
   (`liveSetBtn` po `showModal()` odfokusuje, čo si prehliadač/WebView sám
   zafokusoval) a keď sa klávesnica otvorí ťuknutím do poľa, otvorený dialóg
@@ -269,6 +288,14 @@ testov). Testy žalmu používajú uložené stránky v `tests/fixtures/`.
   a na televízore je vidieť menej riadkov než v náhľade.
 - Natívne testovanie sa dá obísť falošným mostom `window.OrganistaNative`
   cez Playwright `addInitScript` – takto sa dá overiť aj obnova zo zálohy.
+  **Falošný most musí mať skutočné názvy metód**, ktoré volá `store.js`
+  (`read`, `writeBegin`, `writeChunk`, `writeCommit`) – `call()` pri
+  neexistujúcej metóde potichu vráti `null`, úložisko je potom prázdne
+  a chyby okolo reštartu sa neprejavia (tak prekĺzla chyba zálohy setu
+  v a0.1.8). Stav „súborov“ drž v `localStorage`, aby prežil
+  `page.reload()`; preinštalovanie = zmazať len súkromné kľúče. Metódy mosta
+  musia byť synchrónne – `page.exposeFunction` vracia Promise, takže sa na
+  ne nehodí.
 - **Panel rýchleho výberu čísla je ukotvený dole**, preto musia mať nájdené
   piesne stálu výšku a byť **nad** klávesnicou – inak sa tlačidlá pri písaní
   posúvajú.
