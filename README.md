@@ -30,7 +30,7 @@ hosting, žiadny internet.**
 
 1. V tablete otvor priamy odkaz na stiahnutie:
 
-   **https://github.com/JakuGi/churchTextApp/releases/download/android-latest/organista-a0.1.9.apk**
+   **https://github.com/JakuGi/churchTextApp/releases/download/android-latest/organista-a0.1.10.apk**
 
    (Alebo: stránka projektu na GitHube → vpravo **Releases** → vydanie
    **Organista pre Android (posledná verzia)**.)
@@ -176,9 +176,11 @@ ju nepridáš dvakrát.
 | Skočiť na konkrétnu slohu | číselné tlačidlá vpravo (1, 2, R, 3…) | `1`–`9`, refrén `0` |
 | Zhasnúť text na TV | veľké červené **ZASTAVIŤ** v strede (zelené **ZOBRAZIŤ TEXT**, keď je obrazovka čierna) | `B` |
 | Ďalšia / predošlá pieseň | tlačidlá pod náhľadom | `↓` / `↑` |
-| Pieseň mimo setu | **Rýchly výber čísla** hore | – |
+| Pieseň mimo setu | **Rýchly výber čísla** hore – pieseň pribudne do setu hneď za aktuálnu a zostane v ňom aj po skončení premietania | – |
+| Zmeniť set počas premietania | **Set** hore – ťuknutím preskočíš na pieseň, ▲ ▼ menia poradie, ✕ pieseň odoberie, dole sa dá pridať ďalšia; zmeny zostanú v sete | – |
 
 - **Náhľad vľavo** ukazuje presne to, čo je v danej chvíli na televízore.
+  Vybraná sloha je vždy navrchu, pod ňou vidno nasledujúcu.
 - **Premietanie začína čiernou obrazovkou**, aby sa text objavil až keď chceš –
   prvé stlačenie prostredného tlačidla text zobrazí. Dá sa to vypnúť
   v *Nastaveniach*.
@@ -229,9 +231,12 @@ z liturgického kalendára KBS a pripraví na premietanie.
    **Dnes / Zajtra / Najbližšia nedeľa**, alebo priamo v poli **Dátum**.
 3. Ukáže sa odkaz na žalm (napr. `Ž 111, 7-8. 9. 10`), názov sviatku a **refrén**,
    teda to, čo sa spieva a čo sa bude premietať.
-4. Máš dve možnosti:
+4. Máš tri možnosti:
    - **▶ Premietať teraz** – žalm sa hneď premieta a nikam sa neukladá
      (po zavretí aplikácie zmizne);
+   - **+ Do setu (neukladať)** – žalm pribudne do setu, ale **neuloží sa** medzi
+     žalmy ani do knižnice. V sete zostane (aj po reštarte aplikácie a v uloženom
+     sete), kým ho zo setu neodoberieš;
    - **Uložiť medzi žalmy** – pribudne do zbierky **Žalmy** ako pieseň s názvom
      podľa dátumu a sviatku, napr. *17. 9. 2026 – Sv. Kornélia a Cypriána*.
      Odvtedy sa dá pridať do setu ako ktorákoľvek iná pieseň.
@@ -432,7 +437,7 @@ správať s televízorom.
 3. V okne emulátora klikni na **⋯** (Extended controls) → **Displays** →
    **Add secondary display** → zvoľ rozlíšenie → *Apply changes*.
 4. Nainštaluj APK: stiahnutý súbor pretiahni myšou do okna emulátora, alebo
-   `adb install organista-a0.1.9.apk`.
+   `adb install organista-a0.1.10.apk`.
 5. Spusti aplikáciu a premietaj – text sa objaví na druhej obrazovke emulátora.
 
 Overiť, či Android naozaj hlási druhú obrazovku, sa dá aj z príkazového riadka:

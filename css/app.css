@@ -364,15 +364,17 @@ main { flex: 1; min-height: 0; display: flex; overflow-x: hidden; }
   background: var(--ok, #2ecc71); transition: width .15s linear;
 }
 
+/* Viditeľnosť riadi JS cez [hidden]; is-visible sa objaví hneď (bez
+   prechodu), doznieva len pri skrývaní. Nikdy neblokuje ťuknutia. */
 .toast {
-  position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 140%);
+  position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
   background: var(--panel-2); border: 1px solid var(--line); color: var(--fg);
   padding: 14px 22px; border-radius: 999px; font-weight: 600; z-index: 100;
-  transition: transform .22s ease; max-width: 90vw; text-align: center;
+  max-width: 90vw; text-align: center; pointer-events: none;
+  opacity: 0; transition: opacity .2s ease;
 }
-.toast.is-visible { transform: translate(-50%, 0); }
-body.is-live .toast { bottom: auto; top: 88px; transform: translate(-50%, -200%); }
-body.is-live .toast.is-visible { transform: translate(-50%, 0); }
+.toast.is-visible { opacity: 1; transition: none; }
+body.is-live .toast { bottom: auto; top: 88px; }
 .toast--ok { border-color: rgba(46,204,113,.6); }
 .toast--warn { border-color: rgba(255,138,61,.6); }
 
@@ -391,9 +393,13 @@ body.is-live .toast.is-visible { transform: translate(-50%, 0); }
   .bigbtn__label { font-size: 16px; }
 }
 @media (orientation: portrait) and (max-width: 900px) {
-  .live__left { flex: none; }
+  /* Náhľady slôh zaberú zvyšok výšky a scrollujú sa vo vnútri (dva naraz);
+     tlačidlá slôh a piesní pod nimi majú svoju prirodzenú výšku. Predtým tu
+     bolo .live__left { flex: none }, takže pri viac než dvoch slohách stĺpec
+     s náhľadmi narástol a vytlačil tlačidlá mimo obrazovky. */
+  .live__left { flex: 1; min-height: 0; }
+  .live__right { flex: none; max-height: 34vh; }
   .preview__screen { aspect-ratio: 16 / 9; flex: none; }
-  .live__right { flex: 1; max-height: none; }
   .live__title { flex-direction: column; align-items: flex-start; gap: 0; }
   .live__title h1 { font-size: 21px; }
   .live__number { font-size: 17px; }

@@ -40,8 +40,25 @@ const cast = createCast({
 
 // ------------------------------------------------------------------ pomôcky
 
+// Neuložené piesne (žalm pridaný do setu alebo premietaný bez uloženia) –
+// nie sú v knižnici, preto ich nezmaže ani reloadLibrary(). Do setu sa
+// ukladajú priamo s ním (set.inline), aby prežili aj reštart appky.
+const tempSongs = new Map();
+
 function songById(id) {
-  return state.songs.find((song) => song.id === id) || null;
+  return state.songs.find((song) => song.id === id) || tempSongs.get(id) || null;
+}
+
+/** Neuložené piesne, ktoré set obsahuje – ukladajú sa spolu so setom. */
+function inlineSongsFor(items) {
+  return items.map((id) => tempSongs.get(id)).filter(Boolean);
+}
+
+/** Zaregistruje neuložené piesne, ktoré si set nesie so sebou. */
+function registerInlineSongs(set) {
+  for (const song of (set && set.inline) || []) {
+    if (song && song.id && !tempSongs.has(song.id)) tempSongs.set(song.id, { ...song, temporary: true });
+  }
 }
 
 /** Slovenské skloňovanie: 1 pieseň, 2–4 piesne, 5+ piesní. */
@@ -62,20 +79,21 @@ function songLabel(song) {
   return song.number ? `${song.system || ''} ${song.number}`.trim() : '';
 }
 
-// Vždy sa hneď ukáže posledná správa (rýchle opakované ťukanie napr. na
-// „✓ V sete“ teda nikdy nečaká na doznenie predošlej). Keď bol pásik práve
-// v polovici miznutia, vynúti sa prekreslenie pred návratom triedy
-// is-visible – inak vedel prechod „zamrznúť“ v polceste (rovnaký trik ako
-// pri prelínaní na televízore).
+// Notifikácia: vždy sa hneď ukáže posledná správa. Zobrazenie aj skrytie
+// rozhoduje časovač (hidden → display: none), nie dobehnutie CSS prechodu –
+// prechod vo WebView vedel zamrznúť a pásik potom zostal visieť na obrazovke.
+// Prechod je len kozmetické doznenie pred skrytím.
 function toast(message, kind = 'info') {
   const box = $('#toast');
-  const wasHidden = !box.classList.contains('is-visible');
-  box.textContent = message;
-  box.className = `toast toast--${kind}`;
-  if (wasHidden) void box.offsetWidth;
-  box.classList.add('is-visible');
   clearTimeout(box._timer);
-  box._timer = setTimeout(() => box.classList.remove('is-visible'), 3200);
+  clearTimeout(box._hideTimer);
+  box.textContent = message;
+  box.className = `toast toast--${kind} is-visible`;
+  box.hidden = false;
+  box._timer = setTimeout(() => {
+    box.classList.remove('is-visible');
+    box._hideTimer = setTimeout(() => { box.hidden = true; }, 260);
+  }, 3200);
 }
 
 // Aktívne, keď editor bol otvorený priamo z premietania (editCurrentSong) –
@@ -147,6 +165,7 @@ async function reloadLibrary() {
   state.songs = songs.sort(compareSongs);
   state.folders = folders.sort((a, b) => a.name.localeCompare(b.name, 'sk'));
   state.sets = sets.sort((a, b) => b.updatedAt - a.updatedAt);
+  state.sets.forEach(registerInlineSongs);
   renderFolders();
   renderSongList();
   renderSetList();
@@ -394,6 +413,7 @@ async function loadSetsFolderAtStart() {
     showProgress('Načítavam sety…', index + 1, files.length);
   });
   if (files.length) hideProgress();
+  parsed.forEach(registerInlineSongs);
 
   // Pri rovnakom id vyhrá novšia verzia setu.
   const byId = new Map(state.sets.map((set) => [set.id, set]));
@@ -648,6 +668,7 @@ function renderPsalmResult() {
   box.innerHTML = '';
   $('#psalmSave').disabled = !psalm.song;
   $('#psalmPlay').disabled = !psalm.song;
+  $('#psalmAddSet').disabled = !psalm.song;
   if (!parsed) return;
 
   if (!parsed.psalms.length) {
@@ -719,9 +740,20 @@ async function savePsalm() {
 function playPsalm() {
   if (!psalm.song) return;
   const song = { ...psalm.song, temporary: true };
-  if (!state.songs.some((item) => item.id === song.id)) state.songs = [song, ...state.songs];
+  tempSongs.set(song.id, song);
   $('#psalmDialog').close();
   startLive([song.id], 0);
+}
+
+/**
+ * Pridá žalm do setu bez uloženia medzi žalmy. V sete zostane (aj po
+ * reštarte – ukladá sa so setom), kým ho organista zo setu neodoberie.
+ */
+function addPsalmToSet() {
+  if (!psalm.song) return;
+  const song = { ...psalm.song, id: `docasny:${psalm.song.id}`, temporary: true };
+  tempSongs.set(song.id, song);
+  if (addToSet(song.id)) $('#psalmDialog').close();
 }
 
 // ---------------------------------------------------------------- editor
@@ -851,6 +883,9 @@ let lastSetBackupKey = null;
 // Kým sa pri štarte nepokúsime zálohu obnoviť, nesmie sa prepisovať: prvé
 // vykreslenie (ešte prázdneho) setu by ju inak zmazalo skôr, než sa obnoví.
 let setBackupReady = false;
+// Počas načítania priečinka s piesňami pri štarte – set je už vtedy
+// obnovený, len niektoré jeho piesne ešte nemusia byť načítané.
+let songsLoading = false;
 
 /**
  * Rozpracovaný set sa priebežne zálohuje medzi uložené sety pod pevným id –
@@ -876,6 +911,7 @@ async function persistCurrentSetBackup() {
     id: CURRENT_SET_BACKUP_ID,
     name: CURRENT_SET_BACKUP_NAME,
     items: state.set.items.slice(),
+    inline: inlineSongsFor(state.set.items),
     updatedAt: Date.now(),
   };
   const index = state.sets.findIndex((item) => item.id === CURRENT_SET_BACKUP_ID);
@@ -961,11 +997,16 @@ function renderSetList() {
     const song = songById(id);
     const row = document.createElement('div');
     row.className = 'setrow';
+    const missingTitle = songsLoading ? 'Načítavam pieseň…' : 'Pieseň sa nenašla';
+    const sub = song
+      ? [songLabel(song), pluralVerses(song.verses.length), song.temporary ? 'neuložený (len v sete)' : '']
+        .filter(Boolean).join(' · ')
+      : id;
     row.innerHTML = `
       <div class="setrow__pos">${index + 1}</div>
       <div class="setrow__body">
-        <div class="song__title">${song ? song.title : 'Pieseň sa nenašla'}</div>
-        <div class="song__sub">${song ? [songLabel(song), pluralVerses(song.verses.length)].filter(Boolean).join(' · ') : id}</div>
+        <div class="song__title">${song ? song.title : missingTitle}</div>
+        <div class="song__sub">${sub}</div>
       </div>
       <div class="setrow__tools">
         <button class="btn btn--icon" data-up title="Hore">▲</button>
@@ -1035,6 +1076,7 @@ async function saveCurrentSet() {
     id: existing ? existing.id : `set-${Date.now()}`,
     name,
     items: state.set.items.slice(),
+    inline: inlineSongsFor(state.set.items),
     updatedAt: Date.now(),
   };
   await store.putSet(set);
@@ -1119,9 +1161,29 @@ function startLive(ids, index = 0) {
     verseIndex: 0,
     // Premietanie začína čierno, aby sa text objavil až keď organista chce.
     blank: state.settings.blankOnStart,
+    // Spustené z pripraveného setu (nie jedna pieseň z náhľadu) – zmeny
+    // počas premietania sa potom prenášajú aj do setu (syncLiveToSet).
+    fromSet: ids === state.set.items,
   };
   setView('live');
   renderLive();
+}
+
+/**
+ * Zmeny bežiaceho setu (rýchly výber čísla, pridanie, poradie, odobratie)
+ * zostanú natrvalo v pripravenom sete – aj po odchode z premietania.
+ * Pri premietaní jednej piesne mimo setu sa nová pieseň do setu len pridá.
+ */
+function syncLiveToSet(added) {
+  if (state.live.fromSet) {
+    state.set.items = state.live.songs.map((song) => song.id);
+  } else if (added && !isInSet(added.id)) {
+    state.set.items.push(added.id);
+  } else {
+    return;
+  }
+  renderSetList();
+  renderSongList();
 }
 
 function selectVerse(index) {
@@ -1177,7 +1239,10 @@ function toggleJumpPanel(force) {
   }
 }
 
-/** Otvorí pieseň podľa zadaného čísla – ak nie je v sete, vloží ju hneď za aktuálnu. */
+/**
+ * Otvorí pieseň podľa zadaného čísla – ak nie je v sete, vloží ju hneď za
+ * aktuálnu. Natrvalo: zostane v sete aj po odchode z premietania.
+ */
 function jumpToSong(song) {
   const index = state.live.songs.findIndex((item) => item.id === song.id);
   if (index >= 0) {
@@ -1185,6 +1250,7 @@ function jumpToSong(song) {
   } else {
     state.live.songs.splice(state.live.songIndex + 1, 0, song);
     state.live.songIndex += 1;
+    syncLiveToSet(song);
   }
   state.live.verseIndex = 0;
   toggleJumpPanel(false);
@@ -1219,6 +1285,7 @@ function addToLiveSet(song) {
     return;
   }
   state.live.songs.push(song);
+  syncLiveToSet(song);
   toast(`Pridané do setu: ${song.title}`, 'ok');
   $('#liveSetSearch').value = '';
   $('#liveSetResults').innerHTML = '';
@@ -1246,9 +1313,11 @@ function renderLiveSetList() {
       <div class="setrow__tools">
         <button class="btn btn--icon" data-up title="Hore" ${index === 0 ? 'disabled' : ''}>▲</button>
         <button class="btn btn--icon" data-down title="Dole" ${index === state.live.songs.length - 1 ? 'disabled' : ''}>▼</button>
+        <button class="btn btn--icon btn--danger" data-del title="Odobrať zo setu" ${state.live.songs.length < 2 ? 'disabled' : ''}>✕</button>
       </div>`;
     $('[data-up]', row).onclick = () => moveInLiveSet(index, -1);
     $('[data-down]', row).onclick = () => moveInLiveSet(index, 1);
+    $('[data-del]', row).onclick = () => removeFromLiveSet(index);
     row.onclick = (event) => {
       if (event.target.closest('button')) return;
       jumpToLiveSong(index);
@@ -1269,6 +1338,31 @@ function moveInLiveSet(index, delta) {
   const [item] = songs.splice(index, 1);
   songs.splice(target, 0, item);
   state.live.songIndex = songs.indexOf(current);
+  syncLiveToSet();
+  renderLiveSetList();
+  renderLive();
+}
+
+/**
+ * Odoberie pieseň z bežiaceho setu (aj z pripraveného setu). Práve
+ * premietaná pieseň sa odoberie až po potvrdení – premietanie potom prejde
+ * na pieseň, ktorá bola za ňou.
+ */
+function removeFromLiveSet(index) {
+  const songs = state.live.songs;
+  if (songs.length < 2 || index < 0 || index >= songs.length) return;
+  const removingCurrent = index === state.live.songIndex;
+  if (removingCurrent && !confirm(`„${songs[index].title}“ sa práve premieta. Odobrať ju zo setu? `
+    + 'Premietanie prejde na ďalšiu pieseň.')) return;
+  const [removed] = songs.splice(index, 1);
+  if (index < state.live.songIndex) {
+    state.live.songIndex -= 1;
+  } else if (removingCurrent) {
+    state.live.songIndex = Math.min(index, songs.length - 1);
+    state.live.verseIndex = 0;
+  }
+  syncLiveToSet();
+  toast(`Odobraté zo setu: ${removed.title}`, 'ok');
   renderLiveSetList();
   renderLive();
 }
@@ -1322,7 +1416,7 @@ function renderLive() {
 
 // ------------------------------------------- obrazovky slôh v živom režime
 
-const verseScreens = { key: '', items: [] };
+const verseScreens = { key: '', items: [], scrolledTo: '' };
 
 /** Podľa čoho sa pozná, že sa obrazovky slôh musia prekresliť. */
 function verseScreensKey(song) {
@@ -1372,15 +1466,26 @@ function renderVerseScreens() {
   updateVerseScreens();
 }
 
-/** Zvýraznenie vybranej slohy a červený rámik okolo tej premietanej. */
+/**
+ * Zvýraznenie vybranej slohy a rámik okolo tej premietanej. Vybraná sloha sa
+ * posunie navrch zoznamu, aby pod ňou bolo vidno aj tú nasledujúcu. Posúva
+ * sa len pri zmene výberu – napr. čierna obrazovka zoznam neposunie späť,
+ * keď si ho organista medzitým sám posunul.
+ */
 function updateVerseScreens() {
   const live = state.view === 'live' && !state.live.blank;
+  const box = $('#verseScreens');
+  const target = `${verseScreens.key}#${state.live.verseIndex}`;
+  const scroll = target !== verseScreens.scrolledTo && state.view === 'live';
+  const sameSong = verseScreens.scrolledTo && verseScreens.scrolledTo.startsWith(`${verseScreens.key}#`);
   verseScreens.items.forEach((item, index) => {
     const selected = index === state.live.verseIndex;
     item.classList.toggle('is-selected', selected);
     item.classList.toggle('is-live', selected && live);
-    if (selected && item.scrollIntoView) {
-      item.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    if (selected && scroll && box) {
+      const top = box.scrollTop + item.getBoundingClientRect().top - box.getBoundingClientRect().top;
+      box.scrollTo({ top, behavior: sameSong ? 'smooth' : 'auto' });
+      verseScreens.scrolledTo = target;
     }
   });
 }
@@ -1722,6 +1827,7 @@ function bindEvents() {
   $('#psalmLoad').onclick = loadPsalm;
   $('#psalmSave').onclick = savePsalm;
   $('#psalmPlay').onclick = playPsalm;
+  $('#psalmAddSet').onclick = addPsalmToSet;
   $('#psalmDate').onchange = (event) => {
     if (event.target.value) setPsalmDay(dateKey(event.target.value));
   };
@@ -2260,12 +2366,18 @@ async function main() {
   publish();
   startStatusBar();
 
-  // Priečinok s piesňami je úložisko – načíta sa pri každom spustení.
-  await loadSongsFolderAtStart();
-  // Sety vedľa neho rovnako.
+  // Sety (aj rozpracovaný set zo zálohy) sa načítajú hneď, ešte pred
+  // piesňami – priečinok s piesňami môže pri veľkej knižnici trvať dlhšie.
+  songsLoading = isNative && !!call('hasSongsFolder');
   await loadSetsFolderAtStart();
-  // Keby appka spadla uprostred prípravy setu, obnoví sa z priebežnej zálohy.
   restoreCurrentSetBackup();
+  // Priečinok s piesňami je úložisko – načíta sa pri každom spustení.
+  try {
+    await loadSongsFolderAtStart();
+  } finally {
+    songsLoading = false;
+    renderSetList();
+  }
   // Ak je knižnica aj tak prázdna (napríklad po preinštalovaní a priečinok
   // ešte nie je potvrdený), skúsi sa posledná automatická záloha.
   await restoreFromAutoBackup();

@@ -10,6 +10,45 @@ spoľahlivo). Pôvodné čísla `1.0.0` – `1.1.1` sa premenovali takto:
 Číslo `1.0.0` dostane až prvá verzia, ktorá bude na bežné používanie v kostole
 overená.
 
+## a0.1.10
+
+**Spustenie appky**
+
+- **Set sa načíta hneď**, ešte pred piesňami. Kým sa priečinok s piesňami
+  dočíta, piesne, ktoré v appke ešte nie sú, sa v sete ukazujú ako
+  „Načítavam pieseň…“ a hneď potom sa doplnia.
+
+**Premietanie**
+
+- **Rýchly výber čísla pridá pieseň do setu natrvalo** – hneď za práve
+  premietanú pieseň. Zostane tam aj po odchode z premietania a po reštarte.
+- V okne **Set** počas premietania sa dajú piesne aj **odoberať** (✕).
+  Práve premietaná pieseň sa odoberie až po potvrdení a premietanie prejde
+  na ďalšiu. Odobratie, zmena poradia aj pridanie piesne v tomto okne sa
+  prenesú aj do setu v záložke *Set*.
+- **Vybraná sloha je v náhľadoch vždy navrchu** a pod ňou vidno nasledujúcu –
+  pri ťuknutí na číslo slohy aj pri tlačidlách *Ďalšia / Predošlá sloha*.
+  Predtým sa zoznam posunul len toľko, aby bola vybraná sloha vidno (často
+  až dole).
+- **Na tablete na výšku** sa pri piesni s viac než dvoma slohami náhľady
+  roztiahli a vytlačili tlačidlá slôh a piesní mimo obrazovky. Teraz majú
+  náhľady pevnú výšku (dva naraz) a scrollujú sa vo vnútri.
+
+**Notifikácie**
+
+- **Zelené notifikácie sa už nezasekávajú.** O tom, kedy sa ukážu a kedy
+  zmiznú, rozhoduje časovač, nie dobehnutie animácie, takže po 3 sekundách
+  naisto zmiznú. V premietaní navyše „skrytá“ notifikácia zostávala ako
+  prúžok pri hornom okraji obrazovky. Notifikácia tiež už nikdy neblokuje
+  ťuknutie na tlačidlo pod ňou.
+
+**Žalmy**
+
+- Nové tlačidlo **+ Do setu (neukladať)**: žalm pribudne do setu bez toho, aby
+  sa uložil medzi žalmy alebo do knižnice. V sete zostane – aj po reštarte,
+  preinštalovaní a v uloženom sete (text žalmu sa ukladá spolu so setom) –,
+  kým ho zo setu neodoberieš. V sete je označený ako *neuložený*.
+
 ## a0.1.9
 
 **Premietanie**
@@ -32,6 +71,16 @@ overená.
     appky, sa pri štarte samy dopíšu do priečinka `sety` – predtým sa pri
     odinštalovaní stratili spolu s appkou,
   - ak je ten istý set v appke aj v priečinku, použije sa novšia verzia.
+
+**Známe chyby (opravené vo verzii a0.1.10)**
+
+- **Zelené notifikácie sa vedeli zaseknúť** na obrazovke a v premietaní
+  zostával po skrytej notifikácii prúžok pri hornom okraji.
+- **Na tablete na výšku** náhľady slôh pri piesni s viac než dvoma slohami
+  vytlačili tlačidlá slôh a piesní mimo obrazovky.
+- Pieseň pridaná **rýchlym výberom čísla** bola len v bežiacom premietaní – po
+  jeho skončení v sete nebola.
+- Pri štarte sa set ukázal až po dočítaní všetkých piesní z priečinka.
 
 ## a0.1.8
 

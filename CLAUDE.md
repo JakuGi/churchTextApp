@@ -34,7 +34,7 @@ v kostole. Ovládanie je na tablete, text ide na druhú obrazovku.
 > `claude/cool-feynman-88sk88`. Prepnúť na `main` vie iba vlastník repozitára
 > (*Settings → General → Default branch*); Claude na to nemá nástroj.
 
-**Číslovanie verzií:** všetko je zatiaľ **alfa** – `a0.x.y`, teraz `a0.1.9`.
+**Číslovanie verzií:** všetko je zatiaľ **alfa** – `a0.x.y`, teraz `a0.1.10`.
 Pôvodné čísla sa premenovali: `1.0.0 → a0.0.0`, `1.0.1 → a0.0.1`,
 `1.1.0 → a0.1.0`, `1.1.1 → a0.1.1`. Číslo `1.0.0` je vyhradené pre prvú
 odskúšanú verziu.
@@ -161,17 +161,34 @@ testov). Testy žalmu používajú uložené stránky v `tests/fixtures/`.
   Z premietania sa dá pieseň rovno upraviť (`editCurrentSong`, návrat cez
   `editorReturn`).
 - **Tlačidlo „Set“ v premietaní** (`liveSetDialog`) nahradilo číselnú polohu
-  – ukáže celý bežiaci set (`state.live.songs`, nie `state.set.items`, ktoré
-  sa počas naživo môžu rozísť), ťuknutím na pieseň sa naň preskočí
-  (`jumpToLiveSong`) bez zastavenia premietania. Vyhľadávanie v tom istom
-  okne pridáva pieseň na koniec (`addToLiveSet`) – nepreskakuje na ňu, aby
-  nezastavilo práve hranú pieseň.
+  – ukáže celý bežiaci set (`state.live.songs`), ťuknutím na pieseň sa naň
+  preskočí (`jumpToLiveSong`) bez zastavenia premietania. Vyhľadávanie v tom
+  istom okne pridáva pieseň na koniec (`addToLiveSet`) – nepreskakuje na ňu,
+  aby nezastavilo práve hranú pieseň. ▲ ▼ menia poradie (`moveInLiveSet`),
+  ✕ odoberá (`removeFromLiveSet`; premietaná až po potvrdení, potom sa ide
+  na ďalšiu, posledná sa odobrať nedá).
+- **Zmeny počas premietania sa prenášajú do setu** (`syncLiveToSet`): keď
+  premietanie vzniklo z pripraveného setu (`state.live.fromSet`, t. j.
+  `startLive(state.set.items, …)`), po každej zmene (rýchly výber čísla
+  `jumpToSong`, pridanie, poradie, odobratie) sa `state.set.items` prepíše
+  podľa `state.live.songs` – zostane to aj po odchode z premietania (a ide
+  to do zálohy setu). Pri premietaní jednej piesne mimo setu (náhľad, žalm)
+  sa do setu len pridá nová pieseň.
 - **Toast notifikácie** (`toast()` v `app.js`): vždy sa okamžite ukáže
-  posledná správa; keď bol pásik práve v polovici miznutia (`is-visible`
-  odstránené, CSS prechod ešte beží), vynúti sa `void box.offsetWidth`
-  pred návratom triedy – inak vedel prechod zamrznúť v polceste (rovnaký
-  trik ako pri prelínaní na TV). Front rady sa zámerne nepoužíva – spôsoboval
-  zobrazovanie zastaraných správ pri rýchlom opakovanom ťukaní.
+  posledná správa. Viditeľnosť riadia **časovače** (`hidden` → `display:
+  none` 260 ms po odobratí `is-visible`), nie dobehnutie CSS prechodu –
+  prechod vo WebView vedel zamrznúť. `is-visible` je bez prechodu (objaví sa
+  hneď), doznieva len opacity pri skrývaní; `pointer-events: none`.
+  Predtým bola „skrytá“ notifikácia len posunutá transformom – v premietaní
+  (`top: 88px`, `translate(-50%,-200%)`) zostávala viditeľná ako prúžok hore.
+  Front rady sa zámerne nepoužíva – spôsoboval zastarané správy pri
+  rýchlom opakovanom ťukaní.
+- **Výber slohy posunie náhľady tak, že vybraná je navrchu**
+  (`updateVerseScreens`, `box.scrollTo`) a pod ňou vidno nasledujúcu.
+  Posúva sa len pri zmene výberu (`verseScreens.scrolledTo`), takže napr.
+  čierna obrazovka nevráti zoznam, ktorý si organista sám posunul. Na výšku
+  majú náhľady pevnú výšku (`.live__left { flex: 1 }`, `.live__right` max.
+  34vh) – predtým `flex: none` nechal stĺpec rásť a vytlačil tlačidlá von.
 - **Klik do textového poľa ho posunie navrch** jeho scrollovaného kontajnera
   (globálny `focusin` listener v `bindEvents()`, `input/textarea → scrollIntoView`).
   Overené len na skutočný klik/ťuknutie – programové `.focus()` cez
@@ -251,10 +268,18 @@ testov). Testy žalmu používajú uložené stránky v `tests/fixtures/`.
   starších verzií), sa doň dopíšu. Po preinštalovaní appka prístup
   k súborom ešte nemá – sety sa preto načítajú aj neskôr, keď sa používateľ
   vráti s povolením (`visibilitychange` + `setsFolderLoaded`).
-- **Poradie piesní v bežiacom sete** (`moveInLiveSet()` v dialógu Set počas
-  premietania) mení len `state.live.songs` (nie `state.set.items`, rovnako
-  ako `addToLiveSet`) a `songIndex` sa prepočíta tak, aby ostala premietaná
-  tá istá pieseň.
+- **Neuložené piesne v sete** (žalm cez „+ Do setu (neukladať)“,
+  `addPsalmToSet`): žijú v mape `tempSongs` (nie v `state.songs` – tú
+  `reloadLibrary()` prepisuje a `store.replaceSongs` by ich uložila do
+  knižnice), `songById` ich hľadá aj tam. Id majú predponu `docasny:`.
+  Set (záloha aj uložený set) si ich nesie v poli `inline`
+  (`inlineSongsFor`) a pri načítaní setov sa znovu zaregistrujú
+  (`registerInlineSongs` v `reloadLibrary` a `loadSetsFolderAtStart`).
+  „▶ Premietať teraz“ používa tiež `tempSongs`.
+- **Poradie pri štarte** (`main()`): `reloadLibrary()` → sety z priečinka a
+  obnova rozpracovaného setu → až potom priečinok s piesňami (môže trvať).
+  Kým beží, `songsLoading` ukazuje chýbajúce piesne setu ako „Načítavam
+  pieseň…“ namiesto „Pieseň sa nenašla“.
 - **Dialóg so sety počas premietania neotvára klávesnicu hneď**
   (`liveSetBtn` po `showModal()` odfokusuje, čo si prehliadač/WebView sám
   zafokusoval) a keď sa klávesnica otvorí ťuknutím do poľa, otvorený dialóg
@@ -296,6 +321,11 @@ testov). Testy žalmu používajú uložené stránky v `tests/fixtures/`.
   `page.reload()`; preinštalovanie = zmazať len súkromné kľúče. Metódy mosta
   musia byť synchrónne – `page.exposeFunction` vracia Promise, takže sa na
   ne nehodí.
+- **V Playwright testoch blokuj service worker**
+  (`browser.newContext({ serviceWorkers: 'block' })`). `sw.js` inak vybaví
+  `fetch` sám, `page.route` (napr. podvrhnutá stránka žalmu pre
+  `api/liturgia`) sa neuplatní a test môže bežať proti staršej kópii
+  súborov z cache.
 - **Panel rýchleho výberu čísla je ukotvený dole**, preto musia mať nájdené
   piesne stálu výšku a byť **nad** klávesnicou – inak sa tlačidlá pri písaní
   posúvajú.

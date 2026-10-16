@@ -450,6 +450,7 @@
   <div class="dialog__actions">
     <button class="btn" data-close-dialog>Zavrieť</button>
     <button class="btn btn--big" id="psalmSave" disabled>Uložiť medzi žalmy</button>
+    <button class="btn btn--big" id="psalmAddSet" disabled title="Pridá žalm do setu bez uloženia medzi žalmy">+ Do setu (neukladať)</button>
     <button class="btn btn--primary btn--big" id="psalmPlay" disabled>▶ Premietať teraz</button>
   </div>
 </dialog>
@@ -492,7 +493,7 @@ jej druhý riadok."></textarea>
   <div class="progress__label" id="importProgressLabel">Načítavam piesne…</div>
   <div class="progress__track"><div class="progress__bar" id="importProgressBar"></div></div>
 </div>
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
 <script type="module" src="js/app.js"></script>
 </body>
