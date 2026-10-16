@@ -33,6 +33,19 @@ overená.
 - **Na tablete na výšku** sa pri piesni s viac než dvoma slohami náhľady
   roztiahli a vytlačili tlačidlá slôh a piesní mimo obrazovky. Teraz majú
   náhľady pevnú výšku (dva naraz) a scrollujú sa vo vnútri.
+- **Tlačidlá Predošlá / Ďalšia pieseň** sú vždy rovnako široké. Dlhý názov
+  piesne (napríklad žalmu s celým názvom sviatku) sa na tlačidle skráti
+  s „…“ – predtým tlačidlo roztiahol a to druhé vytlačil mimo obrazovky,
+  takže sa nedalo prejsť na inú pieseň.
+
+**Text na obrazovke**
+
+- **Keď sa dlhý riadok musí zalomiť, rozdelí sa na rovnako dlhé časti** –
+  na samostatnom riadku už nezostáva jedno-dve slová (napr. „… všetci jeho /
+  anjeli“ je teraz „Chváľte Pána z nebies, / chváľte ho na výsostiach, /
+  všetci jeho anjeli“). Pravidlo, kedy sa zalamuje, zostáva rovnaké:
+  riadkovanie piesne sa drží, kým by kvôli nemu nebolo písmo primalé; pri
+  dlhých riadkoch sa radšej zalomí, než aby sa text zmenšil.
 
 **Notifikácie**
 
@@ -81,6 +94,9 @@ overená.
 - Pieseň pridaná **rýchlym výberom čísla** bola len v bežiacom premietaní – po
   jeho skončení v sete nebola.
 - Pri štarte sa set ukázal až po dočítaní všetkých piesní z priečinka.
+- Pri dlhom názve piesne vedelo tlačidlo Predošlá / Ďalšia pieseň vytlačiť
+  to druhé mimo obrazovky.
+- Zalomený dlhý riadok vedel nechať jedno-dve slová na samostatnom riadku.
 
 ## a0.1.8
 

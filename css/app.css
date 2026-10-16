@@ -106,11 +106,15 @@ body.is-presenting-bg .topbar {
 .btn--big { min-height: 72px; font-size: 20px; padding: 0 28px; }
 .btn--icon { min-width: 52px; min-height: 52px; padding: 0; font-size: 18px; }
 .btn--add { min-height: 52px; white-space: nowrap; }
+/* Tlačidlá piesní sú vždy rovnako široké a nízke – dlhý názov piesne sa
+   skráti (…), inak vedel tlačidlo roztiahnuť a vytlačiť to druhé mimo
+   obrazovky (min-width flex položky = celá šírka nezalomeného názvu). */
 .btn--nav {
-  flex: 1; min-height: 76px; flex-direction: column; gap: 2px; text-align: center;
+  flex: 1 1 0; min-width: 0; min-height: 76px; flex-direction: column; gap: 2px;
+  text-align: center; padding: 0 12px;
 }
-.btn--nav small { color: var(--muted); font-weight: 500; font-size: 14px;
-  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.btn--nav > * { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.btn--nav small { color: var(--muted); font-weight: 500; font-size: 14px; }
 
 .input {
   min-height: var(--touch); width: 100%; padding: 0 16px;

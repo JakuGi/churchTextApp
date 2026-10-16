@@ -199,6 +199,14 @@ testov). Testy žalmu používajú uložené stránky v `tests/fixtures/`.
   súboru sa zachová, ak by zalomenie prinieslo menej než 10 % veľkosti navyše
   alebo ak by bolo písmo pod `fontMin`. Na záver `shrinkToFit` overí, že text
   naozaj nepreteká.
+- **Keď sa zalamuje, tak vyvážene** (`setWrap()` v `display-core.js`):
+  v režime `pre-wrap` sa nastaví `text-wrap: balance`, takže dlhý riadok sa
+  rozdelí na rovnako dlhé časti a nezostane osamelé slovo („… jeho /
+  anjeli“). Každý riadok piesne je samostatný `.line`, takže sa vyvažuje
+  len v rámci neho. Balance nepridáva riadky, výpočet veľkosti platí.
+  Skratka `text-wrap` nastavuje aj `text-wrap-mode` – preto sa nastavuje
+  až **po** `white-space` a len pri zalamovaní (v režime `pre` by inak
+  zapla zalamovanie a rozbila riadky slôh).
 - **Úprava piesne počas premietania beží na pozadí** (`app.js`,
   `setView`/`updatePresentingIndicator`): `editCurrentSong()` volá
   `openEditor(song, 'live', { keepPresenting: true })`, čo nastaví
@@ -295,7 +303,11 @@ testov). Testy žalmu používajú uložené stránky v `tests/fixtures/`.
 - Pri hromadnej úprave súboru vždy over každý zásah (`grep`/`assert`) –
   `str.replace` ticho neurobí nič, keď sa kotva nenájde.
 - V premietanom texte sa veľkosť písma dopočítava binárnym hľadaním podľa
-  kontajnera; `text-wrap: balance` rozbíja riadky slôh.
+  kontajnera; `text-wrap: balance` na celý blok alebo v režime `pre` rozbíja
+  riadky slôh (pozri `setWrap()` – používa sa len pri zalamovaní).
+- **Tlačidlá s nezalomeným textom vo flex riadku potrebujú `min-width: 0`**
+  (a `flex: 1 1 0`) – inak je ich minimálna šírka celý text a dlhý názov
+  piesne roztiahne tlačidlo cez obrazovku (`.btn--nav`).
 - V GitHub Actions nikdy nevkladaj text z `CHANGELOG.md` priamo do príkazu –
   spätné apostrofy by sa vykonali. Používa sa `printf` s premennými prostredia
   a `--notes-file`.

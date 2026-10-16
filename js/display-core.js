@@ -35,11 +35,24 @@ export function createDisplay(root) {
   let settleTimer = null;
   let fadeEndsAt = 0;
 
+  /**
+   * Režim zalamovania. Keď sa dlhý riadok musí zalomiť, rozdelí sa na
+   * rovnako dlhé časti (text-wrap: balance) – inak by na samostatnom riadku
+   * zostalo jedno-dve slová. Balance nikdy nepridá riadok navyše, takže
+   * výpočet veľkosti písma platí. Skratka text-wrap zapína aj zalamovanie,
+   * preto sa nastavuje len pri pre-wrap a až po white-space.
+   */
+  function setWrap(wrap) {
+    linesBox.style.textWrap = '';
+    linesBox.style.whiteSpace = wrap ? 'pre-wrap' : 'pre';
+    if (wrap) linesBox.style.textWrap = 'balance';
+  }
+
   // Najväčšie písmo, pri ktorom sa text ešte zmestí na plochu.
   // Prvá voľba: každý riadok piesne zostane na jednom riadku obrazovky.
   // Ak by bolo písmo príliš malé (veľmi dlhý verš), povolíme zalomenie.
   function measure(wrap, available, width, cap) {
-    linesBox.style.whiteSpace = wrap ? 'pre-wrap' : 'pre';
+    setWrap(wrap);
     let low = 6;
     let high = Math.max(6, Math.round(cap));
     let best = low;
@@ -94,7 +107,7 @@ export function createDisplay(root) {
     // nemu bolo písmo menšie, než je nastavené minimum – alebo keď by sme tým
     // stratili viac než desatinu veľkosti.
     const keepBreaks = noWrap >= floor && noWrap >= wrapped * KEEP_BREAKS_RATIO;
-    linesBox.style.whiteSpace = keepBreaks ? 'pre' : 'pre-wrap';
+    setWrap(!keepBreaks);
     linesBox.style.fontSize = `${keepBreaks ? noWrap : wrapped}px`;
     shrinkToFit(keepBreaks ? noWrap : wrapped, available);
   }
